@@ -1,0 +1,220 @@
+import { h, toast, jlong, todayISO } from './util.js';
+import { S, api, apiBase, apiConfigured, getToken, setToken, loadAll, bus, authBus, errText, reportError } from './store.js';
+import * as dash from './pages/dashboard.js';
+import * as trade from './pages/trade.js';
+import * as stock from './pages/stock.js';
+import * as pay from './pages/pay.js';
+import * as fin from './pages/finance.js';
+import * as master from './pages/master.js';
+import * as help from './pages/help.js';
+import * as cust from './pages/customers.js';
+import * as hist from './pages/history.js';
+import * as diag from './pages/diag.js';
+import * as savelog from './pages/savelog.js';
+import { onOutbox, initOutbox, pendingCount, blockedCount, pump, state as obState } from './outbox.js';
+import { saleForm, purchaseForm } from './forms_trade.js';
+import { navCounts } from './insights.js';
+import { THEMES, currentTheme, chooseTheme, loadTheme } from './theme.js';
+import { fmt } from './util.js';
+
+const ROUTES = {
+  '': { t: 'خانه', i: '⌂', f: () => dash.render() },
+  sales: { t: 'فروش', i: '🛍', f: q => trade.sales(q) },
+  purchases: { t: 'خرید', i: '📦', f: () => trade.purchases() },
+  stock: { t: 'موجودی', i: '▤', f: q => stock.render(q) },
+  pay: { t: 'پرداخت‌ها', i: '💳', f: q => pay.render(q, 'sup') },
+  expenses: { t: 'هزینه‌ها', i: '🧾', f: q => pay.render(q, 'exp') },
+  returns: { t: 'مرجوعی', i: '↩', f: () => pay.returns() },
+  customers: { t: 'مشتریان و طلب‌ها', i: '👥', f: q => cust.render(q) },
+  invoices: { t: 'بدهی به تامین‌کننده', i: '📄', f: () => trade.invoices() },
+  finance: { t: 'مالی', i: '◎', f: () => fin.render() },
+  items: { t: 'کالاها', i: '🏷', f: () => master.items() },
+  suppliers: { t: 'تامین‌کنندگان', i: '🏭', f: () => master.suppliers() },
+  history: { t: 'تاریخچه', i: '🕘', f: () => hist.render() },
+  help: { t: 'راهنما و پشتیبان', i: '?', f: () => help.render() },
+  savelog: { t: 'گزارش ذخیره', i: '✔', f: () => savelog.render() },
+  diag: { t: 'عیب‌یابی', i: '🛠', f: () => diag.render() }
+};
+const sideList = () => ['', 'sales', 'purchases', 'stock', 'pay', 'expenses', 'returns', 'customers', 'invoices', 'finance', 'items', 'suppliers', 'history', 'savelog', 'help', ...(S.me && S.me.role === 'admin' ? ['diag'] : [])];
+const BOTTOM = ['', 'sales', 'purchases', 'stock', 'finance'];
+const app = document.getElementById('app');
+let view, navEls = [];
+
+function parseHash() {
+  const raw = location.hash.replace(/^#\/?/, ''); const [path, qs] = raw.split('?');
+  return { path: path || '', q: new URLSearchParams(qs || '') };
+}
+function route() {
+  if (!view) return;
+  let { path, q } = parseHash();
+  if (path === 'diag' && !(S.me && S.me.role === 'admin')) { path = ''; history.replaceState(null, '', '#/'); }
+  const r = ROUTES[path] || ROUTES[''];
+  const key = ROUTES[path] ? path : '';
+  document.title = `${r.t} · MARA INTIMATES`;
+  navEls.forEach(a => a.classList.toggle('on', a.dataset.r === key));
+  navEls.forEach(a => (a.dataset.r === key ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
+  try { view.replaceChildren(r.f(q)); } catch (e) { console.error(e); reportError('E_UI_RENDER', e.message, 'ui.page.' + key, e.stack); view.replaceChildren(h('div', { class: 'card' }, h('h2', null, 'خطا در نمایش صفحه'), h('p', null, e.message), h('p', { class: 'hint' }, `کد: E_UI_RENDER · صفحه: ${key || 'خانه'} (به‌صورت خودکار برای مدیر ثبت شد)`))); }
+  window.scrollTo(0, 0); paintCounts();
+}
+/* ---- شمارنده‌ی جلوی نام هر زبانه ---- */
+const TONE_FA = { red: 'مورد فوری', amber: 'مورد باز', info: 'مورد', zero: 'بدون مورد باز' };
+function paintCounts() {
+  if (!view || !S.loaded) return;
+  let c; try { c = navCounts(); } catch (e) { console.error(e); reportError('E_UI_COUNT', e.message, 'ui.counts', e.stack); return; }
+  navEls.forEach(a => {
+    const k = a.dataset.r, o = c[k], b = a.querySelector('.cnt'); if (!b || !o) { if (b) b.hidden = true; return; }
+    b.hidden = false; b.className = 'cnt ' + o.tone; b.textContent = o.q ? '؟' : fmt(o.n);
+    b.setAttribute('aria-label', `${o.q ? 'نامشخص' : fmt(o.n)} ${TONE_FA[o.tone]}`);
+  });
+  const mc = document.getElementById('menucnt');
+  if (mc) { const tot = Object.values(c).reduce((a, o) => a + (o.tone === 'red' || o.tone === 'amber' ? o.n : 0), 0); mc.hidden = !tot; mc.textContent = fmt(tot); mc.setAttribute('aria-label', fmt(tot) + ' مورد باز در همه‌ی بخش‌ها'); }
+}
+async function loadDiagCount() {
+  if (!(S.me && S.me.role === 'admin')) return;
+  try { const r = await api('/api/diagnostics/'); const since = Date.now() - 24 * 3600 * 1000; S.diagErrors = (r.data.errors || []).filter(e => new Date(e.at).getTime() > since).length; }
+  catch { S.diagErrors = null; }
+  paintCounts();
+}
+let staleErr = null, staleTimer = null, staleN = 0;
+async function refresh() {
+  document.body.classList.add('busy');
+  try {
+    await loadAll(); route(); loadDiagCount();
+    if (staleErr) { staleErr = null; staleN = 0; clearTimeout(staleTimer); toast('اطلاعات دوباره از سرور رسید ✔'); renderBar(); }
+  } catch (e) {
+    staleErr = e; renderBar(); clearTimeout(staleTimer);
+    staleTimer = setTimeout(refresh, Math.min(60000, 6000 * 2 ** staleN++));
+  } finally { document.body.classList.remove('busy'); }
+}
+bus.refresh = refresh;
+
+/* ---- نوار وضعیت ذخیره: ثبت‌های در انتظار، خطاهای نیازمند بررسی، آفلاین بودن، اطلاعات قدیمی ---- */
+function renderBar() {
+  const bar = document.getElementById('savebar'); if (!bar) return;
+  const p = pendingCount(), b = blockedCount(), parts = [];
+  const last = obState().items.filter(i => i.status === 'pending').map(i => i.code).filter(Boolean).pop();
+  if (!navigator.onLine) parts.push(h('div', { class: 'sb red' }, h('b', null, '📵 اینترنت قطع است. '), 'تا وصل شدن، ثبت‌ها نگه داشته می‌شوند و بعد خودکار ذخیره می‌شوند.'));
+  if (staleErr) parts.push(h('div', { class: 'sb amber' }, h('b', null, '⚠ اطلاعات از سرور نیامد. '), `آنچه می‌بینی ممکن است قدیمی باشد؛ خودکار دوباره تلاش می‌کنیم [${staleErr.code || 'E_NETWORK'}]. `,
+    h('button', { type: 'button', class: 'btn sm', onclick: () => refresh() }, 'همین حالا')));
+  if (p) parts.push(h('div', { class: 'sb amber' }, h('b', null, `⏳ ذخیره نشد! ${p} ثبت هنوز در سرور ننشسته. `), 'صبر کنید و صفحه را نبندید؛ خودکار دوباره تلاش می‌کنیم' + (last ? ` [${last}]` : '') + '. ',
+    h('button', { type: 'button', class: 'btn sm', onclick: () => pump(true) }, 'الان تلاش کن'), h('a', { href: '#/savelog', class: 'btn sm' }, 'گزارش ذخیره')));
+  if (b) parts.push(h('div', { class: 'sb red' }, h('b', null, `⚠ ${b} ثبت رد شد و ذخیره نشد. `), 'سرور آن را قبول نکرد؛ جزئیات و راه حل در گزارش ذخیره است. ', h('a', { href: '#/savelog', class: 'btn sm' }, 'ببین')));
+  bar.hidden = !parts.length; bar.replaceChildren(...parts); paintCounts();
+}
+onOutbox((type, d) => {
+  if (type === 'queued') { toast('ذخیره نشد! این ثبت در صف ذخیره ماند و خودکار دوباره تلاش می‌شود. تا پیام «ذخیره شد» نیامده صفحه را نبند.' + (d.stored ? '' : ' (مرورگر اجازه‌ی نگهداری نمی‌دهد؛ اگر صفحه بسته شود از بین می‌رود.)'), 'warn'); }
+  if (type === 'saved') { toast(`✔ ذخیره شد: ${d.item.label}${d.result && d.result.no ? ' · ' + d.result.no : ''}${d.replayed ? ' (قبلاً رسیده بود)' : ''}`, 'ok', 5000); refresh(); }
+  if (type === 'blocked') toast(`ذخیره نشد: ${d.item.label}. ${d.item.error}`, 'err', 12000);
+  renderBar();
+});
+window.addEventListener('online', () => { renderBar(); if (staleErr) refresh(); }); window.addEventListener('offline', renderBar);
+
+function themePanel() {
+  const wrap = h('section', { class: 'themebar', 'aria-label': 'تم رنگی' });
+  const strip = t => h('span', { class: 'tb-sw', 'aria-hidden': 'true' }, t.sw.map(c => h('i', { style: { background: c } })));
+  const draw = open => {
+    const cur = currentTheme();
+    wrap.replaceChildren(
+      h('button', { type: 'button', class: 'tb-btn', id: 'themebtn', 'aria-expanded': String(open), 'aria-controls': 'themegrid', onclick: () => draw(!open) }, strip(cur), h('b', null, '🎨 تم رنگی'), h('small', null, cur.name), h('span', { class: 'tb-arrow', 'aria-hidden': 'true' }, open ? '▲' : '▼')),
+      h('div', { class: 'tb-grid', id: 'themegrid', role: 'radiogroup', 'aria-label': 'انتخاب تم رنگی', hidden: !open },
+        THEMES.map(t => h('button', { type: 'button', class: 'tb-opt' + (t.id === cur.id ? ' on' : ''), role: 'radio', 'aria-checked': String(t.id === cur.id), 'data-theme-id': t.id,
+          onclick: () => { chooseTheme(t.id, S.me.name); toast(`تم «${t.name}» انتخاب شد و برایت می‌ماند ✔`); draw(true); if (!document.querySelector('.ov')) route(); } },
+          strip(t), h('b', null, t.name, t.id === cur.id ? h('span', { class: 'ok' }, '✓ فعلی') : null), h('small', null, t.desc)))));
+  };
+  draw(false); return wrap;
+}
+
+function shell() {
+  const mk = (k, cls) => { const r = ROUTES[k]; const a = h('a', { href: '#/' + k, 'data-r': k, class: cls }, h('span', { class: 'ni', 'aria-hidden': 'true' }, r.i), h('b', { class: 'cnt zero', 'data-c': k, role: 'status' }, '۰'), h('span', { class: 'nt' }, r.t)); navEls.push(a); return a; };
+  navEls = [];
+  const drawer = h('div', { class: 'drawer', hidden: true, onclick: e => { if (e.target === drawer || e.target.closest('a')) drawer.hidden = true; } },
+    h('nav', { class: 'dnav', 'aria-label': 'همه‌ی بخش‌ها' }, h('div', { class: 'dh' }, h('b', null, 'همه‌ی بخش‌ها'), h('button', { type: 'button', class: 'x', 'aria-label': 'بستن', onclick: () => { drawer.hidden = true; } }, '✕')), sideList().map(k => mk(k, 'dl'))));
+  view = h('main', { id: 'view', tabindex: '-1' });
+  app.replaceChildren(
+    h('a', { href: '#view', class: 'skip' }, 'رفتن به محتوا'),
+    h('aside', { class: 'side' }, h('div', { class: 'brand' }, h('img', { class: 'brand-mark', src: 'icons/logo-mark.jpg', alt: 'MR', width: 40, height: 40 }), h('div', null, h('b', null, 'MARA'), h('small', null, 'INTIMATES'))),
+      h('nav', { 'aria-label': 'بخش‌ها' }, sideList().map(k => mk(k, 'sl'))),
+      h('div', { class: 'who' }, h('div', { class: 'av' }, S.me.name[0]), h('div', null, h('b', null, S.me.name), h('small', null, jlong(todayISO()))))),
+    h('header', { class: 'top' }, h('button', { type: 'button', class: 'menu', 'aria-label': 'منو', onclick: () => { drawer.hidden = false; } }, '☰', h('b', { class: 'cnt red', id: 'menucnt', hidden: true })), h('div', { class: 'brand sm' }, h('img', { class: 'brand-mark', src: 'icons/logo-mark.jpg', alt: 'MR', width: 40, height: 40 }), h('b', null, 'MARA')), h('div', { class: 'av' }, S.me.name[0])),
+    h('div', { class: 'content' }, themePanel(), h('div', { id: 'savebar', hidden: true, role: 'status', 'aria-live': 'polite' }), view), drawer,
+    h('nav', { class: 'bottom', 'aria-label': 'ناوبری اصلی' }, BOTTOM.map(k => mk(k, 'bl'))),
+    h('div', { class: 'progress' }));
+}
+
+const brandBig = () => h('div', { class: 'brand big' }, h('img', { class: 'logo-full', src: 'icons/logo-full.jpg', alt: 'MARA INTIMATES', width: 360, height: 233 }));
+
+/* سرور رایگان Render بعد از بی‌کاری می‌خوابد؛ اینجا منتظر بیدار شدنش می‌مانیم و وضعیت را نشان می‌دهیم */
+async function wakeServer(setStatus) {
+  const t0 = Date.now();
+  for (let i = 0; i < 14; i++) {
+    try { const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 9000); const r = await fetch(apiBase() + '/api/health/', { signal: ctl.signal }); clearTimeout(tm); let j = null; try { j = await r.json(); } catch {}
+      if (j && j.ok) return { ok: true }; if (j && j.db && j.db.ok === false) return { ok: false, code: 'E_DB_DOWN', msg: 'سرور بالاست ولی به دیتابیس وصل نیست. ' + (j.db.hint || '') };
+      if (r.status >= 400 && !j) { /* هنوز در حال بالا آمدن */ } } catch {}
+    setStatus(Math.round((Date.now() - t0) / 1000));
+    await new Promise(r => setTimeout(r, 4000));
+  }
+  return { ok: false, code: 'E_SERVER_DOWN', msg: 'سرور بعد از ۱٫۵ دقیقه جواب نداد. ۱) آدرس ' + apiBase() + '/api/health/ را در مرورگر باز کن. ۲) در Render وضعیت سرویس «Live» باشد. ۳) API_URL در js/config.js درست باشد.' };
+}
+
+function showLogin(msg, mode = 'pass') {
+  const ident = h('input', { class: 'inp', type: 'text', autocomplete: 'username', dir: 'ltr', placeholder: 'ایمیل یا شماره‌ی موبایل', 'aria-label': 'ایمیل یا موبایل', required: true });
+  const pass = h('input', { class: 'inp', type: 'password', autocomplete: 'current-password', dir: 'ltr', placeholder: 'رمز عبور', 'aria-label': 'رمز عبور' });
+  const code = h('input', { class: 'inp', type: 'text', inputmode: 'numeric', autocomplete: 'one-time-code', dir: 'ltr', placeholder: 'کد ۶ رقمی بله', 'aria-label': 'کد', hidden: true });
+  const err = h('div', { class: 'warnbox', hidden: !msg, role: 'alert' }, msg || '');
+  const wake = h('div', { class: 'wake', hidden: true });
+  const b = h('button', { class: 'btn primary lg', type: 'submit' }, mode === 'pass' ? 'ورود' : 'ارسال کد به بله');
+  let otpSent = false;
+  const alt = h('button', { type: 'button', class: 'alt', onclick: () => showLogin('', mode === 'pass' ? 'otp' : 'pass') }, mode === 'pass' ? 'ورود با کد بله (بدون رمز)' : 'ورود با رمز');
+  if (mode === 'otp') pass.hidden = true;
+  const showErr = e => { err.hidden = false; err.textContent = errText(e); };
+  const f = h('form', { class: 'login', onsubmit: async ev => {
+    ev.preventDefault(); err.hidden = true; b.disabled = true; const old = b.textContent; b.textContent = 'لطفاً صبر کن…';
+    try {
+      if (mode === 'pass') { const r = await api('/api/auth/login/', { method: 'POST', body: { identifier: ident.value.trim(), password: pass.value } }); setToken(r.data.token); return start(); }
+      if (!otpSent) { await api('/api/auth/otp/request/', { method: 'POST', body: { identifier: ident.value.trim() } }); otpSent = true; code.hidden = false; code.focus(); b.textContent = 'ورود'; b.disabled = false; err.hidden = false; err.textContent = 'کد در بله برایت فرستاده شد.'; err.className = 'wake'; return; }
+      const r = await api('/api/auth/otp/verify/', { method: 'POST', body: { identifier: ident.value.trim(), code: code.value.trim() } }); setToken(r.data.token); return start();
+    } catch (e) { showErr(e); err.className = 'warnbox'; b.textContent = old; b.disabled = false; }
+  } }, brandBig(), h('h1', null, 'ورود به حسابداری'), wake, err, ident, pass, code, b, alt, h('p', { class: 'hint center' }, 'رمز را فراموش کردی؟ از حمیدرضا بخواه عوضش کند.'));
+  app.replaceChildren(h('div', { class: 'login-wrap' }, f));
+  if (!showLogin.woke) {
+    b.disabled = true; wake.hidden = false; wake.textContent = 'در حال اتصال به سرور…';
+    wakeServer(sec => { wake.textContent = `سرور رایگان Render در حال بیدار شدن است (${sec} ثانیه)… تا ۱ دقیقه طول می‌کشد.`; }).then(r => {
+      if (r.ok) { showLogin.woke = true; wake.hidden = true; b.disabled = false; } else { wake.className = 'wake bad'; wake.textContent = `${r.msg} [کد ${r.code}]`; b.disabled = false; }
+    });
+  }
+}
+function showMsg(title, text, extra) { app.replaceChildren(h('div', { class: 'login-wrap' }, h('div', { class: 'login' }, h('h1', null, title), h('p', null, text), extra))); }
+
+async function start() {
+  const st = h('p', { class: 'center' }, 'در حال بارگذاری…');
+  app.replaceChildren(h('div', { class: 'login-wrap' }, h('div', { class: 'login' }, brandBig(), st)));
+  try {
+    if (!showLogin.woke) {
+      const w = await wakeServer(sec => { st.textContent = `سرور رایگان Render در حال بیدار شدن است (${sec} ثانیه)… تا ۱ دقیقه طول می‌کشد.`; });
+      if (!w.ok) return showMsg('سرور جواب نمی‌دهد', `${w.msg} [کد ${w.code}]`, h('button', { class: 'btn primary', onclick: () => location.reload() }, 'تلاش دوباره'));
+      showLogin.woke = true;
+    }
+    await loadAll(); loadTheme(S.me.name); shell(); initOutbox(); renderBar(); pump(true); if (!location.hash) location.hash = '#/'; route();
+  } catch (e) {
+    if (['E_AUTH_BAD', 'E_AUTH_EXPIRED', 'E_AUTH_REQUIRED'].includes(e.code)) { setToken(null); return showLogin('نشست تمام شده؛ دوباره وارد شو.'); }
+    showMsg('خطا در اتصال', errText(e), h('button', { class: 'btn primary', onclick: () => location.reload() }, 'تلاش دوباره'));
+  }
+}
+authBus.onLost = () => { if (S.loaded) { S.loaded = false; setToken(null); showLogin('نشست تمام شده؛ دوباره وارد شو.'); } };
+
+async function boot() {
+  if (!apiConfigured()) return showMsg('نصب کامل نشده', 'فایل js/config.js هنوز با آدرس سرور (Render) پر نشده. مرحله‌ی «اتصال فرانت» در راهنما را انجام بده.');
+  if (!getToken()) return showLogin();
+  start();
+}
+// هر خطای ناگهانی برنامه به سرور گزارش می‌شود تا در «عیب‌یابی» دیده شود
+window.addEventListener('error', e => reportError('E_UI_JS', e.message, 'ui.window ' + (e.filename || '').split('/').pop() + ':' + e.lineno, e.error && e.error.stack));
+window.addEventListener('unhandledrejection', e => { const r = e.reason || {}; if (r.code && r.code.startsWith('E_')) return; reportError('E_UI_PROMISE', r.message || String(r), 'ui.promise', r.stack); });
+window.addEventListener('hashchange', route);
+let hiddenAt = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { hiddenAt = Date.now(); return; }
+  if (S.loaded && hiddenAt && Date.now() - hiddenAt > 45000 && !document.querySelector('.ov')) refresh();
+});
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost') && !window.__MARA_API__) navigator.serviceWorker.register('./sw.js').catch(() => {});
+boot();

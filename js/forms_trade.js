@@ -1,0 +1,277 @@
+// فرم‌های اصلی: فروش و خرید
+import { h, fmt, parseNum, todayISO, toast, sum, jstr } from './util.js';
+import { S, rpc, loadAll, bus, pref, setPref, simulateFifo, holdKey, customers, businessAccounts, CHANNELS, accBalance, errText } from './store.js';
+import { modal, field, chips, accountPicker, numField, intField, dateField, dueField, combo, run, promptBox } from './ui.js';
+import { pickCategoryDialog } from './forms_misc.js';
+
+const accOf = name => S.accounts.find(a => a.name === name);
+const seg = (mode, on, cb, a, b) => chips([{ v: 'a', label: a }, { v: 'b', label: b }], mode, cb, { cls: 'two' });
+
+/* ======================= فروش جدید ======================= */
+export function saleForm(preset = {}) {
+  const me = S.me && S.me.name !== 'حمیدرضا' ? S.me.name : 'مهسا';
+  let seller = preset.seller || me;
+  let date = todayISO();
+  const lines = [];
+  const linesBox = h('div', { class: 'lines' });
+  const warn = h('div', { class: 'warnbox', hidden: true });
+  const totalEl = h('b', { class: 'n' }, '0'), profitEl = h('b', { class: 'n' }, '0');
+  const stockAvail = id => { const s = S.stock.find(x => x.id === id); return s ? s : { rem_m: 0, rem_r: 0 }; };
+
+  const sellerChips = chips([{ v: 'مهسا', label: 'مهسا' }, { v: 'رعنا', label: 'رعنا' }], seller, v => { seller = v; lines.forEach(l => l.refreshItems()); defaultAccounts(); recalc(); }, { cls: 'two', label: 'فروشنده' });
+  const dateCtl = dateField(date, v => { date = v; due.refresh(); });
+  const channel = chips(CHANNELS.map(c => ({ v: c, label: c })), pref('channel', CHANNELS[0]), () => {}, { label: 'محل فروش' });
+  const custOpts = () => customers().map(c => { const b = S.vCus.find(x => x.id === c.id); return { v: c.id, label: c.name, sub: (c.phone || '') + (b && b.outstanding > 0 ? ' · بدهکار ' + fmt(b.outstanding) : '') }; });
+  const customer = combo({
+    placeholder: 'نام مشتری (اختیاری؛ برای نسیه الزامی)', createLabel: 'مشتری جدید', options: custOpts(),
+    onCreate: async name => { try { const r = await rpc('save_customer', { name }, { queue: false }); await loadAll(); customer.setOptions(custOpts()); customer.set(r.id); toast('مشتری اضافه شد'); recalc(); return r.id; } catch (e) { toast(errText(e), 'err'); return null; } },
+    onChange: () => recalc()
+  });
+  const custInfo = h('div', { class: 'hint' });
+  const due = dueField(() => date, { label: 'مشتری تا چه زمانی می‌دهد؟' });
+  let payMode = 'full';
+  const payChips = chips([{ v: 'full', label: 'کامل گرفتم' }, { v: 'part', label: 'بخشی / نسیه' }], 'full', v => { payMode = v; partBox.hidden = v === 'full'; recalc(); }, { cls: 'two', label: 'نحوه‌ی دریافت' });
+  const received = numField({ onInput: () => recalc() });
+  const remainEl = h('div', { class: 'hint' });
+  const partBox = h('div', { hidden: true }, field('چقدر گرفتی؟', received, null), remainEl, due);
+  const recvAcc = accountPicker(businessAccounts(), null, () => {}, { pockets: false, balances: accBalance });
+  const courier = numField({ onInput: () => recalc() }), pack = numField({ onInput: () => recalc() });
+  const costAcc = accountPicker(S.accounts, null, () => {}, { pockets: true });
+  const costAccBox = h('div', { hidden: true }, field('هزینه‌ی پیک/بسته‌بندی از کدام حساب پرداخت شد؟', costAcc));
+  const note = h('input', { class: 'inp', type: 'text', placeholder: 'یادداشت (اختیاری)' });
+
+  function defaultAccounts() {
+    const bank = accOf('حساب ' + seller), cash = accOf('نقد ' + seller);
+    const pr = pref('recvAcc_' + seller, null);
+    recvAcc.set(pr && S.A[pr] ? pr : (bank ? bank.id : null));
+    const pc = pref('costAcc_' + seller, null);
+    costAcc.set(pc && S.A[pc] ? pc : (cash ? cash.id : null));
+  }
+
+  function addLine() {
+    const L = { item: null, qty: 1, price: 0, lot: null, holder: null, manual: false };
+    const hl = () => L.holder || seller, other = () => (seller === 'مهسا' ? 'رعنا' : 'مهسا');
+    const cnt = (who, id = L.item) => { const st = S.stock.find(x => x.id === id); return st ? (who === 'مهسا' ? st.rem_m : st.rem_r) : 0; };
+    const choose = v => {
+      L.item = v; L.lot = null; L.manual = false; autoHolder();
+      const st = S.stock.find(x => x.id === v);
+      if (st && st.last_price && !priceCtl.get()) { priceCtl.set(st.last_price); L.price = st.last_price; }
+      drawLots(); recalc();
+    };
+    const sel = combo({ placeholder: 'نام کالا را تایپ کن…', onChange: choose });
+    L.pick = v => { sel.set(v); choose(v); };
+    const qty = intField({ value: 1, min: 1, onChange: n => { L.qty = n; autoHolder(); recalc(); }, big: true });
+    const priceCtl = numField({ onInput: n => { L.price = n; recalc(); } });
+    const lotSel = h('select', { class: 'sel full', 'aria-label': 'انتخاب دسته‌ی خرید', onchange: () => { L.lot = lotSel.value ? +lotSel.value : null; recalc(); } });
+    const lotBox = h('div', { class: 'lotbox', hidden: true }, h('label', { class: 'lbl' }, 'از کدام دسته‌ی خرید؟'), lotSel);
+    const holdBox = h('div', { class: 'holdbox', hidden: true });
+    const prev = h('div', { class: 'prev' });
+    const lineTot = h('b', { class: 'n' }, '0');
+    const card = h('div', { class: 'lcard' },
+      h('div', { class: 'lrow' }, sel, h('button', { class: 'rm', type: 'button', 'aria-label': 'حذف این کالا', onclick: () => { lines.splice(lines.indexOf(L), 1); card.remove(); recalc(); } }, '✕')),
+      h('div', { class: 'two-col' }, field('تعداد', qty), field('فی فروش', priceCtl)),
+      holdBox, lotBox, prev, h('div', { class: 'ltot' }, 'جمع این کالا: ', lineTot, ' ریال'));
+    function items() {
+      return S.stock.filter(i => i.active).map(i => ({ v: i.id, label: i.name, sub: `مهسا ${i.rem_m} · رعنا ${i.rem_r}` }));
+    }
+    function autoHolder() {
+      if (L.manual) return;
+      L.holder = (L.item && cnt(seller) < L.qty && cnt(other()) >= L.qty) ? other() : null;
+      drawHolder(); drawLots();
+    }
+    function drawHolder() {
+      holdBox.hidden = !L.item;
+      if (!L.item) return;
+      const btn = who => h('button', { type: 'button', class: 'chip' + (hl() === who ? ' on' : '') + (cnt(who) < 1 ? ' dim' : ''), 'aria-pressed': hl() === who ? 'true' : 'false',
+        onclick: () => { L.holder = who === seller ? null : who; L.manual = true; drawHolder(); drawLots(); recalc(); } }, `${who} · ${cnt(who)} عدد`);
+      holdBox.replaceChildren(h('label', { class: 'lbl' }, 'از موجودی چه کسی برداشته شود؟'), h('div', { class: 'chips two' }, btn(seller), btn(other())),
+        hl() !== seller ? h('div', { class: 'hint' }, `این جنس را ${seller} نزد خودش ندارد؛ از موجودی ${hl()} برداشته می‌شود و فروش به نام ${seller} ثبت می‌شود.`) : null);
+    }
+    function drawLots() {
+      const key = holdKey(hl());
+      const ls = S.lots.filter(l => l.item_id === L.item && !l.voided && l[key] > 0).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id));
+      lotBox.hidden = ls.length < 2;
+      lotSel.replaceChildren(h('option', { value: '' }, 'خودکار (قدیمی‌ترین اول)'), ...ls.map(l => h('option', { value: l.id }, `${l.lot_no} · فاکتور ${l.invoice_no} · مانده ${l[key]} · تمام‌شده ${fmt(l.landed_unit)}`)));
+      lotSel.value = L.lot || '';
+    }
+    L.refreshItems = () => { sel.setOptions(items()); L.manual = false; autoHolder(); };
+    L.update = () => {
+      const f = L.item ? simulateFifo(L.item, hl(), L.qty, L.lot) : { parts: [], short: 0, cost: 0 };
+      L.cost = f.cost; L.short = f.short;
+      lineTot.textContent = fmt(L.qty * L.price);
+      prev.className = 'prev' + (f.short > 0 ? ' bad' : '');
+      if (!L.item) prev.textContent = '';
+      else if (f.short > 0) prev.textContent = `⚠ موجودی «${S.I[L.item].name}» نزد ${hl()} کافی نیست (${f.short} عدد کم است).` + (cnt(other()) > 0 || cnt(seller) > 0 ? ` نزد ${hl() === seller ? other() : seller} ${cnt(hl() === seller ? other() : seller)} عدد هست؛ بالا همان را انتخاب کن.` : ' این کالا نزد هیچ‌کدام موجود نیست.');
+      else prev.textContent = 'کسر از موجودی: ' + f.parts.map(p => `${p.qty} از ${p.lot.lot_no}`).join(' + ') + ` · بهای تمام‌شده: ${fmt(f.cost)}`;
+    };
+    sel.setOptions(items());
+    L.el = card; lines.push(L); linesBox.append(card); drawLots(); recalc();
+    return L;
+  }
+
+  function totals() {
+    const total = sum(lines, l => l.qty * l.price), cost = sum(lines, l => l.cost);
+    const c = courier.get() + pack.get();
+    const recv = payMode === 'full' ? total : Math.min(received.get(), total);
+    return { total, cost, c, recv, profit: total - cost - c };
+  }
+  function recalc() {
+    lines.forEach(l => l.update());
+    const t = totals();
+    totalEl.textContent = fmt(t.total); profitEl.textContent = fmt(t.profit);
+    profitEl.className = 'n ' + (t.profit < 0 ? 'neg' : 'pos');
+    remainEl.textContent = payMode === 'part' ? `باقی‌مانده به‌عنوان بدهی مشتری ثبت می‌شود: ${fmt(Math.max(0, t.total - t.recv))} ریال` : '';
+    const cb = customer.get() && S.vCus.find(x => x.id === customer.get());
+    custInfo.textContent = cb && cb.outstanding > 0 ? `این مشتری الان ${fmt(cb.outstanding)} ریال بدهکار است` + (cb.overdue_amount > 0 ? ` (${fmt(cb.overdue_amount)} سررسید گذشته!)` : '') : '';
+    costAccBox.hidden = t.c <= 0;
+    const bad = lines.find(l => l.short > 0);
+    warn.hidden = !bad; warn.textContent = bad ? 'موجودی کافی نیست؛ ثبت ممکن نیست.' : '';
+  }
+
+  const submit = h('button', { class: 'btn primary lg', type: 'button' }, 'ثبت فروش');
+  submit.onclick = async () => {
+    const t = totals();
+    if (!lines.length || lines.some(l => !l.item)) return toast('کالای هر ردیف را انتخاب کن', 'err');
+    if (lines.some(l => l.qty < 1)) return toast('تعداد باید حداقل ۱ باشد', 'err');
+    if (lines.some(l => !l.price)) { if (!confirm0('فی فروش یکی از کالاها صفر است. مطمئنی؟')) return; }
+    if (lines.some(l => l.short > 0)) return toast('موجودی کافی نیست', 'err');
+    if (t.recv < t.total && !customer.get()) { customer.input.focus(); return toast('برای فروش نسیه مشتری را انتخاب کن یا بساز', 'err'); }
+    if (t.recv > 0 && !recvAcc.get()) return toast('حسابی که پول به آن آمد را انتخاب کن', 'err');
+    if (t.c > 0 && !costAcc.get()) return toast('حساب پرداخت هزینه را انتخاب کن', 'err');
+    const payload = {
+      date, seller, channel: channel.get(), customer_id: customer.get(), due_date: t.recv < t.total ? due.get() : null, received: t.recv, account_id: t.recv > 0 ? recvAcc.get() : null,
+      courier: courier.get(), pack: pack.get(), cost_account_id: t.c > 0 ? costAcc.get() : null, note: note.value.trim(),
+      lines: lines.map(l => ({ item_id: l.item, qty: l.qty, unit_price: l.price, lot_id: l.lot, holder: l.holder || seller }))
+    };
+    const r = await run(submit, () => rpc('create_sale', payload));
+    if (!r) return;
+    setPref('channel', payload.channel); if (payload.account_id) setPref('recvAcc_' + seller, payload.account_id); if (payload.cost_account_id) setPref('costAcc_' + seller, payload.cost_account_id);
+    toast(`فروش ${r.no} ثبت شد`); m.close(); await bus.refresh();
+  };
+  const m = modal({
+    title: 'فروش جدید', wide: true,
+    body: h('div', { class: 'form' },
+      h('div', { class: 'two-col dt' }, field('فروشنده', sellerChips), field('تاریخ', dateCtl)),
+      h('h3', { class: 'sec' }, 'کالاها'), linesBox,
+      h('button', { class: 'btn dashed', type: 'button', onclick: addLine }, '＋ افزودن کالای دیگر'),
+      field('محل فروش', channel),
+      field('مشتری', [customer, custInfo]),
+      h('h3', { class: 'sec' }, 'پول چطور آمد؟'), payChips, partBox,
+      field('پول به کدام حساب آمد؟', recvAcc),
+      h('h3', { class: 'sec' }, 'هزینه‌ی همین فروش (اختیاری)'),
+      h('div', { class: 'two-col' }, field('پیک (ما دادیم)', courier), field('بسته‌بندی', pack)),
+      h('div', { class: 'hint' }, 'اگر مشتری خودش کرایه‌ی پیک را می‌دهد، خالی بگذار.'), costAccBox,
+      field('یادداشت', note), warn),
+    footer: [h('div', { class: 'sum' }, h('div', null, 'جمع فروش ', totalEl, ' ریال'), h('div', { class: 'sm' }, 'سود تقریبی ', profitEl)), submit]
+  });
+  defaultAccounts(); addLine();
+  if (preset.item) lines[0].pick(preset.item);
+  if (preset.customer) { customer.set(preset.customer); recalc(); }
+  return m;
+}
+const confirm0 = msg => window.confirm(msg);
+
+/* ======================= خرید جدید ======================= */
+export function purchaseForm() {
+  let date = todayISO();
+  const lines = [], pays = [];
+  const linesBox = h('div', { class: 'lines' }), paysBox = h('div', { class: 'lines' });
+  const sum1 = h('div', { class: 'sumbox' });
+  const dateCtl = dateField(date, v => { date = v; due.refresh(); });
+  const supplier = combo({
+    placeholder: 'تامین‌کننده را تایپ کن…', createLabel: 'تامین‌کننده‌ی جدید',
+    options: S.suppliers.filter(s => s.active).map(s => ({ v: s.id, label: s.name, sub: s.phone || '' })),
+    onCreate: async name => { try { const r = await rpc('save_supplier', { name }, { queue: false }); await loadAll(); supplier.setOptions(S.suppliers.filter(s => s.active).map(s => ({ v: s.id, label: s.name, sub: s.phone || '' }))); supplier.set(r.id); toast('تامین‌کننده اضافه شد'); return r.id; } catch (e) { toast(errText(e), 'err'); return null; } }
+  });
+  const itemOpts = () => S.items.filter(i => i.active).map(i => ({ v: i.id, label: i.name, sub: i.category || '' }));
+  const ship = numField({ onInput: () => recalc() });
+  const shipAcc = accountPicker(S.accounts, null, () => {}, { pockets: true });
+  const shipBox = h('div', { hidden: true }, field('هزینه‌ی حمل را چه کسی / از کدام حساب پرداخت کرد؟', shipAcc, 'روی قیمت هر قلم سرشکن می‌شود و قیمت تمام‌شده را می‌سازد.'));
+  const note = h('input', { class: 'inp', type: 'text', placeholder: 'یادداشت (اختیاری)' });
+  const due = dueField(() => date, { label: 'تا چه زمانی باید باقی‌مانده را بدهیم؟' });
+  const dueBox = h('div', { hidden: true }, due);
+
+  function addLine() {
+    const L = { item: null, qty: 1, price: 0, m: 1, r: 0, manual: false };
+    const sel = combo({
+      placeholder: 'نام کالا را تایپ کن…', createLabel: 'کالای جدید', options: itemOpts(), onChange: v => { L.item = v; recalc(); },
+      onCreate: async name => { const category = await pickCategoryDialog(name); if (!category) return null; try { const r = await rpc('save_item', { name, category }, { queue: false }); await loadAll(); sel.setOptions(itemOpts()); sel.set(r.id); L.item = r.id; toast('کالا اضافه شد'); recalc(); return r.id; } catch (e) { toast(errText(e), 'err'); return null; } }
+    });
+    const price = numField({ onInput: n => { L.price = n; recalc(); } });
+    const mS = intField({ value: 1, min: 0, onChange: n => { L.m = n; L.r = Math.max(0, L.qty - n); if (L.m > L.qty) { L.m = L.qty; mS.set(L.m); } rS.set(L.r); L.manual = true; recalc(); } });
+    const rS = intField({ value: 0, min: 0, onChange: n => { L.r = n; L.m = Math.max(0, L.qty - n); if (L.r > L.qty) { L.r = L.qty; rS.set(L.r); } mS.set(L.m); L.manual = true; recalc(); } });
+    const qty = intField({ value: 1, min: 1, big: true, onChange: n => { L.qty = n; if (!L.manual) { L.m = Math.ceil(n / 2); L.r = n - L.m; } else { L.m = Math.min(L.m, n); L.r = n - L.m; } mS.set(L.m); rS.set(L.r); recalc(); } });
+    const quick = h('div', { class: 'quick' },
+      h('button', { type: 'button', class: 'mini', onclick: () => { L.m = L.qty; L.r = 0; mS.set(L.m); rS.set(0); L.manual = true; recalc(); } }, 'همه مهسا'),
+      h('button', { type: 'button', class: 'mini', onclick: () => { L.m = Math.ceil(L.qty / 2); L.r = L.qty - L.m; mS.set(L.m); rS.set(L.r); L.manual = false; recalc(); } }, 'نصف‌نصف'),
+      h('button', { type: 'button', class: 'mini', onclick: () => { L.r = L.qty; L.m = 0; mS.set(0); rS.set(L.r); L.manual = true; recalc(); } }, 'همه رعنا'));
+    const prev = h('div', { class: 'prev' });
+    const tot = h('b', { class: 'n' }, '0');
+    L.update = (share) => { const lt = L.qty * L.price; tot.textContent = fmt(lt); const landed = L.qty ? (lt + share) / L.qty : 0; prev.textContent = L.item && L.price ? `قیمت تمام‌شده‌ی هر عدد (با سهم حمل): ${fmt(landed)}` : ''; };
+    const card = h('div', { class: 'lcard' },
+      h('div', { class: 'lrow' }, sel, h('button', { class: 'rm', type: 'button', 'aria-label': 'حذف این قلم', onclick: () => { lines.splice(lines.indexOf(L), 1); card.remove(); recalc(); } }, '✕')),
+      h('div', { class: 'two-col' }, field('تعداد', qty), field('فی خرید', price)),
+      h('div', { class: 'two-col' }, field('تحویل مهسا', mS), field('تحویل رعنا', rS)), quick, prev,
+      h('div', { class: 'ltot' }, 'جمع این قلم: ', tot, ' ریال'));
+    L.setHold = () => {}; L.el = card; lines.push(L); linesBox.append(card); recalc(); return L;
+  }
+
+  function addPay() {
+    const P = { acc: null, amt: 0, touched: false };
+    const acc = accountPicker(S.accounts, null, v => { P.acc = v; }, { pockets: true });
+    const amt = numField({ onInput: n => { P.amt = n; P.touched = true; recalc(true); } });
+    P.ctl = amt;
+    const card = h('div', { class: 'lcard' },
+      h('div', { class: 'lrow' }, h('b', null, 'پرداخت ' + (pays.length + 1)), pays.length ? h('button', { class: 'rm', type: 'button', 'aria-label': 'حذف', onclick: () => { pays.splice(pays.indexOf(P), 1); card.remove(); recalc(); } }, '✕') : null),
+      field('مبلغ پرداخت‌شده به تامین‌کننده', amt), field('از کدام حساب؟ (شرکت یا جیب شخصی)', acc));
+    pays.push(P); paysBox.append(card); recalc(); return P;
+  }
+
+  const goods = () => sum(lines, l => l.qty * l.price);
+  function recalc(fromPay) {
+    const g = goods(), sh = ship.get();
+    shipBox.hidden = sh <= 0;
+    if (pays[0] && !pays[0].touched && !fromPay) { pays[0].amt = g; pays[0].ctl.set(g || ''); }
+    lines.forEach(l => l.update(g > 0 ? sh * (l.qty * l.price) / g : 0));
+    const paid = sum(pays, p => p.amt);
+    dueBox.hidden = g - paid <= 0;
+    sum1.replaceChildren(
+      row('جمع کالا', g), row('هزینه حمل (سرشکن)', sh), row('قیمت تمام‌شده‌ی فاکتور', g + sh, 'bold'), row('پرداخت‌شده به تامین‌کننده', paid),
+      row(g - paid >= 0 ? 'بدهی به تامین‌کننده' : 'اضافه‌پرداخت (تامین‌کننده بدهکار شد)', Math.abs(g - paid), g - paid > 0 ? 'warn' : g - paid < 0 ? 'info' : 'ok'));
+  }
+  const row = (k, v, c = '') => h('div', { class: 'srow ' + c }, h('span', null, k), h('b', { class: 'n' }, fmt(v)));
+
+  const submit = h('button', { class: 'btn primary lg', type: 'button' }, 'ثبت فاکتور');
+  submit.onclick = async () => {
+    if (!supplier.get()) return toast('تامین‌کننده را انتخاب کن', 'err');
+    if (!lines.length || lines.some(l => !l.item)) return toast('کالای هر قلم را انتخاب کن', 'err');
+    if (lines.some(l => !l.price)) return toast('قیمت خرید هر قلم را بنویس', 'err');
+    if (lines.some(l => l.m + l.r !== l.qty)) return toast('جمع تحویل مهسا و رعنا باید برابر تعداد باشد', 'err');
+    const sh = ship.get();
+    if (sh > 0 && !shipAcc.get()) return toast('حساب پرداخت‌کننده‌ی هزینه حمل را انتخاب کن', 'err');
+    const used = pays.filter(p => p.amt > 0);
+    if (used.some(p => !p.acc)) return toast('حساب هر پرداخت را انتخاب کن', 'err');
+    const payload = {
+      date, supplier_id: supplier.get(), ship_cost: sh, ship_account_id: sh > 0 ? shipAcc.get() : null, due_date: goods() - sum(used, p => p.amt) > 0 ? due.get() : null, note: note.value.trim(),
+      lines: lines.map(l => ({ item_id: l.item, qty: l.qty, unit_price: l.price, hold_m: l.m, hold_r: l.r })),
+      payments: used.map(p => ({ account_id: p.acc, amount: p.amt }))
+    };
+    const r = await run(submit, () => rpc('create_purchase', payload));
+    if (!r) return;
+    toast(`فاکتور ${r.no} ثبت شد`); m.close(); await bus.refresh();
+  };
+  const m = modal({
+    title: 'خرید جدید', wide: true,
+    body: h('div', { class: 'form' },
+      h('div', { class: 'two-col dt' }, field('تامین‌کننده', supplier), field('تاریخ', dateCtl)),
+      h('h3', { class: 'sec' }, 'اقلام فاکتور'), linesBox,
+      h('button', { class: 'btn dashed', type: 'button', onclick: addLine }, '＋ افزودن قلم'),
+      h('h3', { class: 'sec' }, 'هزینه حمل خرید (اختیاری)'), field('مبلغ حمل', ship), shipBox,
+      h('h3', { class: 'sec' }, 'پرداخت به تامین‌کننده'), paysBox,
+      h('button', { class: 'btn dashed', type: 'button', onclick: addPay }, '＋ پرداخت دیگر (اگر دو نفر پرداخت کردند)'),
+      sum1, dueBox, field('یادداشت', note)),
+    footer: [submit]
+  });
+  addLine(); addPay();
+  return m;
+}
