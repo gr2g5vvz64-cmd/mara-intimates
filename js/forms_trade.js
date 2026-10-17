@@ -8,6 +8,8 @@ const accOf = name => S.accounts.find(a => a.name === name);
 const seg = (mode, on, cb, a, b) => chips([{ v: 'a', label: a }, { v: 'b', label: b }], mode, cb, { cls: 'two' });
 
 /* ======================= فروش جدید ======================= */
+const MARKUP = 0.20;                                  // فی فروش پیش‌فرض = بهای تمام‌شده + ۲۰٪
+const roundK = n => Math.round(n / 1000) * 1000;       // گرد به هزار ریال
 export function saleForm(preset = {}) {
   const me = S.me && S.me.name !== 'حمیدرضا' ? S.me.name : 'مهسا';
   let seller = preset.seller || me;
@@ -49,28 +51,42 @@ export function saleForm(preset = {}) {
   }
 
   function addLine() {
-    const L = { item: null, qty: 1, price: 0, lot: null, holder: null, manual: false };
+    const L = { item: null, qty: 1, price: 0, lot: null, holder: null, manual: false, touched: false, unit: 0 };
     const hl = () => L.holder || seller, other = () => (seller === 'مهسا' ? 'رعنا' : 'مهسا');
     const cnt = (who, id = L.item) => { const st = S.stock.find(x => x.id === id); return st ? (who === 'مهسا' ? st.rem_m : st.rem_r) : 0; };
+    /* بهای تمام‌شده‌ی هر واحد = قیمت خرید + سهم هزینه‌ی سرشکن‌شده (میانگین وزنی طبق FIFO یا پارت انتخاب‌شده) */
+    const unitNow = () => {
+      if (!L.item) return 0;
+      const f = simulateFifo(L.item, hl(), L.qty, L.lot), got = L.qty - f.short;
+      return got > 0 ? f.cost / got : 0;
+    };
+    const costEl = h('div', { class: 'inp ro', dir: 'ltr', title: 'قیمت خرید + سهم هزینه‌ی سرشکن‌شده', 'aria-label': 'بهای تمام‌شده‌ی هر عدد' }, '—');
+    const showCost = () => { L.unit = unitNow(); costEl.textContent = L.unit ? fmt(Math.round(L.unit)) : '—'; };
+    /* فی فروش پیشنهادی؛ اگر خودت قیمت را دستی عوض کرده باشی (touched) دست نمی‌زند، مگر force */
+    const autoPrice = force => {
+      showCost();
+      if (!force && L.touched) return;
+      const p = L.unit ? roundK(L.unit * (1 + MARKUP)) : 0;
+      L.price = p; priceCtl.set(p || ''); if (force) L.touched = false;
+    };
     const choose = v => {
-      L.item = v; L.lot = null; L.manual = false; autoHolder();
-      const st = S.stock.find(x => x.id === v);
-      if (st && st.last_price && !priceCtl.get()) { priceCtl.set(st.last_price); L.price = st.last_price; }
-      drawLots(); recalc();
+      L.item = v; L.lot = null; L.manual = false; L.touched = false; autoHolder();
+      autoPrice(true); recalc();
     };
     const sel = combo({ placeholder: 'نام کالا را تایپ کن…', onChange: choose });
     L.pick = v => { sel.set(v); choose(v); };
-    const qty = intField({ value: 1, min: 1, onChange: n => { L.qty = n; autoHolder(); recalc(); }, big: true });
-    const priceCtl = numField({ onInput: n => { L.price = n; recalc(); } });
-    const lotSel = h('select', { class: 'sel full', 'aria-label': 'انتخاب دسته‌ی خرید', onchange: () => { L.lot = lotSel.value ? +lotSel.value : null; recalc(); } });
-    const lotBox = h('div', { class: 'lotbox', hidden: true }, h('label', { class: 'lbl' }, 'از کدام دسته‌ی خرید؟'), lotSel);
+    const qty = intField({ value: 1, min: 1, onChange: n => { L.qty = n; autoHolder(); autoPrice(false); recalc(); }, big: true });
+    const priceCtl = numField({ unit: '', onInput: n => { L.price = n; L.touched = true; recalc(); } });
+    const lotBox = h('div', { class: 'lotstrip', hidden: true });
     const holdBox = h('div', { class: 'holdbox', hidden: true });
     const prev = h('div', { class: 'prev' });
-    const lineTot = h('b', { class: 'n' }, '0');
+    const lineTot = h('b', { class: 'n' }, '0'), lineProf = h('span', { class: 'lp' });
     const card = h('div', { class: 'lcard' },
-      h('div', { class: 'lrow' }, sel, h('button', { class: 'rm', type: 'button', 'aria-label': 'حذف این کالا', onclick: () => { lines.splice(lines.indexOf(L), 1); card.remove(); recalc(); } }, '✕')),
-      h('div', { class: 'two-col' }, field('تعداد', qty), field('فی فروش', priceCtl)),
-      holdBox, lotBox, prev, h('div', { class: 'ltot' }, 'جمع این کالا: ', lineTot, ' ریال'));
+      h('div', { class: 'sline' },
+        field('نام کالا', sel, null, 'c-name'), field('تعداد', qty, null, 'c-qty'),
+        field('بهای تمام‌شده (ریال)', costEl, null, 'c-cost'), field('فی فروش (ریال)', priceCtl, null, 'c-price'),
+        h('button', { class: 'rm', type: 'button', 'aria-label': 'حذف این کالا', onclick: () => { lines.splice(lines.indexOf(L), 1); card.remove(); recalc(); } }, '✕')),
+      lotBox, holdBox, prev, h('div', { class: 'ltot' }, 'جمع این کالا: ', lineTot, ' ریال', lineProf));
     function items() {
       return S.stock.filter(i => i.active).map(i => ({ v: i.id, label: i.name, sub: `مهسا ${i.rem_m} · رعنا ${i.rem_r}` }));
     }
@@ -83,22 +99,33 @@ export function saleForm(preset = {}) {
       holdBox.hidden = !L.item;
       if (!L.item) return;
       const btn = who => h('button', { type: 'button', class: 'chip' + (hl() === who ? ' on' : '') + (cnt(who) < 1 ? ' dim' : ''), 'aria-pressed': hl() === who ? 'true' : 'false',
-        onclick: () => { L.holder = who === seller ? null : who; L.manual = true; drawHolder(); drawLots(); recalc(); } }, `${who} · ${cnt(who)} عدد`);
+        onclick: () => { L.holder = who === seller ? null : who; L.manual = true; drawHolder(); drawLots(); autoPrice(false); recalc(); } }, `${who} · ${cnt(who)} عدد`);
       holdBox.replaceChildren(h('label', { class: 'lbl' }, 'از موجودی چه کسی برداشته شود؟'), h('div', { class: 'chips two' }, btn(seller), btn(other())),
         hl() !== seller ? h('div', { class: 'hint' }, `این جنس را ${seller} نزد خودش ندارد؛ از موجودی ${hl()} برداشته می‌شود و فروش به نام ${seller} ثبت می‌شود.`) : null);
     }
+    /* نوار پارت‌ها: وقتی کالا چند خرید جدا دارد؛ هر پارت = شماره‌ی پارت · تعداد نزد برداشت‌کننده · بهای تمام‌شده */
     function drawLots() {
       const key = holdKey(hl());
       const ls = S.lots.filter(l => l.item_id === L.item && !l.voided && l[key] > 0).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id));
+      if (L.lot && !ls.some(l => l.id === L.lot)) L.lot = null;
       lotBox.hidden = ls.length < 2;
-      lotSel.replaceChildren(h('option', { value: '' }, 'خودکار (قدیمی‌ترین اول)'), ...ls.map(l => h('option', { value: l.id }, `${l.lot_no} · فاکتور ${l.invoice_no} · مانده ${l[key]} · تمام‌شده ${fmt(l.landed_unit)}`)));
-      lotSel.value = L.lot || '';
+      const pick = id => { L.lot = id || null; L.touched = false; drawLots(); autoPrice(true); recalc(); };
+      const cell = (lab, val) => h('span', { class: 'lf' }, h('small', null, lab), h('b', null, val));
+      const chip = (id, kids) => h('button', { type: 'button', class: 'lotchip' + ((L.lot || 0) === id ? ' on' : ''), 'aria-pressed': String((L.lot || 0) === id), 'data-lot': id, onclick: () => pick(id) }, kids);
+      lotBox.replaceChildren(
+        h('div', { class: 'lbl' }, `این کالا در چند خرید جدا گرفته شده؛ پارتی را که می‌فروشی بزن (نزد ${hl()})`),
+        h('div', { class: 'lotrow' },
+          chip(0, [cell('پارت', 'خودکار'), cell('تعداد', 'قدیمی‌ترین اول')]),
+          ...ls.map(l => chip(l.id, [cell('پارت', l.lot_no), cell('تعداد', fmt(l[key]) + ' عدد'), cell('بهای تمام‌شده', fmt(Math.round(l.landed_unit)))]))));
     }
-    L.refreshItems = () => { sel.setOptions(items()); L.manual = false; autoHolder(); };
+    L.refreshItems = () => { sel.setOptions(items()); L.manual = false; autoHolder(); autoPrice(false); };
     L.update = () => {
       const f = L.item ? simulateFifo(L.item, hl(), L.qty, L.lot) : { parts: [], short: 0, cost: 0 };
       L.cost = f.cost; L.short = f.short;
       lineTot.textContent = fmt(L.qty * L.price);
+      showCost();
+      const lp = L.item && !f.short ? L.qty * L.price - f.cost : null;
+      lineProf.textContent = lp == null ? '' : ` · سود این کالا: ${fmt(lp)}`; lineProf.className = 'lp ' + (lp != null && lp < 0 ? 'neg' : '');
       prev.className = 'prev' + (f.short > 0 ? ' bad' : '');
       if (!L.item) prev.textContent = '';
       else if (f.short > 0) prev.textContent = `⚠ موجودی «${S.I[L.item].name}» نزد ${hl()} کافی نیست (${f.short} عدد کم است).` + (cnt(other()) > 0 || cnt(seller) > 0 ? ` نزد ${hl() === seller ? other() : seller} ${cnt(hl() === seller ? other() : seller)} عدد هست؛ بالا همان را انتخاب کن.` : ' این کالا نزد هیچ‌کدام موجود نیست.');
