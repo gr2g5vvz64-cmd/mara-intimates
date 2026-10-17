@@ -35,7 +35,25 @@ const ROUTES = {
   savelog: { t: 'گزارش ذخیره', i: '✔', f: () => savelog.render() },
   diag: { t: 'عیب‌یابی', i: '🛠', f: () => diag.render() }
 };
-const sideList = () => ['', 'sales', 'purchases', 'stock', 'pay', 'expenses', 'returns', 'customers', 'invoices', 'finance', 'items', 'suppliers', 'history', 'savelog', 'help', ...(S.me && S.me.role === 'admin' ? ['diag'] : [])];
+/* منوی کناری در پنج گروه (زیرمجموعه‌ها با کلیک روی عنوان باز و بسته می‌شوند) */
+const GROUPS = [
+  { id: 'sales', t: 'فروش', i: '🛍', kids: ['sales', 'customers'] },
+  { id: 'buy', t: 'خرید', i: '📦', kids: ['purchases', 'invoices', 'suppliers', 'returns'] },
+  { id: 'wh', t: 'انبار', i: '▤', kids: ['stock', 'items'] },
+  { id: 'money', t: 'مالی', i: '◎', kids: ['finance', 'pay', 'expenses', 'history'] },
+  { id: 'set', t: 'تنظیمات', i: '⚙', kids: ['help', 'savelog', 'diag'] }
+];
+const NAVLBL = { sales: 'فروش‌ها', purchases: 'خریدها', finance: 'خلاصه‌ی مالی', pay: 'پرداخت به تامین‌کننده' };
+const isAdmin = () => !!(S.me && S.me.role === 'admin');
+const groupOf = k => (GROUPS.find(g => g.kids.includes(k)) || {}).id;
+let grpEls = [];
+const navKey = () => 'mara.nav.' + ((S.me && S.me.name) || '');
+function savedOpen() { try { return new Set(JSON.parse(localStorage.getItem(navKey()) || '[]')); } catch (e) { return new Set(); } }
+function saveOpen() { try { localStorage.setItem(navKey(), JSON.stringify([...new Set(grpEls.filter(x => x.el.classList.contains('open')).map(x => x.g.id))])); } catch (e) { /* بدون ذخیره هم کار می‌کند */ } }
+function setGroup(id, open, persist = true) {
+  grpEls.filter(x => x.g.id === id).forEach(x => { x.el.classList.toggle('open', open); x.btn.setAttribute('aria-expanded', String(open)); });
+  if (persist) saveOpen();
+}
 const BOTTOM = ['', 'sales', 'purchases', 'stock', 'finance'];
 const app = document.getElementById('app');
 let view, navEls = [];
@@ -53,6 +71,7 @@ function route() {
   document.title = `${r.t} · MARA INTIMATES`;
   navEls.forEach(a => a.classList.toggle('on', a.dataset.r === key));
   navEls.forEach(a => (a.dataset.r === key ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
+  const gid = groupOf(key); if (gid) setGroup(gid, true, false); grpEls.forEach(x => x.btn.classList.toggle('hon', x.g.id === gid));
   try { view.replaceChildren(r.f(q)); } catch (e) { console.error(e); reportError('E_UI_RENDER', e.message, 'ui.page.' + key, e.stack); view.replaceChildren(h('div', { class: 'card' }, h('h2', null, 'خطا در نمایش صفحه'), h('p', null, e.message), h('p', { class: 'hint' }, `کد: E_UI_RENDER · صفحه: ${key || 'خانه'} (به‌صورت خودکار برای مدیر ثبت شد)`))); }
   window.scrollTo(0, 0); paintCounts();
 }
@@ -65,6 +84,12 @@ function paintCounts() {
     const k = a.dataset.r, o = c[k], b = a.querySelector('.cnt'); if (!b || !o) { if (b) b.hidden = true; return; }
     b.hidden = false; b.className = 'cnt ' + o.tone; b.textContent = o.q ? '؟' : fmt(o.n);
     b.setAttribute('aria-label', `${o.q ? 'نامشخص' : fmt(o.n)} ${TONE_FA[o.tone]}`);
+  });
+  grpEls.forEach(x => {
+    let n = 0, red = false;
+    x.kids.forEach(k => { const o = c[k]; if (o && !o.q && (o.tone === 'red' || o.tone === 'amber')) { n = Math.max(n, o.n); if (o.tone === 'red') red = true; } });
+    x.cnt.hidden = !n; x.cnt.className = 'cnt ' + (red ? 'red' : 'amber'); x.cnt.textContent = fmt(n);
+    x.cnt.setAttribute('aria-label', `${fmt(n)} مورد باز در ${x.g.t}`);
   });
   const mc = document.getElementById('menucnt');
   if (mc) { const tot = Object.values(c).reduce((a, o) => a + (o.tone === 'red' || o.tone === 'amber' ? o.n : 0), 0); mc.hidden = !tot; mc.textContent = fmt(tot); mc.setAttribute('aria-label', fmt(tot) + ' مورد باز در همه‌ی بخش‌ها'); }
@@ -125,20 +150,31 @@ function themePanel() {
 }
 
 function shell() {
-  const mk = (k, cls) => { const r = ROUTES[k]; const a = h('a', { href: '#/' + k, 'data-r': k, class: cls }, h('span', { class: 'ni', 'aria-hidden': 'true' }, r.i), h('b', { class: 'cnt zero', 'data-c': k, role: 'status' }, '۰'), h('span', { class: 'nt' }, r.t)); navEls.push(a); return a; };
-  navEls = [];
+  const mk = (k, cls) => { const r = ROUTES[k]; const a = h('a', { href: '#/' + k, 'data-r': k, class: cls }, h('span', { class: 'ni', 'aria-hidden': 'true' }, r.i), h('b', { class: 'cnt zero', 'data-c': k, role: 'status' }, '۰'), h('span', { class: 'nt' }, NAVLBL[k] || r.t)); navEls.push(a); return a; };
+  navEls = []; grpEls = [];
+  const grp = (g, cls) => {
+    const kids = g.kids.filter(k => k !== 'diag' || isAdmin());
+    const cnt = h('b', { class: 'cnt amber', hidden: true, role: 'status' });
+    const kidsEl = h('div', { class: 'gk', id: `gk-${cls}-${g.id}` }, kids.map(k => mk(k, cls)));
+    const btn = h('button', { type: 'button', class: 'gh', 'aria-expanded': 'false', 'aria-controls': kidsEl.id, onclick: () => setGroup(g.id, !el.classList.contains('open')) },
+      h('span', { class: 'ni', 'aria-hidden': 'true' }, g.i), cnt, h('span', { class: 'nt' }, g.t), h('span', { class: 'chev', 'aria-hidden': 'true' }, '▾'));
+    const el = h('div', { class: 'grp' }, btn, kidsEl);
+    grpEls.push({ g, kids, el, btn, cnt }); return el;
+  };
+  const navList = cls => [mk('', cls), ...GROUPS.map(g => grp(g, cls))];
   const drawer = h('div', { class: 'drawer', hidden: true, onclick: e => { if (e.target === drawer || e.target.closest('a')) drawer.hidden = true; } },
-    h('nav', { class: 'dnav', 'aria-label': 'همه‌ی بخش‌ها' }, h('div', { class: 'dh' }, h('b', null, 'همه‌ی بخش‌ها'), h('button', { type: 'button', class: 'x', 'aria-label': 'بستن', onclick: () => { drawer.hidden = true; } }, '✕')), sideList().map(k => mk(k, 'dl'))));
+    h('nav', { class: 'dnav', 'aria-label': 'همه‌ی بخش‌ها' }, h('div', { class: 'dh' }, h('b', null, 'همه‌ی بخش‌ها'), h('button', { type: 'button', class: 'x', 'aria-label': 'بستن', onclick: () => { drawer.hidden = true; } }, '✕')), navList('dl')));
   view = h('main', { id: 'view', tabindex: '-1' });
   app.replaceChildren(
     h('a', { href: '#view', class: 'skip' }, 'رفتن به محتوا'),
     h('aside', { class: 'side' }, h('div', { class: 'brand' }, h('img', { class: 'brand-mark', src: 'icons/logo-mark.jpg', alt: 'MR', width: 40, height: 40 }), h('div', null, h('b', null, 'MARA'), h('small', null, 'INTIMATES'))),
-      h('nav', { 'aria-label': 'بخش‌ها' }, sideList().map(k => mk(k, 'sl'))),
+      h('nav', { 'aria-label': 'بخش‌ها' }, navList('sl')),
       h('div', { class: 'who' }, h('div', { class: 'av' }, S.me.name[0]), h('div', null, h('b', null, S.me.name), h('small', null, jlong(todayISO()))))),
     h('header', { class: 'top' }, h('button', { type: 'button', class: 'menu', 'aria-label': 'منو', onclick: () => { drawer.hidden = false; } }, '☰', h('b', { class: 'cnt red', id: 'menucnt', hidden: true })), h('div', { class: 'brand sm' }, h('img', { class: 'brand-mark', src: 'icons/logo-mark.jpg', alt: 'MR', width: 40, height: 40 }), h('b', null, 'MARA')), h('div', { class: 'av' }, S.me.name[0])),
     h('div', { class: 'content' }, themePanel(), h('div', { id: 'savebar', hidden: true, role: 'status', 'aria-live': 'polite' }), view), drawer,
     h('nav', { class: 'bottom', 'aria-label': 'ناوبری اصلی' }, BOTTOM.map(k => mk(k, 'bl'))),
     h('div', { class: 'progress' }));
+  const op = savedOpen(); GROUPS.forEach(g => setGroup(g.id, op.has(g.id), false));
 }
 
 const brandBig = () => h('div', { class: 'brand big' }, h('img', { class: 'logo-full', src: 'icons/logo-full.jpg', alt: 'MARA INTIMATES', width: 360, height: 233 }));
