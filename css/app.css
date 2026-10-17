@@ -49,6 +49,16 @@ button,input,select{font-family:inherit}
 .dnav a{display:flex;align-items:center;gap:10px;padding:0 12px;min-height:48px;border-radius:12px;text-decoration:none;color:var(--ink)}
 .dnav a.on{background:var(--tint);font-weight:800}
 .dnav a .ni{width:26px;text-align:center}
+.grp{display:flex;flex-direction:column;gap:2px}
+.gh{display:flex;align-items:center;gap:10px;width:100%;padding:0 12px;min-height:48px;border:0;border-radius:12px;background:transparent;cursor:pointer;font:inherit;font-weight:700;text-align:start;color:var(--ink)}
+.gh .ni{width:26px;text-align:center} .gh .nt{flex:1}
+.gh .chev{font-size:12px;opacity:.65;transition:transform .15s}
+.grp.open>.gh .chev{transform:rotate(180deg)}
+.grp:not(.open)>.gk{display:none}
+.gk{display:flex;flex-direction:column;gap:2px;margin-inline-start:22px;padding-inline-start:8px;border-inline-start:2px solid var(--line)}
+.gh.hon{background:var(--tint)}
+.dnav .gh:hover{background:var(--tint)}
+.gh:focus-visible{outline:3px solid var(--gold);outline-offset:1px}
 .progress{position:fixed;top:0;inset-inline:0;height:3px;z-index:300;background:linear-gradient(90deg,transparent,var(--gold),transparent);background-size:50% 100%;background-repeat:no-repeat;opacity:0}
 body.busy .progress{opacity:1;animation:slide 1s linear infinite}
 @keyframes slide{from{background-position:120% 0}to{background-position:-120% 0}}
@@ -63,6 +73,11 @@ body.busy .progress{opacity:1;animation:slide 1s linear infinite}
   .side nav a:hover{background:rgba(255,255,255,.08)}
   .side nav a.on{background:var(--gold);color:var(--onp);font-weight:800}
   .side nav a .ni{width:24px;text-align:center}
+  .side nav .gh{min-height:44px;color:var(--deepfg2)}
+  .side nav .gh:hover{background:rgba(255,255,255,.08)}
+  .side nav .gh.hon{background:transparent;color:var(--gold)}
+  .side nav .gk{border-inline-start-color:rgba(255,255,255,.18)}
+  .side .gh .cnt.red,.side .gh .cnt.amber{margin-inline-start:0}
   .side .who{display:flex;gap:10px;align-items:center;padding:10px 8px;border-top:1px solid rgba(255,255,255,.12)}
   .side .who small{display:block;color:var(--deepfg2);opacity:.8;font-size:11.5px}
   .top,.bottom{display:none}
