@@ -240,6 +240,23 @@ table.t{border-collapse:separate;border-spacing:0;width:100%;font-size:14px}
 .ltot{font-size:13.5px;color:var(--brown);text-align:end}
 .prev{font-size:12.5px;color:var(--green);margin:4px 0 6px;line-height:1.8} .prev.bad{color:var(--red);font-weight:700}
 .lotbox{margin-bottom:8px}
+.sline{display:grid;grid-template-columns:minmax(150px,1.7fr) 124px minmax(112px,1fr) minmax(112px,1fr) 46px;gap:8px;align-items:end;margin-bottom:8px}
+.sline .fld{margin:0}
+.sline .inp.ro{display:flex;align-items:center;justify-content:flex-end;min-height:46px;padding:0 10px;background:var(--tint);color:var(--brown);font-weight:700;border:1px dashed var(--line);border-radius:12px;cursor:default;user-select:text;font-size:15px}
+.sline .numf .inp{padding-inline-end:10px;padding-inline-start:8px}
+.sline .stp button{width:34px} .sline .stp .inp{width:100%}
+.sline .cmb-list{inset-inline-end:auto;min-width:min(330px,86vw)}
+.lotstrip{margin:2px 0 8px}
+.lotrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.lotchip{display:flex;gap:14px;align-items:center;border:1.5px solid var(--line);background:var(--card);border-radius:12px;padding:6px 12px;min-height:50px;cursor:pointer;color:var(--ink);font:inherit;text-align:start}
+.lotchip.on{border-color:var(--gold);background:var(--tint)}
+.lotchip .lf{display:flex;flex-direction:column;line-height:1.35} .lotchip small{font-size:11px;color:var(--brown)} .lotchip b{font-size:14px}
+.ltot .lp{color:var(--green);font-weight:700} .ltot .lp.neg{color:var(--red)}
+@media (max-width:700px){
+  .sline{grid-template-columns:repeat(3,minmax(0,1fr)) 46px}
+  .sline .c-name{grid-column:1/4;grid-row:1} .sline .rm{grid-column:4;grid-row:1}
+  .sline .c-qty{grid-column:1;grid-row:2} .sline .c-cost{grid-column:2;grid-row:2} .sline .c-price{grid-column:3/5;grid-row:2}
+}
 .warnbox{background:var(--red-bg);color:var(--red);padding:10px 14px;border-radius:12px;margin:10px 0;font-size:14px}
 .warnbox[hidden]{display:none}
 .dl{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:0 0 6px}
