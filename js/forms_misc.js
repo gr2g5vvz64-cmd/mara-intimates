@@ -277,7 +277,7 @@ export function itemForm(it) {
   btn.onclick = async () => { if (!cat.get()) return toast('دسته‌ی کالا را انتخاب کن', 'err'); const r = await run(btn, () => rpc('save_item', { id: it && it.id, name: name.value, description: desc.value, category: cat.get(), min_stock: min.get(), active: act.get() })); if (r) finish(m, 'ذخیره شد'); };
   const delBtn = h('button', { class: 'btn danger ghost', type: 'button' }, 'حذف کالا');
   delBtn.onclick = async () => { if (!(await confirmBox(`«${it.name}» حذف شود؟ از لیست‌ها کنار می‌رود و سوابق مالی‌اش (فاکتورها و سود) می‌ماند. کالایی که موجودی دارد حذف نمی‌شود.`, 'حذف کن', true))) return; const r = await run(delBtn, () => rpc('save_item', { id: it.id, name: it.name, category: it.category, min_stock: it.min_stock, active: false })); if (r) finish(m, 'کالا حذف شد'); };
-  const m = modal({ title: it ? 'ویرایش کالا' : 'کالای جدید', body: h('div', { class: 'form' }, field('نام کالا', name, used && S.me.role !== 'admin' ? 'این کالا در خرید/فروش استفاده شده؛ نامش را فقط حمیدرضا می‌تواند عوض کند.' : null), field('توضیحات کالا', desc, 'در فاکتور خرید و فروش کنار این کالا دیده می‌شود.'), field('دسته', cat), field('هشدار کم‌موجودی از … عدد', min), it ? field('وضعیت', act) : null), footer: [btn, ...(it ? [delBtn] : [])] });
+  const m = modal({ title: it ? 'ویرایش کالا' : 'کالای جدید', body: h('div', { class: 'form' }, field('نام کالا', name, used && !canEdit() ? 'این کالا در خرید/فروش استفاده شده؛ نامش را فقط حمیدرضا و مهسا می‌توانند عوض کنند.' : null), field('توضیحات کالا', desc, 'در فاکتور خرید و فروش کنار این کالا دیده می‌شود.'), field('دسته', cat), field('هشدار کم‌موجودی از … عدد', min), it ? field('وضعیت', act) : null), footer: [btn, ...(it ? [delBtn] : [])] });
 }
 export function supplierForm(s) {
   if (s && !canEdit()) { toast("ویرایش فقط برای حمیدرضا و مهسا باز است", "err"); return; }
@@ -289,7 +289,7 @@ export function supplierForm(s) {
   btn.onclick = async () => { const r = await run(btn, () => rpc('save_supplier', { id: s && s.id, name: name.value, phone: phone.value, address: addr.value, note: note.value, active: act.get() })); if (r) finish(m, 'ذخیره شد'); };
   const delBtn = h('button', { class: 'btn danger ghost', type: 'button' }, 'حذف تامین‌کننده');
   delBtn.onclick = async () => { if (!(await confirmBox(`«${s.name}» حذف شود؟ از لیست‌ها کنار می‌رود و فاکتورهایش می‌ماند. تا حساب باز دارید حذف نمی‌شود.`, 'حذف کن', true))) return; const r = await run(delBtn, () => rpc('save_supplier', { id: s.id, name: s.name, phone: s.phone, address: s.address, note: s.note, active: false })); if (r) finish(m, 'تامین‌کننده حذف شد'); };
-  const m = modal({ title: s ? 'ویرایش تامین‌کننده' : 'تامین‌کننده‌ی جدید', body: h('div', { class: 'form' }, field('نام', name, used && S.me.role !== 'admin' ? 'با این تامین‌کننده فاکتور ثبت شده؛ نامش را فقط حمیدرضا می‌تواند عوض کند.' : null), field('تلفن', phone), field('نشانی', addr), field('یادداشت', note), s ? field('وضعیت', act) : null), footer: [btn, ...(s ? [delBtn] : [])] });
+  const m = modal({ title: s ? 'ویرایش تامین‌کننده' : 'تامین‌کننده‌ی جدید', body: h('div', { class: 'form' }, field('نام', name, used && !canEdit() ? 'با این تامین‌کننده فاکتور ثبت شده؛ نامش را فقط حمیدرضا و مهسا می‌توانند عوض کنند.' : null), field('تلفن', phone), field('نشانی', addr), field('یادداشت', note), s ? field('وضعیت', act) : null), footer: [btn, ...(s ? [delBtn] : [])] });
 }
 
 /* ----- مشتری ----- */
@@ -304,7 +304,7 @@ export function customerForm(c, after) {
   btn.onclick = async () => { const r = await run(btn, () => rpc('save_customer', { id: c && c.id, name: name.value, phone: phone.value, note: note.value, active: act.get() })); if (r) { await finish(m, 'ذخیره شد'); after && after(r); } };
   const delBtn = h('button', { class: 'btn danger ghost', type: 'button' }, 'حذف مشتری');
   delBtn.onclick = async () => { if (!(await confirmBox(`«${c.name}» حذف شود؟ از لیست‌ها کنار می‌رود و فروش‌هایش می‌ماند. مشتری بدهکار حذف نمی‌شود.`, 'حذف کن', true))) return; const r = await run(delBtn, () => rpc('save_customer', { id: c.id, name: c.name, phone: c.phone, note: c.note, active: false })); if (r) { await finish(m, 'مشتری حذف شد'); after && after(r); } };
-  const m = modal({ title: c ? 'ویرایش مشتری' : 'مشتری جدید', body: h('div', { class: 'form' }, field('نام', name, used && S.me.role !== 'admin' ? 'برای این مشتری فروش ثبت شده؛ نامش را فقط حمیدرضا می‌تواند عوض کند.' : null), field('تلفن', phone), field('یادداشت', note), c ? field('وضعیت', act) : null), footer: [btn, ...(c ? [delBtn] : [])] });
+  const m = modal({ title: c ? 'ویرایش مشتری' : 'مشتری جدید', body: h('div', { class: 'form' }, field('نام', name, used && !canEdit() ? 'برای این مشتری فروش ثبت شده؛ نامش را فقط حمیدرضا و مهسا می‌توانند عوض کنند.' : null), field('تلفن', phone), field('یادداشت', note), c ? field('وضعیت', act) : null), footer: [btn, ...(c ? [delBtn] : [])] });
 }
 
 /* ----- دریافت کلی از مشتری (کامل یا قسطی؛ روی قدیمی‌ترین بدهی‌ها می‌نشیند) ----- */

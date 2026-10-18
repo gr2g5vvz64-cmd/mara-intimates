@@ -275,17 +275,16 @@ export function purchaseForm(preset = {}) {
     const qty = intField({ value: 1, min: 1, big: true, onChange: n => { L.qty = n; if (!L.manual) { L.m = Math.ceil(n / 2); L.r = n - L.m; } else { L.m = Math.min(L.m, n); L.r = n - L.m; } mS.set(L.m); rS.set(L.r); recalc(); } });
     const quick = h('div', { class: 'quick' },
       h('button', { type: 'button', class: 'mini', onclick: () => { L.m = L.qty; L.r = 0; mS.set(L.m); rS.set(0); L.manual = true; recalc(); } }, 'همه مهسا'),
-      h('button', { type: 'button', class: 'mini', onclick: () => { L.m = Math.ceil(L.qty / 2); L.r = L.qty - L.m; mS.set(L.m); rS.set(L.r); L.manual = false; recalc(); } }, 'نصف‌نصف'),
+      h('button', { type: 'button', class: 'mini', onclick: () => { L.m = Math.ceil(L.qty / 2); L.r = L.qty - L.m; mS.set(L.m); rS.set(L.r); L.manual = false; recalc(); } }, 'نصف'),
       h('button', { type: 'button', class: 'mini', onclick: () => { L.r = L.qty; L.m = 0; mS.set(0); rS.set(L.r); L.manual = true; recalc(); } }, 'همه رعنا'));
     const prev = h('div', { class: 'prev' });
     const tot = h('b', { class: 'n' }, '0');
-    L.update = (share, dshare = 0) => { const lt = L.qty * L.price; tot.textContent = fmt(lt); const landed = L.qty ? (lt + share - dshare) / L.qty : 0; prev.textContent = L.item && L.price ? `قیمت تمام‌شده‌ی هر عدد (با سهم حمل` + (dshare > 0 ? ' و تخفیف' : '') + `): ${fmt(Math.round(landed))}` : ''; };
-    const card = h('div', { class: 'lcard' },
+    L.update = (share, dshare = 0) => { const lt = L.qty * L.price; tot.textContent = fmt(lt); const landed = L.qty ? (lt + share - dshare) / L.qty : 0; prev.textContent = L.item && L.price ? `تمام‌شده‌ی هر عدد` + (share || dshare > 0 ? ' (با حمل/تخفیف)' : '') + `: ${fmt(Math.round(landed))}` : ''; };
+    const card = h('div', { class: 'lcard pline' },
       h('div', { class: 'lrow' }, sel, h('button', { class: 'rm', type: 'button', 'aria-label': 'حذف این قلم', onclick: () => { lines.splice(lines.indexOf(L), 1); card.remove(); recalc(); } }, '✕')),
       descEl,
-      h('div', { class: 'two-col' }, field('تعداد', qty), field('فی خرید', price)),
-      h('div', { class: 'two-col' }, field('تحویل مهسا', mS), field('تحویل رعنا', rS)), quick, prev,
-      h('div', { class: 'ltot' }, 'جمع این قلم: ', tot, ' ریال'));
+      h('div', { class: 'pgrid' }, field('تعداد', qty), field('فی خرید (ریال)', price), field('مهسا', mS), field('رعنا', rS)),
+      h('div', { class: 'pfoot' }, h('span', { class: 'ltot' }, 'جمع: ', tot), quick), prev);
     L.prefill = d => {   // پر کردن قلم هنگام ویرایش
       sel.set(d.item); L.item = d.item; L.qty = d.qty; qty.set(d.qty); L.price = d.price; price.set(d.price);
       L.m = d.m; L.r = d.r; L.manual = true; mS.set(d.m); rS.set(d.r); showDesc(); recalc();
