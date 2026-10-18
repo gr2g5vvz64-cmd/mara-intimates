@@ -421,3 +421,6 @@ ul.plain{list-style:none;padding:0;margin:4px 0}
 }
 @media (min-width:701px){.t td:first-child{white-space:nowrap}}
 @media (min-width:701px){.t th{white-space:normal;line-height:1.4;vertical-align:middle}}
+.logout{margin-top:6px}
+.side .side-out{width:100%;color:var(--deepfg);border-color:rgba(255,255,255,.35);background:transparent}
+.dfoot{padding:12px;border-top:1px solid var(--line)} .dfoot .logout{width:100%}

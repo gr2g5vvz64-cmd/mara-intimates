@@ -38,7 +38,7 @@ const ROUTES = {
   calc: { t: 'محاسبات و درصد سود', i: '％', f: () => calc.render() },
   savelog: { t: 'گزارش ذخیره', i: '✔', f: () => savelog.render() },
   diag: { t: 'عیب‌یابی', i: '🛠', f: () => diag.render() },
-  settings: { t: 'تم رنگی', i: '🎨', f: () => h('div', null, h('div', { class: 'phead' }, h('h1', null, 'تنظیمات ظاهر')), h('p', { class: 'hint' }, 'تمی که انتخاب می‌کنی فقط برای خودت و روی همین دستگاه می‌ماند.'), themePanel(true)) }
+  settings: { t: 'تم رنگی', i: '🎨', f: () => h('div', null, h('div', { class: 'phead' }, h('h1', null, 'تنظیمات ظاهر')), h('p', { class: 'hint' }, 'تمی که انتخاب می‌کنی فقط برای خودت و روی همین دستگاه می‌ماند.'), themePanel(true), h('h3', { class: 'sec' }, 'حساب کاربری'), h('div', { class: 'card' }, h('p', null, 'وارد شده با نام «' + S.me.name + '».'), logoutBtn())) }
 };
 /* منوی کناری در پنج گروه (زیرمجموعه‌ها با کلیک روی عنوان باز و بسته می‌شوند) */
 const GROUPS = [
@@ -139,6 +139,9 @@ onOutbox((type, d) => {
 });
 window.addEventListener('online', () => { renderBar(); if (staleErr) refresh(); }); window.addEventListener('offline', renderBar);
 
+async function logout() { if (!confirm('از حساب «' + S.me.name + '» خارج می‌شوی؟')) return; try { await api('/api/auth/logout/', { method: 'POST' }); } catch {} setToken(null); location.reload(); }
+const logoutBtn = (cls = '') => h('button', { type: 'button', class: 'btn danger ghost sm logout ' + cls, onclick: logout }, '⎋ خروج از حساب');
+
 function themePanel(startOpen = false) {
   const wrap = h('section', { class: 'themebar', 'aria-label': 'تم رنگی' });
   const strip = t => h('span', { class: 'tb-sw', 'aria-hidden': 'true' }, t.sw.map(c => h('i', { style: { background: c } })));
@@ -168,14 +171,14 @@ function shell() {
   };
   const navList = cls => [mk('', cls), ...GROUPS.map(g => grp(g, cls))];
   const drawer = h('div', { class: 'drawer', hidden: true, onclick: e => { if (e.target === drawer || e.target.closest('a')) drawer.hidden = true; } },
-    h('nav', { class: 'dnav', 'aria-label': 'همه‌ی بخش‌ها' }, h('div', { class: 'dh' }, h('b', null, 'همه‌ی بخش‌ها'), h('button', { type: 'button', class: 'x', 'aria-label': 'بستن', onclick: () => { drawer.hidden = true; } }, '✕')), navList('dl')));
+    h('nav', { class: 'dnav', 'aria-label': 'همه‌ی بخش‌ها' }, h('div', { class: 'dh' }, h('b', null, 'همه‌ی بخش‌ها'), h('button', { type: 'button', class: 'x', 'aria-label': 'بستن', onclick: () => { drawer.hidden = true; } }, '✕')), navList('dl'), h('div', { class: 'dfoot' }, logoutBtn())));
   document.body.classList.toggle('ro', !!(S.me && S.me.role === 'viewer'));
   view = h('main', { id: 'view', tabindex: '-1' });
   app.replaceChildren(
     h('a', { href: '#view', class: 'skip' }, 'رفتن به محتوا'),
     h('aside', { class: 'side' }, h('div', { class: 'brand' }, h('img', { class: 'brand-mark', src: 'icons/logo-mark.jpg', alt: 'MR', width: 40, height: 40 }), h('div', null, h('b', null, 'MARA'), h('small', null, 'INTIMATES'))),
       h('nav', { 'aria-label': 'بخش‌ها' }, navList('sl')),
-      h('div', { class: 'who' }, h('div', { class: 'av' }, S.me.name[0]), h('div', null, h('b', null, S.me.name), h('small', null, jlong(todayISO()))))),
+      h('div', { class: 'who' }, h('div', { class: 'av' }, S.me.name[0]), h('div', null, h('b', null, S.me.name), h('small', null, jlong(todayISO())))), logoutBtn('side-out')),
     h('header', { class: 'top' }, h('button', { type: 'button', class: 'menu', 'aria-label': 'منو', onclick: () => { drawer.hidden = false; } }, '☰', h('b', { class: 'cnt red', id: 'menucnt', hidden: true })), h('div', { class: 'brand sm' }, h('img', { class: 'brand-mark', src: 'icons/logo-mark.jpg', alt: 'MR', width: 40, height: 40 }), h('b', null, 'MARA')), h('div', { class: 'av' }, S.me.name[0])),
     h('div', { class: 'content' }, h('div', { id: 'savebar', hidden: true, role: 'status', 'aria-live': 'polite' }), view), drawer,
     h('nav', { class: 'bottom', 'aria-label': 'ناوبری اصلی' }, BOTTOM.map(k => mk(k, 'bl'))),
