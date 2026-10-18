@@ -47,10 +47,10 @@ const GROUPS = [
   { id: 'sales', t: 'فروش', i: '🛍', kids: ['sales', 'customers', 'returns'] },
   { id: 'buy', t: 'خرید', i: '📦', kids: ['purchases', 'suppliers', 'sreturns'] },
   { id: 'wh', t: 'انبار', i: '▤', kids: ['stock', 'items'] },
-  { id: 'money', t: 'مالی', i: '◎', kids: ['finance', 'pay', 'invoices', 'expenses'] },
+  { id: 'money', t: 'مالی', i: '◎', kids: ['finance', 'pay', 'invoices'] },
   { id: 'set', t: 'تنظیمات', i: '⚙', kids: ['settings', 'history', 'help', 'savelog', 'diag'] }
 ];
-const NAVLBL = { sales: 'فاکتور فروش', purchases: 'فاکتور خرید', finance: 'خلاصه‌ی مالی', pay: 'پرداخت به تامین‌کننده', calc: 'محاسبات درصد' };
+const NAVLBL = { sales: 'فاکتور فروش', purchases: 'فاکتور خرید', finance: 'خلاصه‌ی مالی', pay: 'پرداخت و هزینه', calc: 'محاسبات درصد' };
 const BLBL = { '': 'خانه', sales: 'فروش', purchases: 'خرید', stock: 'موجودی', finance: 'مالی' };
 const navLabel = (k, cls) => (cls === 'bl' && BLBL[k]) || (k === '' && isAdmin() ? 'داشبورد مدیریت' : NAVLBL[k] || ROUTES[k].t);
 const isAdmin = () => !!(S.me && S.me.role === 'admin');
