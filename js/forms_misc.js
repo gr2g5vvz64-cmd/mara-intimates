@@ -121,39 +121,63 @@ export function transferForm(preset = {}) {
   const m = modal({ title: 'انتقال بین حساب‌ها', body: h('div', { class: 'form' }, kindChips, hk, field('تاریخ', dateField(date, v => { date = v; })), field('از حساب', from), field('به حساب', to), field('مبلغ', amt), field('توضیح', note)), footer: [btn] });
 }
 
-/* ----- انتقال سرمایه بین مهسا و رعنا (برابر کردن سهم‌ها) ----- */
+/* ----- انتقال سرمایه / برابر کردن سهم‌ها -----
+   دو راه برای رسیدن به سهم برابر:
+   ۱) «پرداخت به شریک»: یکی از جیب خودش مبلغی (هر مقدار دلخواه) به دیگری می‌دهد؛ پول کسب‌وکار تغییر نمی‌کند، سرمایه‌ی گیرنده کم و پرداخت‌کننده زیاد می‌شود. برابر شدن کامل = نصفِ تفاوت.
+   ۲) «واریز به کسب‌وکار»: شریکِ کم‌سرمایه پول تازه به حساب کسب‌وکار می‌ریزد؛ برابر شدن کامل = کل تفاوت. */
 export function capitalForm() {
   const T = S.totals || {}, capM = T.capital_m || 0, capR = T.capital_r || 0;
-  let date = todayISO(), payer = capM >= capR ? 'رعنا' : 'مهسا';
-  const other = p => (p === 'مهسا' ? 'رعنا' : 'مهسا');
+  const cap = p => (p === 'مهسا' ? capM : capR), other = p => (p === 'مهسا' ? 'رعنا' : 'مهسا');
   const pocketOf = o => S.accounts.find(a => a.kind === 'pocket' && a.owner === o);
-  const who = chips([{ v: 'رعنا', label: 'رعنا به مهسا می‌دهد' }, { v: 'مهسا', label: 'مهسا به رعنا می‌دهد' }], payer, v => { payer = v; prev(); }, { cls: 'two' });
+  let date = todayISO(), mode = 'pay', payer = capM >= capR ? 'رعنا' : 'مهسا';
+  const modeChips = chips([{ v: 'pay', label: 'پرداخت به شریک (از جیب خودش)' }, { v: 'inject', label: 'واریز پول تازه به کسب‌وکار' }], mode, v => { mode = v; layout(); prev(); }, { cls: 'two' });
+  const who = chips([{ v: 'مهسا', label: 'مهسا' }, { v: 'رعنا', label: 'رعنا' }], payer, v => { payer = v; prev(); }, { cls: 'two' });
   const amt = numField({ value: '', onInput: () => prev() });
+  const acc = accountPicker(businessAccounts(), null, () => {}, { pockets: false, balances: accBalance });
+  const accBox = h('div', null, field('به کدام حساب کسب‌وکار واریز شد؟', acc));
   const note = h('input', { class: 'inp', placeholder: 'توضیح (اختیاری)' });
-  const pv = h('div', { class: 'prev' });
+  const pv = h('div', { class: 'prev' }), hint = h('div', { class: 'hint' });
+  const diff = () => Math.abs(capM - capR), small = () => (capM <= capR ? 'مهسا' : 'رعنا'), big = () => other(small());
+  const layout = () => {
+    accBox.hidden = mode !== 'inject';
+    hint.textContent = mode === 'pay'
+      ? 'هر مبلغ دلخواهی را می‌توانی بنویسی (مثلاً ۳ میلیون). پول از جیب شخصی پرداخت‌کننده به دیگری می‌رود؛ پول و حساب‌های کسب‌وکار تغییری نمی‌کند، فقط سرمایه‌ی دو نفر جابه‌جا می‌شود. برای سهم کاملاً برابر، دکمه‌ی زیر نصفِ تفاوت را می‌نویسد.'
+      : 'پول تازه‌ای که یک نفر از جیب خودش به حساب کسب‌وکار می‌ریزد؛ سرمایه‌ی او زیاد می‌شود و حساب کسب‌وکار هم همان مقدار بالا می‌رود. برای سهم کاملاً برابر، دکمه‌ی زیر کل تفاوت را می‌نویسد.';
+    equal.textContent = mode === 'pay' ? 'برابر کردن کامل (نصفِ تفاوت)' : 'برابر کردن کامل (کل تفاوت)';
+  };
   const equal = h('button', { type: 'button', class: 'btn ghost', onclick: () => {
-    const big = capM >= capR ? 'مهسا' : 'رعنا', diff = Math.abs(capM - capR);
-    if (diff < 1) return toast('سرمایه‌ها همین حالا برابرند', 'ok');
-    payer = other(big); who.set(payer); amt.set(Math.floor(diff / 2)); prev();
-  } }, 'برابر کردن سهم‌ها (محاسبه‌ی خودکار)');
+    if (diff() < 1) return toast('سرمایه‌ها همین حالا برابرند');
+    if (mode === 'pay') { payer = small(); amt.set(Math.floor(diff() / 2)); } else { payer = small(); amt.set(Math.round(diff())); }
+    who.set(payer); prev();
+  } });
+  const after = () => {
+    const a = amt.get() || 0; let m = capM, r = capR;
+    if (mode === 'pay') { if (payer === 'مهسا') { m += a; r -= a; } else { r += a; m -= a; } } else { if (payer === 'مهسا') m += a; else r += a; }
+    return { m, r, a };
+  };
   const prev = () => {
-    const a = amt.get() || 0, rcv = other(payer), cm = capM + (rcv === 'مهسا' ? -a : a), cr = capR + (rcv === 'رعنا' ? -a : a);
-    pv.textContent = `سرمایه پس از انتقال: مهسا ${fmt(cm)} · رعنا ${fmt(cr)}`; pv.classList.toggle('bad', a > (rcv === 'مهسا' ? capM : capR));
+    const { m, r, a } = after();
+    pv.textContent = `سرمایه پس از این ثبت: مهسا ${fmt(m)} · رعنا ${fmt(r)}` + (a && Math.abs(m - r) < 1 ? '  ✓ برابر' : a ? `  (تفاوت ${fmt(Math.abs(m - r))})` : '');
+    pv.classList.toggle('bad', m < 0 || r < 0);
   };
-  prev();
-  const btn = h('button', { class: 'btn primary lg', type: 'button' }, 'ثبت انتقال سرمایه');
+  layout(); prev();
+  const btn = h('button', { class: 'btn primary lg', type: 'button' }, 'ثبت');
   btn.onclick = async () => {
-    const a = amt.get(), rcv = other(payer);
+    const { a, m, r } = after();
     if (!a) return toast('مبلغ را بنویس', 'err');
-    const from = pocketOf(payer), to = pocketOf(rcv);
-    if (!from || !to) return toast('جیب شخصی پیدا نشد', 'err');
-    const r = await run(btn, () => rpc('add_transfer', { date, from_account_id: from.id, to_account_id: to.id, amount: a, kind: 'capital', note: note.value }));
-    if (r) finish(m, 'انتقال سرمایه ثبت شد');
+    if (m < 0 || r < 0) return toast('این مبلغ بیشتر از سرمایه‌ی گیرنده است', 'err');
+    const from = pocketOf(payer); if (!from) return toast('جیب شخصی پیدا نشد', 'err');
+    let payload;
+    if (mode === 'pay') { const to = pocketOf(other(payer)); if (!to) return toast('جیب شخصی پیدا نشد', 'err'); payload = { from_account_id: from.id, to_account_id: to.id, amount: a, kind: 'capital', note: note.value }; }
+    else { if (!acc.get()) return toast('حساب کسب‌وکار را انتخاب کن', 'err'); payload = { from_account_id: from.id, to_account_id: acc.get(), amount: a, kind: 'transfer', note: note.value || 'سرمایه‌ی تازه' }; }
+    const res = await run(btn, () => rpc('add_transfer', { date, ...payload }));
+    if (res) finish(m_, 'ثبت شد');
   };
-  const m = modal({ title: 'انتقال سرمایه', body: h('div', { class: 'form' },
-    h('div', { class: 'hint' }, `الان سرمایه‌ی مهسا ${fmt(capM)} و سرمایه‌ی رعنا ${fmt(capR)} ریال است. وقتی یکی از شرکا بخشی از سرمایه‌ی دیگری را از جیب خودش به او پرداخت می‌کند، همین‌جا ثبت کن؛ مجموع سرمایه و حساب‌های کسب‌وکار تغییر نمی‌کند.`),
-    equal, who, field('تاریخ', dateField(date, v => { date = v; })), field('مبلغ پرداختی (ریال)', amt), pv, field('توضیح', note)), footer: btn });
-  return m;
+  const m_ = modal({ title: 'انتقال سرمایه / برابر کردن سهم‌ها', body: h('div', { class: 'form' },
+    h('div', { class: 'hint' }, `سرمایه‌ی فعلی: مهسا ${fmt(capM)} · رعنا ${fmt(capR)} ریال (تفاوت ${fmt(diff())})`),
+    modeChips, hint, equal, field(mode === 'pay' ? 'چه کسی می‌پردازد؟' : 'چه کسی واریز می‌کند؟', who), field('تاریخ', dateField(date, v => { date = v; })),
+    field('مبلغ (ریال)', amt), accBox, pv, field('توضیح', note)), footer: btn });
+  return m_;
 }
 
 /* ----- مرجوعی از مشتری ----- */

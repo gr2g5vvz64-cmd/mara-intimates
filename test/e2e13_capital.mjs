@@ -13,13 +13,21 @@ try {
   ok(body.includes('سرمایه‌ی مهسا') && body.includes('سرمایه‌ی رعنا'), 'صفحه‌ی مالی: «سرمایه‌ی مهسا/رعنا» به‌جای جیب منفی');
   ok(!body.includes('جیب شخصی مهسا') && !body.includes('جیب شخصی رعنا'), 'جیب شخصی منفی دیگر نمایش داده نمی‌شود');
   await page.locator('button', { hasText: 'انتقال سرمایه' }).first().click(); await M.waitFor(); await sleep(400);
-  await M.locator('button', { hasText: 'برابر کردن سهم‌ها' }).click(); await sleep(300);
+  await M.locator('button', { hasText: 'برابر کردن کامل' }).click(); await sleep(300);
   const half = Math.floor(Math.abs(cm - cr) / 2);
   const shown = fa(await M.locator('.numinp').first().inputValue()); ok(+shown === half, `مبلغ خودکار نصف تفاوت است (${shown} = ${half})`);
   const pv = fa(await M.locator('.prev').innerText()); ok(pv.includes(String(cm - half)) && pv.includes(String(cr + half)), 'پیش‌نمایش سرمایه‌ی بعد از انتقال درست است');
-  await M.locator('button', { hasText: 'ثبت انتقال سرمایه' }).click(); await sleep(2000);
+  await M.locator('button', { hasText: /^ثبت$/ }).click(); await sleep(2000);
   const t1 = await D(); ok(Math.abs(+t1.v_totals.capital_m - (cm - half)) < 1 && Math.abs(+t1.v_totals.capital_r - (cr + half)) < 1, `سرمایه‌ها برابر شد: ${t1.v_totals.capital_m} / ${t1.v_totals.capital_r}`);
   ok(+t1.v_totals.check_diff === 0, 'check_diff=0');
+  // مبلغ دلخواه (نه نصف‌نصف) و حالت واریز تازه
+  await page.locator('button', { hasText: 'انتقال سرمایه' }).first().click(); await M.waitFor(); await sleep(400);
+  await M.locator('.numinp').first().fill('3000000'); await sleep(300);
+  const pv2 = fa(await M.locator('.prev').innerText()); ok(pv2.includes('تفاوت6000000'), 'مبلغ دلخواه ۳٬۰۰۰٬۰۰۰ پذیرفته شد و تفاوت جدید نشان داده می‌شود: ' + pv2);
+  await M.locator('button.chip', { hasText: 'واریز پول تازه' }).click(); await sleep(300);
+  await M.locator('button', { hasText: 'برابر کردن کامل' }).click(); await sleep(300);
+  ok((await page.locator('body').innerText()).includes('همین حالا برابرند'), 'وقتی سرمایه‌ها برابرند دکمه می‌گوید نیازی به انتقال نیست');
+  await page.keyboard.press('Escape'); await sleep(300);
   // نام خریدار اجباری
   await go('#/sales'); await page.click('text=＋ فروش جدید'); await M.waitFor(); await sleep(500);
   const sc = M.locator('.lcard').first(); await sc.locator('.cmb input').fill('شورت'); await sc.locator('.cmb-o').first().click(); await sleep(400);
