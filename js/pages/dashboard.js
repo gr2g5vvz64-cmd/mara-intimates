@@ -171,7 +171,7 @@ export function legacyRender() {
     h('div', { class: 'grid2' },
       h('div', { class: 'card' }, h('div', { class: 'ct' }, 'مانده‌ی حساب‌ها ', h('a', { href: '#/finance', class: 'more' }, 'مالی ←')),
         h('div', { class: 'accs' }, biz.map(a => h('div', { class: 'acc' }, h('span', null, a.name), N(accBalance(a.id))))),
-        h('div', { class: 'srow bold' }, h('span', null, 'جمع حساب‌های کسب‌وکار'), N(T.business_balance || 0))),
+        h('div', { class: 'srow bold' }, h('span', null, 'مانده حساب‌ها'), N(T.business_balance || 0))),
       h('div', { class: 'card' }, h('div', { class: 'ct' }, 'نیاز به توجه'), h('div', { class: 'alerts' }, alerts))),
     h('div', { class: 'grid2' }, barChart(), h('div', null, hbars('فروش به تفکیک محل (از ابتدا)', byCh), hbars('پرسودترین کالاها (از ابتدا)', top, 'var(--green)'))),
     h('div', { class: 'grid2' },

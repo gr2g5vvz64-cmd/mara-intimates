@@ -101,7 +101,7 @@ export function adminDashboard() {
     /* ثروت و سن‌ها */
     const SA = stockAge(), RA = receivableAge();
     const worth = h('div', { class: 'grid2' },
-      hbars('ارزش خالص چطور ساخته شده', [{ l: 'حساب‌های کسب‌وکار', v: T.business_balance || 0 }, { l: 'ارزش موجودی', v: T.stock_value || 0 }, { l: 'طلب از مشتریان', v: T.receivable || 0 }, { l: 'بدهی به تامین‌کنندگان (−)', v: -(T.payable || 0) }, { l: `ارزش خالص = ${fmt(T.net_worth || 0)}`, v: T.net_worth || 0 }], 'var(--gold)'),
+      hbars('کل دارایی چطور ساخته شده', [{ l: 'حساب‌های کسب‌وکار', v: T.business_balance || 0 }, { l: 'ارزش موجودی', v: T.stock_value || 0 }, { l: 'طلب از مشتریان', v: T.receivable || 0 }, { l: 'بدهی به تامین‌کنندگان (−)', v: -(T.payable || 0) }, { l: `ارزش خالص = ${fmt(T.net_worth || 0)}`, v: T.net_worth || 0 }], 'var(--gold)'),
       h('div', null, hbars('سن طلب‌ها (ریال)', [{ l: 'تا ۳ روز', v: RA.a }, { l: '۴ تا ۷ روز', v: RA.b }, { l: '۸ روز و بیشتر', v: RA.c }], 'var(--amber, #d9a21b)'),
         hbars('سن موجودی: پول گیر کرده (ریال)', [{ l: 'کمتر از ۱۴ روز', v: SA.new }, { l: '۱۴ تا ۳۰ روز', v: SA.mid }, { l: 'بیش از ۳۰ روز', v: SA.old }], 'var(--red)')));
 

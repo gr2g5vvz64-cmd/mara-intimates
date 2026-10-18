@@ -1,7 +1,7 @@
 import { h, fmt, jstr, jmonthName, sum } from '../util.js';
 import { S, businessAccounts, pockets, accBalance, monthly } from '../store.js';
 import { dtable, N, pill, kpi } from '../ui.js';
-import { transferForm, capitalForm, collectionForm, supplierPaymentForm, dayCloseForm } from '../forms_misc.js';
+import { transferForm, capitalForm, collectionForm, dayCloseForm } from '../forms_misc.js';
 import { dayCloseOpen, negativeAccounts } from '../insights.js';
 import { ex } from '../explain.js';
 import { head, btn } from './common.js';
@@ -16,13 +16,12 @@ export function render() {
   const rows = [part('مهسا', capM, T.payout_m || 0, pk.find(a => a.owner === 'مهسا')), part('رعنا', capR, T.payout_r || 0, pk.find(a => a.owner === 'رعنا'))];
   const ok = Math.abs(T.check_diff || 0) <= 1;
   const R = (k, v, c = '', key = '') => h('div', { class: 'srow ' + c }, h('span', null, k), key ? ex(N(v), key) : N(v));
-  const debts = S.vSales.filter(s => !s.voided && s.outstanding > 0);
   return h('div', null,
     head('مالی و سرمایه', [btn('بستن روز', () => dayCloseForm()), btn('انتقال / برداشت سود', () => transferForm({ kind: 'transfer' })), btn('انتقال سرمایه', () => capitalForm(), 'ghost'), ...(S.me.role === 'admin' ? [btn('🔍 تحلیل', () => { location.hash = '#/analysis'; }, 'ghost')] : []), btn('دریافت نسیه', () => collectionForm(), 'ghost')], 'سود بین مهسا و رعنا برابر (نصف–نصف) تقسیم می‌شود. روی هر عدد بزنی (مدیر) محاسبه‌اش را می‌بینی.'),
     dayCloseOpen() ? h('div', { class: 'alert warn' }, 'امروز هنوز بسته نشده؛ موجودی نقد و بانک را بشمار و «بستن روز» را بزن.') : null,
     negativeAccounts().length ? h('div', { class: 'alert red' }, 'مانده‌ی این حساب‌ها منفی است: ' + negativeAccounts().map(a => a.name).join('، ') + ' — احتمالاً ثبتی با حساب اشتباه یا دریافتی ثبت‌نشده داریم.') : null,
     eqAmt > 1000 ? h('div', { class: 'alert warn' }, `سرمایه‌ی وارد‌شده برابر نیست: ${hiName} ${fmt(Math.max(capM, capR))} ریال و ${loName} ${fmt(Math.min(capM, capR))} ریال. برای برابر شدن، ${loName} باید ${fmt(Math.round(eqAmt / 10))} تومان (${fmt(Math.round(eqAmt))} ریال) به حساب شخصی ${hiName} واریز کند و بعد «انتقال سرمایه» ثبت شود.`) : null,
-    h('div', { class: 'kpis' }, kpi('سود کل', ex(N(profit), 'profit'), { tone: profit < 0 ? 'neg' : 'pos' }), kpi('جمع حساب‌های کسب‌وکار', ex(N(T.business_balance), 'business_balance')), kpi('ارزش موجودی', ex(N(T.stock_value), 'stock_value')), kpi('ارزش خالص', ex(N(T.net_worth), 'net_worth'), { sub: 'حساب‌ها + موجودی + طلب − بدهی' })),
+    h('div', { class: 'kpis' }, kpi('سود کل', ex(N(profit), 'profit'), { tone: profit < 0 ? 'neg' : 'pos' }), kpi('مانده حساب‌ها', ex(N(T.business_balance), 'business_balance')), kpi('ارزش موجودی انبار', ex(N(T.stock_value), 'stock_value')), kpi('کل دارایی کسب‌وکار', ex(N(T.net_worth), 'net_worth'), { sub: 'حساب‌ها + موجودی + طلب − بدهی' })),
     h('div', { class: 'grid2' },
       h('div', { class: 'card' }, h('div', { class: 'ct' }, 'حساب‌ها'),
         h('div', { class: 'accs' }, biz.map(a => h('div', { class: 'acc' }, h('span', null, a.name), ex(N(accBalance(a.id)), 'acc', a.id)))),
@@ -33,7 +32,7 @@ export function render() {
         h('div', { style: 'margin-top:10px' }, btn('انتقال سرمایه بین مهسا و رعنا', () => capitalForm(), 'ghost sm'))),
       h('div', { class: 'card' }, h('div', { class: 'ct' }, 'سود چطور ساخته شد'),
         R('جمع فروش', T.revenue, '', 'revenue'), R('− بهای تمام‌شده‌ی کالاهای فروخته‌شده', -T.cogs, '', 'cogs'), R('− پیک و بسته‌بندی فروش‌ها', -T.sale_costs, '', 'sale_costs'), R('− هزینه‌ها', -T.expenses, '', 'expenses'), R('± مرجوعی‌ها', T.returns_effect, '', 'returns'), R('سود کل', profit, 'bold', 'profit'),
-        h('div', { class: 'checkline xpchk ' + (ok ? 'ok' : 'bad') }, ok ? '✓ کنترل حسابداری: ارزش خالص − سرمایه + برداشت‌ها = سود. اختلاف صفر است.' : `⚠ اختلاف کنترلی: ${fmt(T.check_diff)} ریال. با حمیدرضا تماس بگیر.`))),
+        h('div', { class: 'checkline xpchk ' + (ok ? 'ok' : 'bad') }, ok ? '✓ کنترل حسابداری: کل دارایی − سرمایه + برداشت‌ها = سود. اختلاف صفر است.' : `⚠ اختلاف کنترلی: ${fmt(T.check_diff)} ریال. با حمیدرضا تماس بگیر.`))),
     h('h3', { class: 'sec' }, 'سرمایه و سهم از سود (برابر)'),
     dtable([
       { label: 'نفر', main: true, render: r => r.name }, { label: 'سرمایه‌ی گذاشته‌شده', cls: 'num', render: r => N(r.cap) }, { label: 'سهم از سرمایه', cls: 'num', render: r => h('span', { class: 'n' }, capT > 0 ? (r.share * 100).toFixed(1) + '%' : '') },
@@ -41,10 +40,6 @@ export function render() {
       { label: '', render: r => btn('ثبت برداشت', () => transferForm({ kind: 'profit_payout', to: r.pocketId && r.pocketId.id }), 'ghost sm') }
     ], rows, { empty: '' }),
     h('p', { class: 'hint' }, 'سرمایه = پولی که هر نفر از جیب شخصی‌اش در کسب‌وکار گذاشته، منهای آنچه پس گرفته. سود همیشه برابر تقسیم می‌شود: سهم هر نفر ' + fmt(profit / 2) + ' ریال. اگر یکی بیشتر سرمایه گذاشته باشد، نفر دیگر با واریز نصفِ تفاوت به حساب شخصی او سرمایه را برابر می‌کند.'),
-    h('h3', { class: 'sec' }, 'مشتری‌های بدهکار (نسیه)'),
-    dtable([{ label: 'فروش', main: true, render: s => s.no }, { label: 'تاریخ', render: s => jstr(s.date) }, { label: 'مشتری', render: s => s.customer || '' }, { label: 'کالاها', hm: true, render: s => s.items_text }, { label: 'مانده', cls: 'num', render: s => N(s.outstanding) }, { label: '', render: s => btn('دریافت', () => collectionForm(s.id), 'gold sm') }], debts, { empty: 'مشتری بدهکاری وجود ندارد' }),
-    h('h3', { class: 'sec' }, 'حساب با تامین‌کنندگان'),
-    dtable([{ label: 'تامین‌کننده', main: true, render: s => s.name }, { label: 'وضعیت', cls: 'num', render: s => (s.balance > 0 ? pill('بدهکاریم ' + fmt(s.balance), 'amber') : s.balance < 0 ? pill('طلبکاریم ' + fmt(-s.balance), 'blue') : pill('تسویه', 'green')) }, { label: '', render: s => (s.balance > 0 ? btn('پرداخت', () => supplierPaymentForm({ supplier_id: s.id }), 'gold sm') : '') }], S.vSup.filter(s => s.goods || s.paid), { empty: 'هنوز خریدی نیست' }),
     h('h3', { class: 'sec' }, 'بستن روزها (شمارش واقعی در برابر سیستم)'),
     dtable([{ label: 'تاریخ', main: true, render: c => jstr(c.date) }, { label: 'حساب', render: c => (S.A[c.account_id] || {}).name || '' }, { label: 'سیستم', cls: 'num', render: c => N(c.system_balance) }, { label: 'شمارش‌شده', cls: 'num', render: c => N(c.counted) },
       { label: 'اختلاف', cls: 'num', render: c => (Math.round(c.diff) === 0 ? pill('می‌خواند ✓', 'green') : pill((c.diff > 0 ? 'اضافه ' : 'کمبود ') + fmt(Math.abs(c.diff)), c.diff > 0 ? 'blue' : 'red')) }, { label: 'ثبت‌کننده', hm: true, render: c => c.created_by || '' }, { label: 'یادداشت', hm: true, render: c => c.note || '' }],
