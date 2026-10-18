@@ -1,6 +1,6 @@
 // مشتریان و طلب‌ها: چه کسی چقدر بدهکار است، سررسیدها، دریافت کامل یا قسطی، صورت‌حساب هر مشتری
 import { h, fmt, jstr, sum } from '../util.js';
-import { S } from '../store.js';
+import { S, canEdit } from '../store.js';
 import { dtable, N, pill, kpi } from '../ui.js';
 import { collectCustomerForm, customerForm, collectionForm, setDueForm } from '../forms_misc.js';
 import { saleForm } from '../forms_trade.js';
@@ -50,7 +50,7 @@ export function customerDetail(id) {
     extra: [open.length ? [h('h3', { class: 'sec' }, 'فروش‌های باز (قدیمی‌ترین اول)'), dtable([
       { label: 'فروش', main: true, render: s => s.no }, { label: 'تاریخ', render: s => jstr(s.date) }, { label: 'مانده', cls: 'num', render: s => N(s.outstanding) },
       { label: 'سررسید', render: s => (s.due_date ? dueCell(s.due_date) : 'تعیین نشده') },
-      { label: '', render: s => btn('تغییر سررسید', e => { e.stopPropagation(); m.close(); setDueForm('sale', s); }, 'ghost sm') }], open, { onRow: s => { m.close(); saleDetail(s.id); } })] : null,
+      { label: '', render: s => !canEdit() ? '' : btn('تغییر سررسید', e => { e.stopPropagation(); m.close(); setDueForm('sale', s); }, 'ghost sm') }], open, { onRow: s => { m.close(); saleDetail(s.id); } })] : null,
       h('h3', { class: 'sec' }, 'گردش حساب'), ledgerTable(ev, dtable, { plus: 'فروش (بدهکار شد)', minus: 'دریافت / کسر' })],
     actions: [b.outstanding > 0.5 ? btn('ثبت دریافت', () => { m.close(); collectCustomerForm(id); }, 'gold') : null, btn('فروش جدید به او', () => { m.close(); saleForm({ customer: id }); }, 'ghost'), btn('ویرایش مشتری', () => { m.close(); customerForm(c); }, 'ghost')]
   });

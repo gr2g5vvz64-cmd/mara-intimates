@@ -1,5 +1,5 @@
 import { h, fmt, jstr, jmonthKey, jmonthName, sum } from '../util.js';
-import { S } from '../store.js';
+import { S, canEdit } from '../store.js';
 import { dtable, N, pill, chips, kpi, tabsBar } from '../ui.js';
 import { saleForm, purchaseForm } from '../forms_trade.js';
 import { collectionForm, returnForm, supplierPaymentForm, voidEntry, moveStockForm, setDueForm } from '../forms_misc.js';
@@ -62,7 +62,7 @@ export function saleDetail(id) {
       { label: 'برگشتی', cls: 'num', render: l => l.returned_qty || '' }], lines),
     cols.length ? [h('h3', { class: 'sec' }, 'دریافت‌های بعدی'), dtable([{ label: 'تاریخ', render: c => jstr(c.date) }, { label: 'مبلغ', cls: 'num', render: c => N(c.amount) }, { label: 'حساب', render: c => accName(c.account_id) }, { label: 'وضعیت', render: c => c.voided ? pill('باطل', 'red') : '' }], cols)] : null,
     rets.length ? [h('h3', { class: 'sec' }, 'مرجوعی‌ها'), dtable([{ label: 'شماره', render: r => r.no }, { label: 'تاریخ', render: r => jstr(r.date) }, { label: 'تعداد', cls: 'num', render: r => r.qty }, { label: 'وضعیت', render: r => r.condition + (r.to_supplier ? ' · به تامین‌کننده' : '') }, { label: 'اثر بر سود', cls: 'num', render: r => N(r.profit_effect) }], rets)] : null],
-    actions: s.voided ? [] : [s.outstanding > 0 ? btn('ثبت دریافت', () => { m.close(); collectionForm(id); }, 'gold') : null, s.outstanding > 0 ? btn('تغییر سررسید', () => { m.close(); setDueForm('sale', s); }, 'ghost') : null, btn('مرجوعی', () => { m.close(); returnForm(id); }, 'ghost'), btn('ابطال فروش', async () => { if (await voidEntry('sale', s, `فروش ${s.no}`)) m.close(); }, 'danger ghost')]
+    actions: s.voided ? [] : [s.outstanding > 0 ? btn('ثبت دریافت', () => { m.close(); collectionForm(id); }, 'gold') : null, s.outstanding > 0 && canEdit() ? btn('تغییر سررسید', () => { m.close(); setDueForm('sale', s); }, 'ghost') : null, btn('مرجوعی', () => { m.close(); returnForm(id); }, 'ghost'), ...(canEdit() ? [btn('ویرایش', () => { m.close(); saleForm({ edit: id }); }, 'ghost'), btn('ابطال فروش', async () => { if (await voidEntry('sale', s, `فروش ${s.no}`)) m.close(); }, 'danger ghost')] : [])]
   });
 }
 
@@ -101,7 +101,7 @@ export function purchaseDetail(id) {
       ...(i.discount > 0 ? [{ label: 'سهم تخفیف', cls: 'num', hm: true, render: l => N(-(S.lines.find(x => x.id === l.id) || {}).disc_share) }] : []), { label: 'تمام‌شده‌ی هر عدد', cls: 'num', render: l => N(l.landed_unit) },
       { label: 'تحویل م/ر', cls: 'num', hm: true, render: l => `${l.hold_m} / ${l.hold_r}` }, { label: 'مانده م/ر', cls: 'num', render: l => `${l.rem_m} / ${l.rem_r}` }], ls),
     pays.length ? [h('h3', { class: 'sec' }, 'پرداخت‌ها'), dtable([{ label: 'تاریخ', render: p => jstr(p.date) }, { label: 'مبلغ', cls: 'num', render: p => N(p.amount) }, { label: 'از حساب', render: p => accName(p.account_id) }, { label: 'ثبت‌کننده', render: p => p.created_by }, { label: 'وضعیت', render: p => (p.voided ? pill('باطل', 'red') : '') }], pays)] : null],
-    actions: i.voided ? [] : [i.debt > 0 ? btn('ثبت پرداخت', () => { m.close(); supplierPaymentForm({ supplier_id: i.supplier_id, invoice_id: id }); }, 'gold') : null, i.debt > 0 ? btn('تغییر سررسید', () => { m.close(); setDueForm('purchase', i); }, 'ghost') : null, btn('ابطال فاکتور', async () => { if (await voidEntry('purchase', full, `فاکتور ${i.no}`)) m.close(); }, 'danger ghost')]
+    actions: i.voided ? [] : [i.debt > 0 ? btn('ثبت پرداخت', () => { m.close(); supplierPaymentForm({ supplier_id: i.supplier_id, invoice_id: id }); }, 'gold') : null, i.debt > 0 && canEdit() ? btn('تغییر سررسید', () => { m.close(); setDueForm('purchase', i); }, 'ghost') : null, ...(canEdit() ? [btn('ویرایش', () => { m.close(); purchaseForm({ edit: id }); }, 'ghost'), btn('ابطال فاکتور', async () => { if (await voidEntry('purchase', full, `فاکتور ${i.no}`)) m.close(); }, 'danger ghost')] : [])]
   });
 }
 

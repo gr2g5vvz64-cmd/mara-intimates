@@ -1,12 +1,12 @@
 import { h, fmt, jstr, sum, jmonthKey, todayISO } from '../util.js';
 import { overdue } from '../insights.js';
-import { S } from '../store.js';
+import { S, canEdit } from '../store.js';
 import { dtable, N, pill, tabsBar, kpi } from '../ui.js';
-import { supplierPaymentForm, expenseForm, collectionForm, transferForm, returnForm, supplierReturnForm, voidEntry } from '../forms_misc.js';
+import { supplierPaymentForm, expenseForm, collectionForm, transferForm, returnForm, supplierReturnForm, voidEntry, editEntryForm } from '../forms_misc.js';
 import { head, btn, searchBox, match, sortNew, detail, stamp, accName, rowCls } from './common.js';
 
 function entryDetail(kind, title, rows, row) {
-  const m = detail({ title, rows: [...rows, ['ثبت‌کننده', stamp(row)], row.voided ? ['باطل‌شده', row.void_reason || ''] : null], actions: row.voided ? [] : [btn('ابطال', async () => { if (await voidEntry(kind, row, title)) m.close(); }, 'danger ghost')] });
+  const m = detail({ title, rows: [...rows, ['ثبت‌کننده', stamp(row)], row.voided ? ['باطل‌شده', row.void_reason || ''] : null], actions: row.voided || !canEdit() ? [] : [btn('ویرایش', () => { m.close(); if (kind === 'return') (row.kind === 'customer' ? returnForm(S.saleLines.find(l => l.id === row.sale_line_id).sale_id, row) : supplierReturnForm(row)); else editEntryForm(kind, row); }, 'ghost'), btn('ابطال', async () => { if (await voidEntry(kind, row, title)) m.close(); }, 'danger ghost')] });
 }
 
 export function render(query, defTab = 'sup') {

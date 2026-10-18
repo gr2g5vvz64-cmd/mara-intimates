@@ -1,7 +1,7 @@
 import { h, fmt, jstr } from '../util.js';
-import { S } from '../store.js';
+import { S, canEdit } from '../store.js';
 import { dtable, N, pill, tabsBar, kpi } from '../ui.js';
-import { moveStockForm, supplierReturnForm } from '../forms_misc.js';
+import { moveStockForm, supplierReturnForm, editEntryForm, voidEntry } from '../forms_misc.js';
 import { saleForm, purchaseForm } from '../forms_trade.js';
 import { head, btn, searchBox, match, detail, catFilter, inCat } from './common.js';
 import { catNames, catOf, NO_CAT } from '../store.js';
@@ -54,6 +54,12 @@ export function render(query) {
         { label: 'تمام‌شده', cls: 'num', render: l => N(l.landed_unit) }, { label: 'نزد مهسا', cls: 'num', render: l => l.rem_m }, { label: 'نزد رعنا', cls: 'num', render: l => l.rem_r }, { label: 'ارزش', cls: 'num', render: l => N(l.value) },
         { label: '', render: l => btn('جابجایی', e => { e.stopPropagation(); moveStockForm(l.id); }, 'ghost sm') }
       ], rows, { empty: 'دسته‌ی دارای موجودی نیست' }));
+      const mv = (S.moves || []).filter(x => !x.voided).sort((x, y) => (x.date < y.date ? 1 : -1)).slice(0, 15);
+      if (canEdit() && mv.length) body.append(h('h3', { class: 'sec' }, 'آخرین جابجایی‌ها'), dtable([
+        { label: 'تاریخ', main: true, render: x => jstr(x.date) }, { label: 'کالا', render: x => (S.LOT[x.lot_id] ? S.LOT[x.lot_id].item : '') },
+        { label: 'از ← به', render: x => `${x.from_holder} ← ${x.to_holder}` }, { label: 'تعداد', cls: 'num', render: x => x.qty },
+        { label: '', render: x => h('span', { class: 'row-actions' }, btn('ویرایش', () => editEntryForm('move', x), 'ghost sm'), btn('ابطال', async () => { if (await voidEntry('move', x, 'جابجایی کالا')) draw(); }, 'danger ghost sm')) }
+      ], mv, { empty: '' }));
     }
   };
   const tot = S.totals.stock_value || 0;
