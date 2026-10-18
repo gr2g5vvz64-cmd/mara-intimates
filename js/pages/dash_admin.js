@@ -1,3 +1,4 @@
+import { ex } from '../explain.js';
 // داشبورد تحلیلی مدیر: شاخص‌ها با مقایسه‌ی بازه‌ی قبل، آدم‌ها (خریداران/تامین‌کنندگان)، روندها، نمودارها، سلامت سیستم
 import { h, fmt, jlong, jstr, todayISO, sum } from '../util.js';
 import { S, businessAccounts, accBalance } from '../store.js';
@@ -66,7 +67,7 @@ export function adminDashboard() {
     const T = S.totals || {};
 
     const kp = h('div', { class: 'kpis' },
-      kpi('فروش', N(cur.sales), { ...delta(cur.sales, prev.sales) }), kpi('سود خالص', N(cur.profit), { ...delta(cur.profit, prev.profit), tone: cur.profit < 0 ? 'neg' : 'pos' }),
+      kpi('فروش', ex(N(cur.sales), 'sales'), { ...delta(cur.sales, prev.sales) }), kpi('سود خالص', ex(N(cur.profit), 'dprofit'), { ...delta(cur.profit, prev.profit), tone: cur.profit < 0 ? 'neg' : 'pos' }),
       kpi('درصد سود', h('span', { class: 'n' }, cur.margin.toFixed(1) + '٪'), { sub: `قبل: ${prev.margin.toFixed(1)}٪` }),
       kpi('تعداد فاکتور', h('span', { class: 'n' }, fmt(cur.count)), { ...delta(cur.count, prev.count) }), kpi('میانگین هر فاکتور', N(cur.avg), { ...delta(cur.avg, prev.avg) }));
 

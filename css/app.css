@@ -384,3 +384,26 @@ h3.sec{margin:18px 0 8px;font-size:16px}
 /* حساب مشاهده‌گر: دکمه‌های ثبت پنهان است (سرور هم ثبت را رد می‌کند) */
 body.ro .phead .acts, body.ro .qas, body.ro .fab, body.ro .dash .mini{display:none!important}
 ul.plain{list-style:none;padding:0;margin:4px 0}
+
+/* ---- v5.20: خط و جدول پررنگ‌تر ---- */
+:root{--line:color-mix(in srgb,var(--ink) 30%,var(--bg));--line2:color-mix(in srgb,var(--ink) 42%,var(--bg))}
+.card,.kpi,.tw,.acc,.stp,.inp,.sel,.chip,.btn.ghost,.mini{border-width:1.5px;border-color:var(--line2)}
+.t th{border-bottom:2px solid var(--line2)}
+.t td{border-bottom:1px solid var(--line)}
+.t td:first-child{border-inline-end:1px solid var(--line)}
+.srow{border-bottom:1px dashed var(--line2)}
+.t tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--tint) 45%,var(--card))}
+.t tbody tr:nth-child(even) td:first-child{background:color-mix(in srgb,var(--tint) 45%,var(--card))}
+.t tbody tr:hover td,.t tbody tr:hover td:first-child{background:var(--tint)}
+@media (max-width:760px){.t tr{border:1.5px solid var(--line2)}}
+/* عددهای توضیح‌دار (مدیر) */
+.xp{cursor:pointer;border-bottom:2px dotted var(--gold);padding-bottom:1px}
+.xp:hover,.xp:focus-visible{background:var(--tint);border-radius:6px}
+.xp-body .xform{background:var(--tint);border:1.5px solid var(--line2);border-radius:12px;padding:10px 12px;font-weight:700;margin-bottom:10px;line-height:1.8}
+.xrows{border:1.5px solid var(--line2);border-radius:12px;overflow:hidden}
+.xrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line)}
+.xrow:last-child{border-bottom:0}
+.xrow .xl{display:flex;flex-direction:column;gap:2px;min-width:0}
+.xrow small{color:var(--brown);font-size:12px;line-height:1.6}
+.xrow.sum{background:var(--tint);font-weight:800}
+.xsub{margin:12px 0 6px;font-weight:800;font-size:13px}
