@@ -4,7 +4,7 @@ import { h, fmt, jlong, jstr, todayISO, sum } from '../util.js';
 import { S, businessAccounts, accBalance } from '../store.js';
 import { N, pill, kpi, chips, dtable } from '../ui.js';
 import { tok } from '../theme.js';
-import { RANGES, period, salesStats, buyerStats, supplierStats, buyerTable, supplierTable, concentration, monthTrend, weekTrend, peopleTrend, rangeOfMonthKey, pct, stockAge, receivableAge } from '../analytics.js';
+import { RANGES, period, salesStats, buyerStats, supplierStats, buyerTable, supplierTable, concentration, grandTotal, anonStats, monthTrend, weekTrend, peopleTrend, rangeOfMonthKey, pct, stockAge, receivableAge } from '../analytics.js';
 import { analyze } from '../analysis.js';
 import { saleForm, purchaseForm } from '../forms_trade.js';
 import { sv, mil, hbars, dueChart, categoryProfitCard, reorderCard, goalsCard } from './dashboard.js';
@@ -87,10 +87,11 @@ export function adminDashboard() {
       groupedBars(`خریداران و تامین‌کنندگان ${trendKind === 'week' ? 'هفتگی' : 'ماهانه'}`, '(نفر)', tr.map((x, i) => ({ label: x.label, ...pt[i] })), [{ key: 'active', label: 'خریدار فعال', color: tok('--gold') }, { key: 'fresh', label: 'خریدار جدید', color: tok('--green') }, { key: 'sup', label: 'تامین‌کننده‌ی فعال', color: tok('--blue') || '#4a78c9' }], v => String(v)));
 
     /* برترین‌ها */
-    const bt = buyerTable(P.from, P.to).filter(r => r.rangeTotal > 0), st = supplierTable(P.from, P.to).filter(r => r.rangeTotal > 0), conc = concentration(bt);
+    const bt = buyerTable(P.from, P.to).filter(r => r.rangeTotal > 0), st = supplierTable(P.from, P.to).filter(r => r.rangeTotal > 0), conc = concentration(bt, grandTotal(P.from, P.to)), an = anonStats(P.from, P.to);
     const tops = h('div', { class: 'grid2' },
       h('div', null, hbars(`خریداران برتر (${label})`, bt.slice(0, 8).map(r => ({ l: `${r.name} · ${r.share.toFixed(0)}٪`, v: r.rangeTotal }))),
-        conc ? h('p', { class: 'hint' }, `📌 ${fmt(conc.k)} نفر از ${fmt(conc.n)} خریدار (۲۰٪) حدود ${conc.share}٪ فروش این بازه را ساخته‌اند.`) : null),
+        conc ? h('p', { class: 'hint' }, `📌 ${fmt(conc.k)} نفر از ${fmt(conc.n)} خریدار (۲۰٪) حدود ${conc.share}٪ فروش این بازه را ساخته‌اند.`) : null,
+        an.count ? h('p', { class: 'hint' }, `⚠️ ${fmt(an.count)} فاکتور بدون نام خریدار: ${fmt(Math.round(an.total))} ریال (${an.share.toFixed(0)}٪ فروش). سهم‌ها روی کل فروش حساب شده؛ نام خریدار را در فاکتور بنویس.`) : null),
       hbars(`تامین‌کنندگان برتر (${label}) · مبلغ خرید`, st.slice(0, 8).map(r => ({ l: `${r.name} · ${r.share.toFixed(0)}٪`, v: r.rangeTotal })), 'var(--blue)'));
 
     /* فروشنده‌ها و کانال‌ها */

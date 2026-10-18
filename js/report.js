@@ -2,7 +2,7 @@
 // همه‌ی عددها از داده‌های برنامه (همان که اکنون روی صفحه است) حساب می‌شود؛ حدس و تفسیر هوش مصنوعی در آن نیست.
 import { S, activeSales, catOf } from './store.js';
 import { fmt, jstr, sum } from './util.js';
-import { period, salesStats, buyerStats, supplierStats, buyerTable, supplierTable, concentration, stockAge, receivableAge, pct } from './analytics.js';
+import { period, salesStats, buyerStats, supplierStats, buyerTable, supplierTable, concentration, grandTotal, anonStats, stockAge, receivableAge, pct } from './analytics.js';
 import { reorderSuggestions } from './insights.js';
 
 export const PERIODS = [{ v: 7, label: 'هفته (۷ روز اخیر)', short: 'هفته', prev: 'هفته‌ی قبل' }, { v: 30, label: 'ماه (۳۰ روز اخیر)', short: 'ماه', prev: 'ماه قبل' }, { v: 365, label: 'سال (۳۶۵ روز اخیر)', short: 'سال', prev: 'سال قبل' }];
@@ -34,7 +34,7 @@ export function buildReport(n) {
   const P = period(n), PER = PERIODS.find(x => x.v === n), cur = salesStats(P.from, P.to), prev = salesStats(P.pFrom, P.pTo);
   const cc = costStats(P.from, P.to), pc = costStats(P.pFrom, P.pTo), li = lineStats(P.from, P.to), lp = lineStats(P.pFrom, P.pTo);
   const B = buyerStats(P.from, P.to), Bp = buyerStats(P.pFrom, P.pTo), SU = supplierStats(P.from, P.to);
-  const bt = buyerTable(P.from, P.to).filter(r => r.rangeTotal > 0), conc = concentration(bt);
+  const bt = buyerTable(P.from, P.to).filter(r => r.rangeTotal > 0), conc = concentration(bt, grandTotal(P.from, P.to)), an = anonStats(P.from, P.to);
   const lost = buyerTable(P.pFrom, P.pTo).filter(r => r.rangeTotal > 0 && !B.activeSet.has(r.id)).slice(0, 5);
   const T = S.totals || {}, ra = receivableAge(), sa = stockAge();
   const sections = [], advice = [];
@@ -82,6 +82,7 @@ export function buildReport(n) {
   const pe = [];
   if (B.active) pe.push(row('info', `${fmt(B.active)} خریدار فعال بود (${fmt(B.fresh)} نفر جدید، ${B.repeat}٪ تکراری)؛ ${PER.prev}: ${fmt(Bp.active)} نفر.`));
   if (bt[0]) pe.push(row(bt[0].share >= 40 ? 'neg' : 'info', `بزرگ‌ترین خریدار: ${bt[0].name} (${bt[0].share.toFixed(0)}٪ فروش، ${M(bt[0].rangeTotal)}).`));
+  if (an.count) pe.push(row(an.share >= 20 ? 'neg' : 'info', `${fmt(an.count)} فاکتور بدون نام خریدار (${M(an.total)}، ${an.share.toFixed(0)}٪ فروش)؛ سهم خریداران روی کل فروش حساب شده و با ثبت نام دقیق‌تر می‌شود.`));
   if (conc) pe.push(row(conc.share >= 70 ? 'neg' : 'info', `${fmt(conc.k)} نفر از ${fmt(conc.n)} خریدار، ${conc.share}٪ فروش را ساختند.`));
   if (lost.length) pe.push(row('neg', `${PER.prev} خرید کرده بودند ولی این دوره نه: ${lost.map(r => `${r.name} (${M(r.rangeTotal)})`).join('، ')}.`));
   if (SU.active) pe.push(row('info', `از ${fmt(SU.active)} تامین‌کننده ${M(SU.spent)} خرید کردیم (${fmt(SU.count)} فاکتور).`));

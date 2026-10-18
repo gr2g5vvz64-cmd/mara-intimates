@@ -48,9 +48,17 @@ export function buyerTable(a, b) {
     if (inR(s.date, a, b)) { o.rangeTotal += s.total; o.rangeCount++; }
     by.set(s.customer_id, o);
   }
-  const rows = [...by.values()].sort((x, y) => y.rangeTotal - x.rangeTotal || y.total - x.total), tot = sum(rows, r => r.rangeTotal);
+  // سهم هر خریدار از «کل فروش بازه» حساب می‌شود (فروش‌های بدون نام خریدار هم در مخرج هستند)
+  const rows = [...by.values()].sort((x, y) => y.rangeTotal - x.rangeTotal || y.total - x.total), tot = grandTotal(a, b);
   rows.forEach(r => { r.share = tot > 0 ? r.rangeTotal / tot * 100 : 0; });
   return rows;
+}
+/** جمع کل فروش بازه (با و بدون نام خریدار) */
+export function grandTotal(a, b) { return sum(activeSales().filter(s => inR(s.date, a, b)), s => s.total); }
+/** فروش‌های بدون نام خریدار در بازه */
+export function anonStats(a, b) {
+  const ss = activeSales().filter(s => !s.customer_id && inR(s.date, a, b)), total = sum(ss, s => s.total), g = grandTotal(a, b);
+  return { count: ss.length, total, share: g > 0 ? total / g * 100 : 0 };
 }
 export function supplierTable(a, b) {
   const by = new Map();
@@ -65,9 +73,9 @@ export function supplierTable(a, b) {
   return rows;
 }
 /** «۲۰٪ خریداران چند درصد فروش را ساخته‌اند» */
-export function concentration(rows) {
+export function concentration(rows, grand) {
   const r = rows.filter(x => x.rangeTotal > 0); if (r.length < 3) return null;
-  const k = Math.max(1, Math.round(r.length * 0.2)), top = sum(r.slice(0, k), x => x.rangeTotal), tot = sum(r, x => x.rangeTotal);
+  const k = Math.max(1, Math.round(r.length * 0.2)), top = sum(r.slice(0, k), x => x.rangeTotal), tot = grand > 0 ? grand : sum(r, x => x.rangeTotal);
   return { k, n: r.length, share: Math.round(top / tot * 100) };
 }
 
