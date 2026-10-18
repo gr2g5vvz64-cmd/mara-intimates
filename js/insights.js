@@ -119,7 +119,7 @@ export function categoryStats(range = 'month') {
   for (const n of catNames(true)) get(n);
   for (const l of S.saleLines) {
     const s = S.SALE[l.sale_id]; if (!s || s.voided || !inR(s.date)) continue;
-    const o = get(catOf(S.I[l.item_id])); o.revenue += l.qty * l.unit_price; o.cost += l.qty * l.unit_cost; o.profit += l.qty * (l.unit_price - l.unit_cost); o.qty += l.qty;
+    const o = get(catOf(S.I[l.item_id])); o.revenue += l.qty * l.net_unit; o.cost += l.qty * l.unit_cost; o.profit += l.qty * (l.net_unit - l.unit_cost); o.qty += l.qty;
   }
   for (const r of S.returns) { if (r.voided || !inR(r.date)) continue; get(catOf(S.I[r.item_id])).profit += r.profit_effect || 0; }
   const out = [...rows.values()].map(o => ({ ...o, margin: o.revenue > 0 ? o.profit / o.revenue * 100 : null }));

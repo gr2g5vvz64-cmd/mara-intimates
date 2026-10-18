@@ -72,6 +72,10 @@ export async function loadAll() {
   S.LOT = Object.fromEntries(S.lots.map(x => [x.id, x]));
   S.SALE = Object.fromEntries(S.vSales.map(x => [x.id, x]));
   S.INV = Object.fromEntries(S.vInvoices.map(x => [x.id, x]));
+  /* فی خالص هر ردیف فروش = فی فروش منهای سهم تخفیف فاکتور (تناسبی)؛ برای سود دسته‌ها و مرجوعی */
+  const gross = new Map();
+  for (const l of S.saleLines) gross.set(l.sale_id, (gross.get(l.sale_id) || 0) + l.qty * l.unit_price);
+  for (const l of S.saleLines) { const s = S.SALE[l.sale_id], g = gross.get(l.sale_id) || 0; l.net_unit = s && s.discount > 0 && g > 0 ? l.unit_price * (1 - s.discount / g) : l.unit_price; }
   S.loaded = true;
 }
 
@@ -107,7 +111,7 @@ export function monthly() {
 export function itemProfit() {
   const lineProfit = new Map();
   const saleOk = new Set(activeSales().map(s => s.id));
-  for (const l of S.saleLines) if (saleOk.has(l.sale_id)) lineProfit.set(l.item_id, (lineProfit.get(l.item_id) || 0) + l.qty * (l.unit_price - l.unit_cost));
+  for (const l of S.saleLines) if (saleOk.has(l.sale_id)) lineProfit.set(l.item_id, (lineProfit.get(l.item_id) || 0) + l.qty * (l.net_unit - l.unit_cost));
   for (const r of S.returns) if (!r.voided) lineProfit.set(r.item_id, (lineProfit.get(r.item_id) || 0) + r.profit_effect);
   return [...lineProfit.entries()].map(([id, p]) => ({ item: S.I[id], profit: p })).sort((a, b) => b.profit - a.profit);
 }

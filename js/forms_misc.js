@@ -151,17 +151,17 @@ export function returnForm(saleId) {
   function drawLines() {
     const s = S.SALE[sale.get()];
     lines = s ? S.saleLines.filter(l => l.sale_id === s.id && l.qty - l.returned_qty > 0) : [];
-    lineSel.replaceChildren(...lines.map(l => h('option', { value: l.id }, `${S.I[l.item_id].name} · ${l.qty - l.returned_qty} عدد قابل برگشت · فی ${fmt(l.unit_price)} · ${S.LOT[l.lot_id].lot_no}`)));
+    lineSel.replaceChildren(...lines.map(l => h('option', { value: l.id }, `${S.I[l.item_id].name} · ${l.qty - l.returned_qty} عدد قابل برگشت · فی ${fmt(Math.round(l.net_unit))}${l.net_unit < l.unit_price ? ' (پس از تخفیف)' : ''} · ${S.LOT[l.lot_id].lot_no}`)));
     debtBox.hidden = !(s && s.outstanding > 0);
     setupLine();
   }
   const cur = () => lines.find(l => l.id === +lineSel.value);
   function setupLine() { const l = cur(); holder = l ? l.holder : null; if (l) { qty.setMax(l.qty - l.returned_qty); qty.set(1); } defaults(); }
-  function defaults() { const l = cur(); if (l) { refund.set(qty.get() * l.unit_price); debt.set(''); } preview(); }
+  function defaults() { const l = cur(); if (l) { refund.set(Math.round(qty.get() * l.net_unit)); debt.set(''); } preview(); }
   function preview() {
     const l = cur(); prev.replaceChildren(); syncHolder(); if (!l) return;
     const lot = S.LOT[l.lot_id]; const q = qty.get();
-    const rec = toSup ? q * lot.unit_price : cond === 'سالم' ? q * lot.landed_unit : 0;
+    const rec = toSup ? q * lot.net_price : cond === 'سالم' ? q * lot.landed_unit : 0;
     const eff = rec - refund.get() - debt.get();
     const r = (k, v, c = '') => h('div', { class: 'srow ' + c }, h('span', null, k), h('b', { class: 'n' }, fmt(v)));
     prev.append(r('پول برگشتی به مشتری', refund.get() + debt.get()), r(toSup ? 'اعتبار نزد تامین‌کننده' : cond === 'سالم' ? 'ارزش کالای برگشته به موجودی' : 'ارزش بازیافت‌شده', rec),
@@ -192,7 +192,7 @@ export function supplierReturnForm() {
   const qty = intField({ value: 1, min: 1, big: true, onChange: () => prev() });
   const prevE = h('div', { class: 'sumbox' });
   const note = h('input', { class: 'inp', placeholder: 'دلیل' });
-  function prev() { const l = S.LOT[lot.get()]; prevE.replaceChildren(); if (!l) return; const cr = qty.get() * l.unit_price; prevE.append(h('div', { class: 'srow' }, h('span', null, 'اعتبار از بدهی ' + l.supplier), h('b', { class: 'n' }, fmt(cr)))); }
+  function prev() { const l = S.LOT[lot.get()]; prevE.replaceChildren(); if (!l) return; const cr = qty.get() * l.net_price; prevE.append(h('div', { class: 'srow' }, h('span', null, 'اعتبار از بدهی ' + l.supplier), h('b', { class: 'n' }, fmt(cr)))); }
   const btn = h('button', { class: 'btn primary lg', type: 'button' }, 'ثبت برگشت به تامین‌کننده');
   btn.onclick = async () => { if (!lot.get()) return toast('دسته را انتخاب کن', 'err'); const r = await run(btn, () => rpc('create_supplier_return', { date, lot_id: lot.get(), holder, qty: qty.get(), note: note.value })); if (r) finish(m, `ثبت شد (${r.no})`); };
   const m = modal({ title: 'برگشت کالا به تامین‌کننده', body: h('div', { class: 'form' }, field('تاریخ', dateField(date, v => { date = v; })), field('چه کسی کالا را به تامین‌کننده پس داد؟ (از موجودی همین نفر کم می‌شود)', hold), field('کدام کالا؟', lot), field('تعداد', qty), prevE, field('دلیل', note), P('مبلغ به‌ازای قیمت خرید از بدهی تامین‌کننده کم می‌شود؛ اگر بدهی صفر شود، تامین‌کننده بدهکار ما می‌شود.')), footer: [btn] });
@@ -257,13 +257,14 @@ export function categoriesForm() {
 
 export function itemForm(it) {
   const name = h('input', { class: 'inp', value: it ? it.name : '', placeholder: 'مثلاً سوتین اسپرت' });
+  const desc = h('input', { class: 'inp', value: it && it.description || '', placeholder: 'مثلاً جنس، رنگ، سایز، مدل (اختیاری)', maxlength: 300 });
   const cat = categoryPicker(it && it.category || '');
   const min = intField({ value: it ? it.min_stock : 3, min: 0 });
   const act = chips([{ v: true, label: 'فعال' }, { v: false, label: 'غیرفعال' }], it ? it.active : true, () => {}, { cls: 'two' });
   const used = it && S.lines.some(l => l.item_id === it.id);
   const btn = h('button', { class: 'btn primary lg', type: 'button' }, it ? 'ذخیره' : 'افزودن کالا');
-  btn.onclick = async () => { if (!cat.get()) return toast('دسته‌ی کالا را انتخاب کن', 'err'); const r = await run(btn, () => rpc('save_item', { id: it && it.id, name: name.value, category: cat.get(), min_stock: min.get(), active: act.get() })); if (r) finish(m, 'ذخیره شد'); };
-  const m = modal({ title: it ? 'ویرایش کالا' : 'کالای جدید', body: h('div', { class: 'form' }, field('نام کالا', name, used && S.me.role !== 'admin' ? 'این کالا در خرید/فروش استفاده شده؛ نامش را فقط حمیدرضا می‌تواند عوض کند.' : null), field('دسته', cat), field('هشدار کم‌موجودی از … عدد', min), it ? field('وضعیت', act) : null), footer: [btn] });
+  btn.onclick = async () => { if (!cat.get()) return toast('دسته‌ی کالا را انتخاب کن', 'err'); const r = await run(btn, () => rpc('save_item', { id: it && it.id, name: name.value, description: desc.value, category: cat.get(), min_stock: min.get(), active: act.get() })); if (r) finish(m, 'ذخیره شد'); };
+  const m = modal({ title: it ? 'ویرایش کالا' : 'کالای جدید', body: h('div', { class: 'form' }, field('نام کالا', name, used && S.me.role !== 'admin' ? 'این کالا در خرید/فروش استفاده شده؛ نامش را فقط حمیدرضا می‌تواند عوض کند.' : null), field('توضیحات کالا', desc, 'در فاکتور خرید و فروش کنار این کالا دیده می‌شود.'), field('دسته', cat), field('هشدار کم‌موجودی از … عدد', min), it ? field('وضعیت', act) : null), footer: [btn] });
 }
 export function supplierForm(s) {
   const name = h('input', { class: 'inp', value: s ? s.name : '' }), phone = h('input', { class: 'inp', value: s && s.phone || '', dir: 'ltr', inputmode: 'tel' });

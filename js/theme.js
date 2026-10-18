@@ -9,6 +9,7 @@ export const THEMES = [
   { id: 't6', name: 'یاسی ملایم', desc: 'آرام و نرم', sw: ['#F6F1F8', '#6D4A8A', '#2B1E36', '#E0B7D2'] }
 ];
 THEMES.push({ id: 't8', name: 'شکلاتی و کرم', desc: 'قهوه‌ای پررنگ با کرم، گرم و جدی', sw: ['#F7EFE6', '#6B4226', '#2E1B10', '#C9A24B'] });
+THEMES.push({ id: 't9', name: 'صورتی و مشکی', desc: 'صورتی پررنگ و روشن با مشکی؛ مدرن و جسور', sw: ['#FFF4F9', '#F276B4', '#000000', '#F5A6CF'] });
 const LAST = 'mara.theme.last';
 const get = k => { try { return localStorage.getItem(k); } catch { return null; } };
 const put = (k, v) => { try { localStorage.setItem(k, v); } catch {} };

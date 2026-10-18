@@ -28,8 +28,8 @@ const delay = n => Math.min(60000, 3000 * 2 ** Math.max(0, n - 1));
 export function describe(fn, p = {}) {
   const bits = [LABELS[fn] || fn];
   const money = n => Math.round(n).toLocaleString('en-US');
-  if (fn === 'create_sale' && Array.isArray(p.lines)) bits.push(money(p.lines.reduce((a, l) => a + (l.qty || 0) * (l.unit_price || 0), 0)) + ' ریال');
-  else if (fn === 'create_purchase' && Array.isArray(p.lines)) bits.push(money(p.lines.reduce((a, l) => a + (l.qty || 0) * (l.unit_price || 0), 0)) + ' ریال');
+  if (fn === 'create_sale' && Array.isArray(p.lines)) bits.push(money(p.lines.reduce((a, l) => a + (l.qty || 0) * (l.unit_price || 0), 0) - (p.discount || 0)) + ' ریال');
+  else if (fn === 'create_purchase' && Array.isArray(p.lines)) bits.push(money(p.lines.reduce((a, l) => a + (l.qty || 0) * (l.unit_price || 0), 0) - (p.discount || 0)) + ' ریال');
   else if (p.amount) bits.push(money(p.amount) + ' ریال');
   if (p.date) bits.push(jstr(p.date));
   return bits.join(' · ');

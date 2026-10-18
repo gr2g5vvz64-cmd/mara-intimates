@@ -18,6 +18,9 @@ export function saleForm(preset = {}) {
   const linesBox = h('div', { class: 'lines' });
   const warn = h('div', { class: 'warnbox', hidden: true });
   const totalEl = h('b', { class: 'n' }, '0'), profitEl = h('b', { class: 'n' }, '0');
+  const discount = numField({ onInput: () => recalc() });
+  const discSum = h('div', { class: 'sumbox' });
+  const row = (k, v, c = '') => h('div', { class: 'srow ' + c }, h('span', null, k), h('b', { class: 'n' }, fmt(v)));
   const stockAvail = id => { const s = S.stock.find(x => x.id === id); return s ? s : { rem_m: 0, rem_r: 0 }; };
 
   const sellerChips = chips([{ v: 'مهسا', label: 'مهسا' }, { v: 'رعنا', label: 'رعنا' }], seller, v => { seller = v; lines.forEach(l => l.refreshItems()); defaultAccounts(); recalc(); }, { cls: 'two', label: 'فروشنده' });
@@ -70,13 +73,15 @@ export function saleForm(preset = {}) {
       L.price = p; priceCtl.set(p || ''); if (force) L.touched = false;
     };
     const choose = v => {
-      L.item = v; L.lot = null; L.manual = false; L.touched = false; autoHolder();
+      L.item = v; L.lot = null; L.manual = false; L.touched = false; showDesc(); autoHolder();
       autoPrice(true); recalc();
     };
     const sel = combo({ placeholder: 'نام کالا را تایپ کن…', onChange: choose });
     L.pick = v => { sel.set(v); choose(v); };
     const qty = intField({ value: 1, min: 1, onChange: n => { L.qty = n; autoHolder(); autoPrice(false); recalc(); }, big: true });
     const priceCtl = numField({ unit: '', onInput: n => { L.price = n; L.touched = true; recalc(); } });
+    const descEl = h('div', { class: 'idesc', hidden: true });
+    const showDesc = () => { const d = L.item && S.I[L.item] && S.I[L.item].description; descEl.textContent = d ? '📝 ' + d : ''; descEl.hidden = !d; };
     const lotBox = h('div', { class: 'lotstrip', hidden: true });
     const holdBox = h('div', { class: 'holdbox', hidden: true });
     const prev = h('div', { class: 'prev' });
@@ -86,7 +91,7 @@ export function saleForm(preset = {}) {
         field('نام کالا', sel, null, 'c-name'), field('تعداد', qty, null, 'c-qty'),
         field('بهای تمام‌شده (ریال)', costEl, null, 'c-cost'), field('فی فروش (ریال)', priceCtl, null, 'c-price'),
         h('button', { class: 'rm', type: 'button', 'aria-label': 'حذف این کالا', onclick: () => { lines.splice(lines.indexOf(L), 1); card.remove(); recalc(); } }, '✕')),
-      lotBox, holdBox, prev, h('div', { class: 'ltot' }, 'جمع این کالا: ', lineTot, ' ریال', lineProf));
+      descEl, lotBox, holdBox, prev, h('div', { class: 'ltot' }, 'جمع این کالا: ', lineTot, ' ریال', lineProf));
     function items() {
       return S.stock.filter(i => i.active).map(i => ({ v: i.id, label: i.name, sub: `مهسا ${i.rem_m} · رعنا ${i.rem_r}` }));
     }
@@ -100,8 +105,8 @@ export function saleForm(preset = {}) {
       if (!L.item) return;
       const btn = who => h('button', { type: 'button', class: 'chip' + (hl() === who ? ' on' : '') + (cnt(who) < 1 ? ' dim' : ''), 'aria-pressed': hl() === who ? 'true' : 'false',
         onclick: () => { L.holder = who === seller ? null : who; L.manual = true; drawHolder(); drawLots(); autoPrice(false); recalc(); } }, `${who} · ${cnt(who)} عدد`);
-      holdBox.replaceChildren(h('label', { class: 'lbl' }, 'از موجودی چه کسی برداشته شود؟'), h('div', { class: 'chips two' }, btn(seller), btn(other())),
-        hl() !== seller ? h('div', { class: 'hint' }, `این جنس را ${seller} نزد خودش ندارد؛ از موجودی ${hl()} برداشته می‌شود و فروش به نام ${seller} ثبت می‌شود.`) : null);
+      holdBox.replaceChildren(...[h('label', { class: 'lbl' }, 'از موجودی چه کسی برداشته شود؟'), h('div', { class: 'chips two' }, btn(seller), btn(other())),
+        hl() !== seller ? h('div', { class: 'hint' }, `این جنس را ${seller} نزد خودش ندارد؛ از موجودی ${hl()} برداشته می‌شود و فروش به نام ${seller} ثبت می‌شود.`) : null].filter(Boolean));
     }
     /* نوار پارت‌ها: وقتی کالا چند خرید جدا دارد؛ هر پارت = شماره‌ی پارت · تعداد نزد برداشت‌کننده · بهای تمام‌شده */
     function drawLots() {
@@ -137,15 +142,18 @@ export function saleForm(preset = {}) {
   }
 
   function totals() {
-    const total = sum(lines, l => l.qty * l.price), cost = sum(lines, l => l.cost);
+    const gross = sum(lines, l => l.qty * l.price), cost = sum(lines, l => l.cost);
+    const disc = Math.min(discount.get(), gross), total = gross - disc;          // مبلغ فاکتور بعد از تخفیف
     const c = courier.get() + pack.get();
     const recv = payMode === 'full' ? total : Math.min(received.get(), total);
-    return { total, cost, c, recv, profit: total - cost - c };
+    return { gross, disc, total, cost, c, recv, profit: total - cost - c };
   }
   function recalc() {
     lines.forEach(l => l.update());
     const t = totals();
     totalEl.textContent = fmt(t.total); profitEl.textContent = fmt(t.profit);
+    discSum.hidden = !(t.disc > 0 || discount.get() > 0);
+    discSum.replaceChildren(row('جمع کالاها', t.gross), row('تخفیف', -t.disc), row('مبلغ فاکتور', t.total, 'bold'));
     profitEl.className = 'n ' + (t.profit < 0 ? 'neg' : 'pos');
     remainEl.textContent = payMode === 'part' ? `باقی‌مانده به‌عنوان بدهی مشتری ثبت می‌شود: ${fmt(Math.max(0, t.total - t.recv))} ریال` : '';
     const cb = customer.get() && S.vCus.find(x => x.id === customer.get());
@@ -160,13 +168,14 @@ export function saleForm(preset = {}) {
     const t = totals();
     if (!lines.length || lines.some(l => !l.item)) return toast('کالای هر ردیف را انتخاب کن', 'err');
     if (lines.some(l => l.qty < 1)) return toast('تعداد باید حداقل ۱ باشد', 'err');
+    if (discount.get() > t.gross) return toast('تخفیف نمی‌تواند از جمع کالاها بیشتر باشد', 'err');
     if (lines.some(l => !l.price)) { if (!confirm0('فی فروش یکی از کالاها صفر است. مطمئنی؟')) return; }
     if (lines.some(l => l.short > 0)) return toast('موجودی کافی نیست', 'err');
     if (t.recv < t.total && !customer.get()) { customer.input.focus(); return toast('برای فروش نسیه مشتری را انتخاب کن یا بساز', 'err'); }
     if (t.recv > 0 && !recvAcc.get()) return toast('حسابی که پول به آن آمد را انتخاب کن', 'err');
     if (t.c > 0 && !costAcc.get()) return toast('حساب پرداخت هزینه را انتخاب کن', 'err');
     const payload = {
-      date, seller, channel: channel.get(), customer_id: customer.get(), due_date: t.recv < t.total ? due.get() : null, received: t.recv, account_id: t.recv > 0 ? recvAcc.get() : null,
+      date, seller, channel: channel.get(), customer_id: customer.get(), discount: t.disc, due_date: t.recv < t.total ? due.get() : null, received: t.recv, account_id: t.recv > 0 ? recvAcc.get() : null,
       courier: courier.get(), pack: pack.get(), cost_account_id: t.c > 0 ? costAcc.get() : null, note: note.value.trim(),
       lines: lines.map(l => ({ item_id: l.item, qty: l.qty, unit_price: l.price, lot_id: l.lot, holder: l.holder || seller }))
     };
@@ -179,10 +188,11 @@ export function saleForm(preset = {}) {
     title: 'فروش جدید', wide: true,
     body: h('div', { class: 'form' },
       h('div', { class: 'two-col dt' }, field('فروشنده', sellerChips), field('تاریخ', dateCtl)),
+      field('مشتری', [customer, custInfo]),
       h('h3', { class: 'sec' }, 'کالاها'), linesBox,
       h('button', { class: 'btn dashed', type: 'button', onclick: addLine }, '＋ افزودن کالای دیگر'),
+      field('تخفیف فروش (ریال)', discount, 'اختیاری؛ از جمع فاکتور کم می‌شود و روی طلب، دریافتی و سود اثر می‌گذارد.'), discSum,
       field('محل فروش', channel),
-      field('مشتری', [customer, custInfo]),
       h('h3', { class: 'sec' }, 'پول چطور آمد؟'), payChips, partBox,
       field('پول به کدام حساب آمد؟', recvAcc),
       h('h3', { class: 'sec' }, 'هزینه‌ی همین فروش (اختیاری)'),
@@ -210,8 +220,9 @@ export function purchaseForm() {
     options: S.suppliers.filter(s => s.active).map(s => ({ v: s.id, label: s.name, sub: s.phone || '' })),
     onCreate: async name => { try { const r = await rpc('save_supplier', { name }, { queue: false }); await loadAll(); supplier.setOptions(S.suppliers.filter(s => s.active).map(s => ({ v: s.id, label: s.name, sub: s.phone || '' }))); supplier.set(r.id); toast('تامین‌کننده اضافه شد'); return r.id; } catch (e) { toast(errText(e), 'err'); return null; } }
   });
-  const itemOpts = () => S.items.filter(i => i.active).map(i => ({ v: i.id, label: i.name, sub: i.category || '' }));
+  const itemOpts = () => S.items.filter(i => i.active).map(i => ({ v: i.id, label: i.name, sub: [i.category, i.description].filter(Boolean).join(' · ') }));
   const ship = numField({ onInput: () => recalc() });
+  const discount = numField({ onInput: () => recalc() });
   const shipAcc = accountPicker(S.accounts, null, () => {}, { pockets: true });
   const shipBox = h('div', { hidden: true }, field('هزینه‌ی حمل را چه کسی / از کدام حساب پرداخت کرد؟', shipAcc, 'روی قیمت هر قلم سرشکن می‌شود و قیمت تمام‌شده را می‌سازد.'));
   const note = h('input', { class: 'inp', type: 'text', placeholder: 'یادداشت (اختیاری)' });
@@ -221,9 +232,11 @@ export function purchaseForm() {
   function addLine() {
     const L = { item: null, qty: 1, price: 0, m: 1, r: 0, manual: false };
     const sel = combo({
-      placeholder: 'نام کالا را تایپ کن…', createLabel: 'کالای جدید', options: itemOpts(), onChange: v => { L.item = v; recalc(); },
-      onCreate: async name => { const category = await pickCategoryDialog(name); if (!category) return null; try { const r = await rpc('save_item', { name, category }, { queue: false }); await loadAll(); sel.setOptions(itemOpts()); sel.set(r.id); L.item = r.id; toast('کالا اضافه شد'); recalc(); return r.id; } catch (e) { toast(errText(e), 'err'); return null; } }
+      placeholder: 'نام کالا را تایپ کن…', createLabel: 'کالای جدید', options: itemOpts(), onChange: v => { L.item = v; showDesc(); recalc(); },
+      onCreate: async name => { const category = await pickCategoryDialog(name); if (!category) return null; try { const r = await rpc('save_item', { name, category }, { queue: false }); await loadAll(); sel.setOptions(itemOpts()); sel.set(r.id); L.item = r.id; showDesc(); toast('کالا اضافه شد'); recalc(); return r.id; } catch (e) { toast(errText(e), 'err'); return null; } }
     });
+    const descEl = h('div', { class: 'idesc', hidden: true });
+    const showDesc = () => { const d = L.item && S.I[L.item] && S.I[L.item].description; descEl.textContent = d ? '📝 ' + d : ''; descEl.hidden = !d; };
     const price = numField({ onInput: n => { L.price = n; recalc(); } });
     const mS = intField({ value: 1, min: 0, onChange: n => { L.m = n; L.r = Math.max(0, L.qty - n); if (L.m > L.qty) { L.m = L.qty; mS.set(L.m); } rS.set(L.r); L.manual = true; recalc(); } });
     const rS = intField({ value: 0, min: 0, onChange: n => { L.r = n; L.m = Math.max(0, L.qty - n); if (L.r > L.qty) { L.r = L.qty; rS.set(L.r); } mS.set(L.m); L.manual = true; recalc(); } });
@@ -234,9 +247,10 @@ export function purchaseForm() {
       h('button', { type: 'button', class: 'mini', onclick: () => { L.r = L.qty; L.m = 0; mS.set(0); rS.set(L.r); L.manual = true; recalc(); } }, 'همه رعنا'));
     const prev = h('div', { class: 'prev' });
     const tot = h('b', { class: 'n' }, '0');
-    L.update = (share) => { const lt = L.qty * L.price; tot.textContent = fmt(lt); const landed = L.qty ? (lt + share) / L.qty : 0; prev.textContent = L.item && L.price ? `قیمت تمام‌شده‌ی هر عدد (با سهم حمل): ${fmt(landed)}` : ''; };
+    L.update = (share, dshare = 0) => { const lt = L.qty * L.price; tot.textContent = fmt(lt); const landed = L.qty ? (lt + share - dshare) / L.qty : 0; prev.textContent = L.item && L.price ? `قیمت تمام‌شده‌ی هر عدد (با سهم حمل` + (dshare > 0 ? ' و تخفیف' : '') + `): ${fmt(Math.round(landed))}` : ''; };
     const card = h('div', { class: 'lcard' },
       h('div', { class: 'lrow' }, sel, h('button', { class: 'rm', type: 'button', 'aria-label': 'حذف این قلم', onclick: () => { lines.splice(lines.indexOf(L), 1); card.remove(); recalc(); } }, '✕')),
+      descEl,
       h('div', { class: 'two-col' }, field('تعداد', qty), field('فی خرید', price)),
       h('div', { class: 'two-col' }, field('تحویل مهسا', mS), field('تحویل رعنا', rS)), quick, prev,
       h('div', { class: 'ltot' }, 'جمع این قلم: ', tot, ' ریال'));
@@ -256,14 +270,14 @@ export function purchaseForm() {
 
   const goods = () => sum(lines, l => l.qty * l.price);
   function recalc(fromPay) {
-    const g = goods(), sh = ship.get();
+    const g0 = goods(), sh = ship.get(), dc = Math.min(discount.get(), g0), g = g0 - dc;   // g = مبلغ فاکتور بعد از تخفیف = بدهی به تامین‌کننده
     shipBox.hidden = sh <= 0;
     if (pays[0] && !pays[0].touched && !fromPay) { pays[0].amt = g; pays[0].ctl.set(g || ''); }
-    lines.forEach(l => l.update(g > 0 ? sh * (l.qty * l.price) / g : 0));
+    lines.forEach(l => { const lt = l.qty * l.price; l.update(g0 > 0 ? sh * lt / g0 : 0, g0 > 0 ? dc * lt / g0 : 0); });
     const paid = sum(pays, p => p.amt);
     dueBox.hidden = g - paid <= 0;
     sum1.replaceChildren(
-      row('جمع کالا', g), row('هزینه حمل (سرشکن)', sh), row('قیمت تمام‌شده‌ی فاکتور', g + sh, 'bold'), row('پرداخت‌شده به تامین‌کننده', paid),
+      row('جمع کالا', g0), ...(dc > 0 ? [row('تخفیف', -dc), row('جمع پس از تخفیف (بدهی کالا)', g, 'bold')] : []), row('هزینه حمل (سرشکن)', sh), row('قیمت تمام‌شده‌ی فاکتور', g + sh, 'bold'), row('پرداخت‌شده به تامین‌کننده', paid),
       row(g - paid >= 0 ? 'بدهی به تامین‌کننده' : 'اضافه‌پرداخت (تامین‌کننده بدهکار شد)', Math.abs(g - paid), g - paid > 0 ? 'warn' : g - paid < 0 ? 'info' : 'ok'));
   }
   const row = (k, v, c = '') => h('div', { class: 'srow ' + c }, h('span', null, k), h('b', { class: 'n' }, fmt(v)));
@@ -275,11 +289,12 @@ export function purchaseForm() {
     if (lines.some(l => !l.price)) return toast('قیمت خرید هر قلم را بنویس', 'err');
     if (lines.some(l => l.m + l.r !== l.qty)) return toast('جمع تحویل مهسا و رعنا باید برابر تعداد باشد', 'err');
     const sh = ship.get();
+    if (discount.get() > goods()) return toast('تخفیف نمی‌تواند از جمع کالاها بیشتر باشد', 'err');
     if (sh > 0 && !shipAcc.get()) return toast('حساب پرداخت‌کننده‌ی هزینه حمل را انتخاب کن', 'err');
     const used = pays.filter(p => p.amt > 0);
     if (used.some(p => !p.acc)) return toast('حساب هر پرداخت را انتخاب کن', 'err');
     const payload = {
-      date, supplier_id: supplier.get(), ship_cost: sh, ship_account_id: sh > 0 ? shipAcc.get() : null, due_date: goods() - sum(used, p => p.amt) > 0 ? due.get() : null, note: note.value.trim(),
+      date, supplier_id: supplier.get(), ship_cost: sh, discount: discount.get(), ship_account_id: sh > 0 ? shipAcc.get() : null, due_date: goods() - discount.get() - sum(used, p => p.amt) > 0 ? due.get() : null, note: note.value.trim(),
       lines: lines.map(l => ({ item_id: l.item, qty: l.qty, unit_price: l.price, hold_m: l.m, hold_r: l.r })),
       payments: used.map(p => ({ account_id: p.acc, amount: p.amt }))
     };
@@ -293,6 +308,7 @@ export function purchaseForm() {
       h('div', { class: 'two-col dt' }, field('تامین‌کننده', supplier), field('تاریخ', dateCtl)),
       h('h3', { class: 'sec' }, 'اقلام فاکتور'), linesBox,
       h('button', { class: 'btn dashed', type: 'button', onclick: addLine }, '＋ افزودن قلم'),
+      field('تخفیف خرید (ریال)', discount, 'اختیاری؛ از جمع فاکتور و بدهی به تامین‌کننده کم می‌شود و روی قیمت تمام‌شده‌ی اقلام سرشکن می‌شود.'),
       h('h3', { class: 'sec' }, 'هزینه حمل خرید (اختیاری)'), field('مبلغ حمل', ship), shipBox,
       h('h3', { class: 'sec' }, 'پرداخت به تامین‌کننده'), paysBox,
       h('button', { class: 'btn dashed', type: 'button', onclick: addPay }, '＋ پرداخت دیگر (اگر دو نفر پرداخت کردند)'),
