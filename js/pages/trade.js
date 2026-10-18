@@ -77,17 +77,17 @@ export function purchases() {
     const act = rows.filter(r => !r.voided);
     tbl.replaceChildren(dtable([
       { label: 'فاکتور', main: true, render: r => h('span', null, r.no, ' ', r.voided ? pill('باطل', 'red') : null) }, { label: 'تاریخ', render: r => jstr(r.date) }, { k: 'supplier', label: 'تامین‌کننده' },
-      { label: 'اقلام', cls: 'num', hm: true, render: r => r.nlines }, { label: 'جمع کالا', cls: 'num', render: r => N(r.goods_total) },
-      { label: 'هزینه حمل', cls: 'num', hm: true, render: r => (r.ship_cost ? N(r.ship_cost) : '') }, { label: 'پرداخت‌کننده‌ی حمل', hm: true, render: r => r.ship_account || '' },
-      { label: 'قیمت تمام‌شده', cls: 'num', hm: true, render: r => N(r.landed_total) }, { label: 'پرداخت‌شده', cls: 'num', render: r => N(r.paid) },
+      { label: 'اقلام', cls: 'num', hm: true, render: r => r.nlines }, { label: 'جمع کالا (قبل از تخفیف)', cls: 'num', hm: true, render: r => N((r.goods_total || 0) + (r.discount || 0)) }, { label: 'تخفیف', cls: 'num', hm: true, render: r => (r.discount ? N(-r.discount) : '') }, { label: 'بدهی کالا به تامین‌کننده', cls: 'num', render: r => N(r.goods_total) },
+      { label: 'هزینه حمل (پرداخت‌کننده)', cls: 'num', hm: true, render: r => (r.ship_cost ? h('span', null, N(r.ship_cost), r.ship_account ? h('small', { style: 'display:block;color:var(--brown)' }, r.ship_account) : null) : '') },
+      { label: 'قیمت تمام‌شده (کالا + حمل)', cls: 'num', hm: true, render: r => N(r.landed_total) }, { label: 'پرداخت‌شده به تامین‌کننده', cls: 'num', render: r => N(r.paid) },
       { label: 'بدهی', cls: 'num', render: r => (r.voided ? '' : r.debt > 0 ? pill(fmt(r.debt), 'amber') : r.debt < 0 ? pill('طلب ' + fmt(-r.debt), 'blue') : pill('تسویه', 'green')) }, { label: 'سررسید', render: r => (!r.voided && r.debt > 0 ? dueCell(r.due_date) : '') }, { k: 'created_by', label: 'ثبت‌کننده', hm: true }
-    ], rows, { onRow: r => purchaseDetail(r.id), rowCls, empty: 'فاکتوری پیدا نشد', foot: rows.length ? ['', '', 'جمع', '', N(sum(act, r => r.goods_total)), N(sum(act, r => r.ship_cost)), '', N(sum(act, r => r.landed_total)), N(sum(act, r => r.paid)), N(sum(act, r => r.debt)), '', ''] : null }));
+    ], rows, { onRow: r => purchaseDetail(r.id), rowCls, empty: 'فاکتوری پیدا نشد', foot: rows.length ? ['', '', 'جمع', '', N(sum(act, r => (r.goods_total || 0) + (r.discount || 0))), N(-sum(act, r => r.discount || 0)), N(sum(act, r => r.goods_total)), N(sum(act, r => r.ship_cost)), N(sum(act, r => r.landed_total)), N(sum(act, r => r.paid)), N(sum(act, r => r.debt)), '', ''] : null }));
   };
   const ctr = h('div', { class: 'bar' }, searchBox(v => { st.q = v; draw(); }, 'جستجو: شماره یا تامین‌کننده…'),
     sel([{ v: '', label: 'همه‌ی تامین‌کننده‌ها' }, ...S.suppliers.map(s => ({ v: String(s.id), label: s.name }))], '', v => { st.sup = v; draw(); }, 'تامین‌کننده'),
     h('label', { class: 'chk' }, h('input', { type: 'checkbox', onchange: e => { st.voided = e.target.checked; draw(); } }), 'نمایش باطل‌شده‌ها'));
   draw();
-  return h('div', null, head('خرید', [btn('＋ خرید جدید', () => purchaseForm())], 'هر فاکتور شامل چند قلم است؛ هزینه حمل روی قیمت اقلام سرشکن می‌شود.'), ctr, tbl);
+  return h('div', null, head('خرید', [btn('＋ خرید جدید', () => purchaseForm())], 'هر فاکتور شامل چند قلم است. «بدهی کالا» = جمع کالا − تخفیف، همان مبلغی که به تامین‌کننده می‌دهیم. کرایه (حمل) را جداگانه به باربر می‌دهیم و فقط روی قیمت تمام‌شده‌ی اقلام سرشکن می‌شود: قیمت تمام‌شده = بدهی کالا + حمل. پس «پرداخت‌شده» می‌تواند از «قیمت تمام‌شده» کمتر باشد و بدهی باز هم تسویه است.'), ctr, tbl);
 }
 
 export function purchaseDetail(id) {

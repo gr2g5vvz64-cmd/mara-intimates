@@ -420,3 +420,4 @@ ul.plain{list-style:none;padding:0;margin:4px 0}
   .tw{max-height:none;overflow-x:auto}
 }
 @media (min-width:701px){.t td:first-child{white-space:nowrap}}
+@media (min-width:701px){.t th{white-space:normal;line-height:1.4;vertical-align:middle}}
