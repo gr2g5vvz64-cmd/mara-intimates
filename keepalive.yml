@@ -1,0 +1,20 @@
+# بیدار نگه‌داشتن سرور MARA (پشتیبان cron-job.org). هر ۵ دقیقه یک درخواست به سرور می‌فرستد.
+name: keepalive
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch: {}
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: ping api
+        run: |
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -m 60 -w '%{http_code}' https://mara-intimates-api.onrender.com/api/health/ || echo 000)
+            echo "attempt $i -> $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 20
+          done
+          exit 1
