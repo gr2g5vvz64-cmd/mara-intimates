@@ -2,7 +2,7 @@
   "name": "mara-web-tests",
   "version": "1.0.0",
   "scripts": {
-    "test": "node util_test.mjs && node e2e5_render.mjs && node e2e5_flow.mjs && node e2e5_partner.mjs && node e2e5_returns.mjs && node e2e5_reliable.mjs && node e2e5_matrix.mjs && node e2e6_features.mjs && node e2e7_categories.mjs"
+    "test": "node util_test.mjs && node e2e5_render.mjs && node e2e5_flow.mjs && node e2e5_partner.mjs && node e2e5_returns.mjs && node e2e5_reliable.mjs && node e2e5_matrix.mjs && node e2e6_features.mjs && node e2e7_categories.mjs && node e2e8_nav.mjs && node e2e9_saleform.mjs && node e2e10_discount.mjs && node e2e11_edit.mjs"
   },
   "dependencies": {
     "playwright-core": "^1.64.1"
