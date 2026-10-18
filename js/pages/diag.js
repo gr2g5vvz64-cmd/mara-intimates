@@ -26,7 +26,7 @@ export function render() {
       db.ok ? row(Math.abs(db.check_diff || 0) < 1, 'ترازنامه‌ی کنترلی (باید صفر باشد)', 'اختلاف: ' + (Math.abs(db.check_diff || 0) < 1 ? '۰ (کمتر از یک ریال؛ فقط خطای گرد کردن)' : Math.round(db.check_diff).toLocaleString('en') + ' ریال'), 'اختلاف واقعی است: صفحه‌ی «تحلیل › بررسی اشتباهات» نشان می‌دهد کدام ثبت مشکل دارد.') : null,
       db.ok ? row(true, 'تاریخچه', `${db.audit_rows} ردیف ثبت شده`) : null));
     parts.push(sec('۲ · تنظیمات Render (Environment)',
-      row(c.users === 3, 'کاربران', `${c.users} نفر · ${c.users_with_email} ایمیل · ${c.users_with_phone} موبایل`, 'متغیرهای MAHSA_/RANA_/HAMID_ را در Render پر کن و دوباره Deploy بزن.'),
+      row(c.users >= 3 && c.users_with_email >= c.users && c.users_with_phone >= 3, 'کاربران', `${c.users} نفر (مدیر، مهسا، رعنا${c.users > 3 ? '، مشاهده‌گر' : ''}) · ${c.users_with_email} ایمیل · ${c.users_with_phone} موبایل`, 'یکی از کاربران ایمیل یا موبایل ندارد: متغیرهای MAHSA_/RANA_/HAMID_/MAHDI_ را در Render پر کن و دوباره Deploy بزن.'),
       row(c.frontend_origins.length > 0, 'FRONTEND_ORIGINS (آدرس سایت)', c.frontend_origins.join(' , ') || 'خالی', 'آدرس GitHub Pages را (مثل https://نام.github.io) بگذار؛ وگرنه مرورگر درخواست‌ها را مسدود می‌کند.'),
       row(c.cron_key, 'CRON_KEY (کلید کرون‌جاب)', c.cron_key ? 'ثبت شده' : 'خالی', 'یک رمز بلند بساز و در Render بگذار.'),
       row(c.webhook_secret, 'WEBHOOK_SECRET', c.webhook_secret ? 'ثبت شده' : 'خالی', 'یک رمز بلند بساز و در Render بگذار.'),
