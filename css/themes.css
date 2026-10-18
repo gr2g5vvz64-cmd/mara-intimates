@@ -9,3 +9,7 @@ html[data-theme="t5"]{--bg:#1A1416;--card:#261C20;--ink:#F6E9ED;--brown:#C9AEB7;
 html[data-theme="t5"] .btn.danger{color:#1A1416} html[data-theme="t5"] .btn.danger.ghost{color:var(--red);border-color:var(--red)}
 html[data-theme="t5"] .t tbody tr:hover td{background:var(--tint)}
 html[data-theme="t8"]{--bg:#F7EFE6;--card:#FFFFFF;--ink:#2E1B10;--brown:#6B4A36;--gold:#6B4226;--gold-d:#4A2C17;--lux:#C9A24B;--line:#E0CDB8;--tint:#F0E3D3;--pinkl:#D8B48A;--deep:#2E1B10;--deepfg:#F7EFE6;--deepfg2:#E0CDB8}
+/* تم ۹ — صورتی و مشکی (الهام از رنگ‌های برندهای لباس زیر): دکمه‌ها صورتی با نوشته‌ی مشکی تا خوانا بماند */
+html[data-theme="t9"]{--bg:#FFF4F9;--card:#FFFFFF;--ink:#111111;--brown:#6B3A55;--gold:#F276B4;--gold-d:#B8327F;--lux:#F5A6CF;--line:#F9D5E8;--tint:#FDE8F3;--pinkl:#F5A6CF;--deep:#000000;--deepfg:#FFFFFF;--deepfg2:#F5A6CF;--onp:#000000}
+html[data-theme="t9"] .btn.gold:hover{background:#F5A6CF}
+html[data-theme="t9"] a{color:var(--gold-d)}

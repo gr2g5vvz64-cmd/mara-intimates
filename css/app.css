@@ -364,3 +364,6 @@ h3.sec{margin:18px 0 8px;font-size:16px}
 .chips.catf{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
 .chips.catf .chip{min-height:38px;padding:2px 12px;font-size:13.5px}
 .tw.sm{max-height:none}
+/* توضیحات کالا زیر نام کالا در فرم‌ها و فاکتورها */
+.idesc{font-size:12.5px;color:var(--brown);background:var(--tint);border-radius:10px;padding:6px 10px;margin:-2px 0 8px;line-height:1.7}
+.idesc-s{display:block;font-size:11.5px;color:var(--brown);font-weight:400;line-height:1.5;margin-top:1px}
