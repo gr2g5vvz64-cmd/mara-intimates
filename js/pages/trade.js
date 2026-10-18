@@ -125,7 +125,7 @@ export function invoices() {
   const supT = dtable([
     { label: 'تامین‌کننده', main: true, render: s => s.name }, { label: 'جمع خرید', cls: 'num', render: s => N(s.goods) }, { label: 'پرداخت‌شده', cls: 'num', render: s => N(s.paid) }, { label: 'اعتبار مرجوعی', cls: 'num', hm: true, render: s => (s.credit ? N(s.credit) : '') },
     { label: 'وضعیت حساب', cls: 'num', render: s => (s.balance > 0 ? pill('بدهکاریم ' + fmt(s.balance), 'amber') : s.balance < 0 ? pill('طلبکاریم ' + fmt(-s.balance), 'blue') : pill('تسویه', 'green')) },
-    { label: '', render: s => btn('پرداخت', e => { e.stopPropagation(); supplierPaymentForm({ supplier_id: s.id }); }, 'gold sm') }
+    { label: '', render: s => (s.balance > 0.5 ? btn('پرداخت', e => { e.stopPropagation(); supplierPaymentForm({ supplier_id: s.id }); }, 'gold sm') : '') }
   ], S.vSup.filter(s => s.goods || s.paid), { onRow: s => supplierStatement(s.id), empty: 'تامین‌کننده‌ای با گردش حساب نیست' });
   return h('div', null, head('فاکتورها و بدهی', [btn('＋ پرداخت به تامین‌کننده', () => supplierPaymentForm())], 'بدهی هر فاکتور = جمع کالا − پرداختی‌ها − اعتبار مرجوعی. هزینه حمل جدا پرداخت می‌شود و در بدهی نیست.'),
     h('div', { class: 'kpis' }, kpi('بدهی ما به تامین‌کنندگان', N(debt), { tone: debt > 0 ? 'neg' : '' }), kpi('طلب ما از تامین‌کنندگان', N(credit), { tone: 'pos' })),
