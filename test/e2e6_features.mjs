@@ -40,7 +40,6 @@ try {
   const stockN = navs.find(n => n.r === 'stock'); const lowN = t0.v_stock.filter(i => i.active && i.rem <= i.min_stock).length; ok(stockN.c && stockN.c.replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)) == String(lowN), `شمارنده‌ی موجودی = کم‌موجودی/تمام‌شده (${lowN}): ${stockN.c}`);
   ok(await page.locator('.bottom a .cnt').count() === 5, 'نوار پایین موبایل هم شمارنده دارد');
   ok(await page.locator('.dnav a .cnt').count() >= 15, 'منوی کشویی هم شمارنده دارد');
-  ok(await page.locator('.tabs button .cnt').count() === 3, 'تب‌های داشبورد شمارنده دارند');
   await go('#/pay'); ok(await page.locator('.tabs button .cnt').count() === 4, 'تب‌های پرداخت‌ها شمارنده دارند');
   await go('#/stock'); ok(await page.locator('.tabs button .cnt').count() === 2, 'تب‌های موجودی شمارنده دارند');
   // انبار: جنس دست هر نفر با قیمت تمام‌شده
@@ -76,27 +75,28 @@ try {
   ok(Math.abs(t1.v_totals.check_diff) < 1, 'ترازنامه‌ی کنترلی سر جایش (بستن روز حساب را عوض نمی‌کند)');
 
   /* ---------- هدف ماهانه ---------- */
-  await go('#/'); await page.locator('.tabs button', { hasText: 'کل MARA' }).click(); await sleep(300);
-  ok(await page.locator('.goalrow').count() === 2, 'کارت هدف: دو شریک');
+  await go('#/');
+  ok(await page.locator('.goalrow').count() === 1, 'کارت هدف شریک: فقط هدف خودش');
   await page.locator('button', { hasText: 'تعیین هدف' }).first().click(); await M.waitFor();
   await M.locator('.numinp').nth(0).fill('50000000'); await M.locator('.numinp').nth(1).fill('30000000');
   await M.locator('button', { hasText: 'ثبت هدف' }).click(); await M.waitFor({ state: 'detached', timeout: 15000 }); await sleep(500);
   const t2 = await D(); ok(t2.goals.length === 2 && t2.goals.some(g => g.owner === 'مهسا' && Number(g.amount) === 50000000), 'دو هدف ماهانه در دیتابیس');
-  await sleep(300); ok(await page.locator('.gbar').count() === 2, 'نوار پیشرفت هدف نمایش داده شد');
+  await sleep(300); ok(await page.locator('.gbar').count() === 1, 'نوار پیشرفت هدف نمایش داده شد');
   await page.screenshot({ path: 'shots/f6_goals.png', fullPage: true });
 
   /* ---------- نمودار سررسید، مشتریان برتر، پیشنهاد خرید ---------- */
-  ok(await page.locator('svg.dchart').count() === 1, 'نمودار سررسیدهای ۳۰ روز');
-  const top = await page.locator('.rank .li').count(); ok(top >= 1, 'مشتریان برتر: ' + top + ' نفر');
+  const ap = await newPage(browser, url, { logs }); await login(ap, 'hamid@example.com', 'hamid-pass-333'); await sleep(900);
+  ok(await ap.locator('svg.dchart').count() === 1, 'نمودار سررسیدهای ۳۰ روز (داشبورد مدیر)');
+  ok(await ap.locator('.goalrow').count() === 2, 'داشبورد مدیر: هدف هر دو شریک');
   await go('#/customers'); ok(await page.locator('.rank').count() === 1, 'مشتریان برتر در صفحه‌ی مشتریان هم هست');
-  await go('#/'); await page.locator('.tabs button', { hasText: 'کل MARA' }).click(); await sleep(300);
+  await go('#/');
   // پیشنهاد خرید مجدد: فروش تقریباً همه‌ی سوتین اسپرت مهسا
   const tt = await D(); const bra = tt.v_stock.find(i => i.name === 'سوتین اسپرت'), ac = tt.accounts.find(a => a.name === 'حساب مهسا');
   const rs = await fetch(API + '/api/rpc/create_sale/', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + tok, 'x-idempotency-key': 'e6-' + Date.now() }, body: JSON.stringify({ seller: 'مهسا', channel: 'پیج اینستاگرام', customer: 'مشتری برتر آزمایشی', received: null, account_id: ac.id, lines: [{ item_id: bra.id, qty: bra.rem_m - 1, unit_price: 900000 }] }) });
   ok(rs.ok, 'فروش آزمایشی برای کم کردن موجودی: ' + rs.status);
   await page.evaluate(() => { location.hash = '#/stock'; }); await sleep(300); await go('#/'); await page.reload(); await page.waitForSelector('#view'); await sleep(900);
-  await page.locator('.tabs button', { hasText: 'کل MARA' }).click(); await sleep(300);
-  const ro = await page.locator('.reorder').innerText().catch(() => ''); ok(/سوتین اسپرت/.test(ro) && /بخر/.test(ro), 'پیشنهاد خرید مجدد برای سوتین اسپرت: ' + ro.replace(/\s+/g, ' ').slice(0, 90));
+  await ap.reload(); await ap.waitForSelector('#view'); await sleep(900);
+  const ro = await ap.locator('.reorder').innerText().catch(() => ''); ok(/سوتین اسپرت/.test(ro) && /بخر/.test(ro), 'پیشنهاد خرید مجدد برای سوتین اسپرت: ' + ro.replace(/\s+/g, ' ').slice(0, 90));
   const hn = await page.locator('.side nav a[data-r=""] .cnt').innerText(); ok(hn !== '۰', 'شمارنده‌ی خانه بعد از هشدار جدید: ' + hn);
   const cn = await page.locator('.side nav a[data-r="stock"] .cnt').innerText(); ok(cn !== '۰', 'شمارنده‌ی موجودی بعد از کم‌موجودی: ' + cn);
   await page.screenshot({ path: 'shots/f6_all.png', fullPage: true });

@@ -7,16 +7,10 @@ const D = async () => (await (await fetch(API + '/api/data/', { headers: { autho
 const page = await newPage(browser, url, { logs }); await login(page, 'mahsa@example.com', 'mahsa-pass-1'); page.setDefaultTimeout(8000);
 const M = page.locator('.ov'), sleep = ms => page.waitForTimeout(ms);
 try {
-  // تب‌های داشبورد
-  const tabs = (await page.locator('.tabs button').allInnerTexts()).map(x => x.replace(/[0-9۰-۹\s]/g, '')); ok(tabs.join('|') === 'مهسا|رعنا|کلMARA', 'سه تب: ' + tabs.join(' | '));
-  ok((await page.locator('.tabs button.on').innerText()).replace(/[0-9۰-۹\s]/g, '') === 'مهسا', 'تب پیش‌فرض مهسا = خودش');
-  ok(/حساب‌های مهسا/.test(await page.locator('.dbody').innerText()), 'تب مهسا: حساب‌های خودش');
-  await page.locator('.tabs button', { hasText: 'رعنا' }).click(); await sleep(300);
-  let tx = await page.locator('.dbody').innerText(); ok(/حساب‌های رعنا/.test(tx) && /ست لاکچری/.test(tx) && /حساب رعنا/.test(tx), 'تب رعنا: حساب و موجودی رعنا (ست لاکچری) را می‌بیند');
-  await page.locator('.tabs button', { hasText: 'کل MARA' }).click(); await sleep(300);
-  ok(await page.locator('.pg').count() === 1 && /فروش امروز/.test(await page.locator('.dbody').innerText()), 'تب کل MARA: مقایسه و خلاصه‌ی کل');
-  await page.screenshot({ path: 'shots/f5_tabs_all.png' });
-  await page.locator('.tabs button', { hasText: 'رعنا' }).click(); await sleep(300); await page.screenshot({ path: 'shots/f5_tabs_rana.png', fullPage: true });
+  const dtx = await page.locator('.dash').innerText();
+  ok(await page.locator('.tabs button').count() === 0 && /امروز من/.test(dtx) && /کارهای من/.test(dtx), 'داشبورد شریک: بدون تب، با «امروز من» و «کارهای من»');
+  ok(/حساب‌های مهسا|جنس و پول من/.test(dtx) && /جنس دست رعنا/.test(dtx) && /ست لاکچری/.test(dtx), 'جنس دست رعنا (ست لاکچری) دیده می‌شود');
+  ok(!/کل MARA|مقایسه/.test(dtx), 'عملکرد شریک دیگر دیده نمی‌شود');
   // فروش از موجودی رعنا توسط مهسا
   await page.evaluate(() => { location.hash = '#/sales'; }); await sleep(500); await page.click('text=＋ فروش جدید');
   const card = M.locator('.lcard').first();

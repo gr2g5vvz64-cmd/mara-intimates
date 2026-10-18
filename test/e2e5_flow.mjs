@@ -74,7 +74,7 @@ async function main() {
   await M.locator('button.chip', { hasText: /^۳۰ روز$/ }).click(); await M.locator('button', { hasText: 'ذخیره‌ی سررسید' }).click(); await modalGone();
   t = await D(); ok(t.v_invoices.find(i => i.no === 'F-0003').due_date === plus(30), 'تمدید سررسید فاکتور ' + await err());
   // ۶) داشبورد هشدار سررسید
-  await go(''); const dash = await page.locator('#view').innerText(); ok(/سررسید/.test(dash), 'داشبورد هشدار سررسید دارد'); await page.screenshot({ path: 'shots/f5_dash.png', fullPage: true });
+  const dp = await newPage(browser, url, { logs }); await login(dp, 'hamid@example.com', 'hamid-pass-333'); await sleep(900); const dash = await dp.locator('#view').innerText(); ok(/سررسید/.test(dash), 'داشبورد مدیر هشدار سررسید دارد'); await page.screenshot({ path: 'shots/f5_dash.png', fullPage: true });
   // ۷) تاریخچه
   await go('history'); await sleep(1200);
   const htxt = await page.locator('#view').innerText(); ok(/سارا/.test(htxt) && /مهسا/.test(htxt) && /دریافت/.test(htxt), 'تاریخچه شامل کار مهسا و مشتری سارا است');
@@ -107,17 +107,14 @@ async function main() {
   const dM = await dat(await tk('mahsa@example.com', 'mahsa-pass-1')), dR = await dat(await tk('rana@example.com', 'rana-pass-22'));
   const strip = t => JSON.stringify({ a: t.v_account_balance, s: t.v_stock, l: t.v_lots, v: t.v_sales });
   ok(strip(dM) === strip(dR), 'سرور برای مهسا و رعنا دقیقاً همان حساب‌ها، موجودی و فروش‌ها را می‌دهد');
-  for (const [nm, who] of [['rana@example.com', 'رعنا'], ['mahsa@example.com', 'مهسا']]) {
-    const pp = await newPage(browser, url, { logs }); await login(pp, nm, nm.startsWith('rana') ? 'rana-pass-22' : 'mahsa-pass-1'); await pp.waitForTimeout(700); await pp.locator('.tabs button', { hasText: 'کل MARA' }).click(); await pp.waitForTimeout(300);
-    const grid = await pp.locator('.pg').innerText(); ok(/مهسا/.test(grid) && /رعنا/.test(grid) && /جنس در دست/.test(grid) && /نقد/.test(grid), `داشبورد ${who}: کارت مقایسه‌ی هر دو نفر`);
-    const mm = dM.v_stock.reduce((a, i) => a + i.rem_m, 0), rr = dM.v_stock.reduce((a, i) => a + i.rem_r, 0);
-    ok(grid.replace(/\s+/g, ' ').includes(String(mm)) && grid.replace(/\s+/g, ' ').includes(String(rr)), `تعداد جنس مهسا (${mm}) و رعنا (${rr}) در داشبورد ${who} هست`);
-    ok(await pp.locator('.pg .ph.me').innerText().then(x => x.includes('(تو)')), 'ستون خودِ کاربر مشخص است');
-    if (who === 'رعنا') await pp.screenshot({ path: 'shots/f5_partners_d.png' });
+  for (const [nm, who, other] of [['rana@example.com', 'رعنا', 'مهسا'], ['mahsa@example.com', 'مهسا', 'رعنا']]) {
+    const pp = await newPage(browser, url, { logs }); await login(pp, nm, nm.startsWith('rana') ? 'rana-pass-22' : 'mahsa-pass-1'); await pp.waitForTimeout(900);
+    const dx = await pp.locator('.dash').innerText();
+    ok(/امروز من/.test(dx) && dx.includes('جنس دست ' + other), `داشبورد ${who}: کارت خودش و موجودی جنس ${other}`);
+    ok(!/مقایسه|کل MARA/.test(dx) && await pp.locator('.pg').count() === 0, `داشبورد ${who}: بدون مقایسه‌ی عملکرد`);
     await pp.close();
   }
-  const pm = await newPage(browser, url, { viewport: { width: 390, height: 844 }, logs }); await login(pm, 'mahsa@example.com', 'mahsa-pass-1'); await pm.waitForTimeout(700); await pm.locator('.tabs button', { hasText: 'کل MARA' }).click(); await pm.waitForTimeout(300);
-  ok(await pm.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'داشبورد موبایل: بدون سرریز افقی'); await pm.locator('.pg').scrollIntoViewIfNeeded(); await pm.screenshot({ path: 'shots/f5_partners_m.png' }); await pm.close();
+  const pm = await newPage(browser, url, { viewport: { width: 390, height: 844 }, logs }); await login(pm, 'mahsa@example.com', 'mahsa-pass-1'); await pm.waitForTimeout(700); ok(await pm.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'داشبورد موبایل: بدون سرریز افقی'); await pm.screenshot({ path: 'shots/f5_partners_m.png' }); await pm.close();
   // ۱۲) موبایل
   const mp = await newPage(browser, url, { viewport: { width: 390, height: 844 }, logs }); await login(mp, 'rana@example.com', 'rana-pass-22');
   for (const r of ['customers', 'invoices', 'history']) { await mp.evaluate(x => { location.hash = '#/' + x; }, r); await mp.waitForTimeout(900); ok(await mp.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `موبایل ${r}: بدون سرریز افقی`); await mp.screenshot({ path: `shots/f5_m_${r}.png` }); }

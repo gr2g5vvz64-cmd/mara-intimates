@@ -10,8 +10,8 @@ import { saleForm, purchaseForm } from '../forms_trade.js';
 import { returnForm, expenseForm, supplierPaymentForm, dayCloseForm, goalForm } from '../forms_misc.js';
 
 const NS = 'http://www.w3.org/2000/svg';
-const sv = (tag, a = {}, ...k) => { const e = document.createElementNS(NS, tag); for (const x in a) e.setAttribute(x, a[x]); k.flat().forEach(c => c != null && e.append(c instanceof Node ? c : document.createTextNode(c))); return e; };
-const mil = n => { const v = n / 1e6; return (Math.abs(v) >= 100 ? Math.round(v) : Math.round(v * 10) / 10).toString(); };
+export const sv = (tag, a = {}, ...k) => { const e = document.createElementNS(NS, tag); for (const x in a) e.setAttribute(x, a[x]); k.flat().forEach(c => c != null && e.append(c instanceof Node ? c : document.createTextNode(c))); return e; };
+export const mil = n => { const v = n / 1e6; return (Math.abs(v) >= 100 ? Math.round(v) : Math.round(v * 10) / 10).toString(); };
 
 function barChart() {
   const keys = lastMonths(6); const M = Object.fromEntries(monthly().map(m => [m.key, m]));
@@ -33,7 +33,7 @@ function barChart() {
   return h('div', { class: 'card' }, h('div', { class: 'ct' }, 'فروش و سود ماهانه ', h('small', null, '(میلیون ریال)')),
     h('div', { class: 'legend' }, h('i', { class: 'sw gold' }), 'فروش', h('i', { class: 'sw green' }), 'سود'), svg);
 }
-function hbars(title, rows, color = 'var(--gold)', unit = '') {
+export function hbars(title, rows, color = 'var(--gold)', unit = '') {
   const max = Math.max(1, ...rows.map(r => Math.abs(r.v)));
   return h('div', { class: 'card' }, h('div', { class: 'ct' }, title),
     rows.length ? rows.map(r => h('div', { class: 'hb' }, h('span', { class: 'hl' }, r.l), h('span', { class: 'hbar' }, h('i', { style: { width: Math.max(2, Math.abs(r.v) / max * 100) + '%', background: r.v < 0 ? 'var(--red)' : color } })), h('span', { class: 'hv n' }, fmt(r.v) + unit))) : h('div', { class: 'empty sm' }, 'هنوز داده‌ای نیست'));
@@ -41,7 +41,7 @@ function hbars(title, rows, color = 'var(--gold)', unit = '') {
 
 
 /* نمودار سررسیدهای ۳۰ روز آینده: بدهی ما به تامین‌کننده و طلب ما از مشتری */
-function dueChart() {
+export function dueChart() {
   const b = dueBuckets(), max = Math.max(1, ...b.map(x => Math.max(x.payable, x.receivable)));
   const W = 560, H = 190, pb = 28, pt = 12, gap = (W - 12) / b.length, bw = Math.max(3, gap / 2 - 1.5);
   const svg = sv('svg', { viewBox: `0 0 ${W} ${H}`, class: 'chart dchart', role: 'img', 'aria-label': 'نمودار سررسیدهای ۳۰ روز آینده' });
@@ -69,12 +69,12 @@ function goalRow(who) {
     g.goal ? h('div', { class: 'gbar', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.min(100, g.pct), 'aria-label': `پیشرفت هدف ${who}` }, h('i', { class: g.pct >= 100 ? 'done' : '', style: { width: Math.min(100, g.pct) + '%' } })) : null,
     g.goal ? h('div', { class: 'gsub' }, g.pct >= 100 ? '🎉 به هدف رسید' : `${fmt(Math.max(0, g.goal - g.done))} ریال تا هدف مانده`) : null);
 }
-function goalsCard(only) {
+export function goalsCard(only) {
   const mk = jmonthKey(todayISO());
   return h('div', { class: 'card' }, h('div', { class: 'ct' }, `هدف فروش ${jmonthName(mk)}`, h('button', { type: 'button', class: 'mini', onclick: () => goalForm() }, 'تعیین هدف')),
     ...(only ? [goalRow(only)] : [goalRow('مهسا'), goalRow('رعنا')]));
 }
-function reorderCard() {
+export function reorderCard() {
   const rows = reorderSuggestions();
   if (!rows.length) return null;
   return h('div', { class: 'card reorder' }, h('div', { class: 'ct' }, 'پیشنهاد خرید مجدد ', h('button', { type: 'button', class: 'mini', onclick: () => purchaseForm() }, 'خرید جدید')),
@@ -84,7 +84,7 @@ function reorderCard() {
 
 /* سود هر دسته‌ی کالا (شورت، سوتین، جوراب، …) در بازه‌ی انتخابی */
 let catRange = 'month';
-function categoryProfitCard() {
+export function categoryProfitCard() {
   const host = h('div', { class: 'card' });
   const draw = () => {
     const rows = categoryStats(catRange).filter(r => r.revenue || r.profit || r.qty), best = rows[0];
@@ -128,7 +128,7 @@ function partnersCard(act, today, mk) {
 }
 
 let savedTab = null;   // تبی که کاربر آخر انتخاب کرده؛ با هر تازه‌سازی داده همان می‌ماند
-export function render() {
+export function legacyRender() {
   const T = S.totals, today = todayISO(), mk = jmonthKey(today);
   const act = activeSales();
   const sToday = sum(act.filter(s => s.date === today), s => s.total), pToday = sum(act.filter(s => s.date === today), s => s.profit);
@@ -226,3 +226,8 @@ export function render() {
     h('div', { class: 'qas' }, quick('فروش جدید', '🛍', 'gold', () => saleForm()), quick('خرید جدید', '📦', 'dark', () => purchaseForm()), quick('مرجوعی', '↩', 'line', () => returnForm()), quick('پرداخت / هزینه', '💳', 'line', () => location.hash = '#/pay'), ...(S.me.role === 'admin' ? [quick('تحلیل', '🔍', 'gold', () => analysisModal())] : [])),
     body);
 }
+
+/** هر نقش داشبورد خودش را می‌بیند: مدیر ← تحلیلی، مهسا و رعنا ← کار روزانه */
+import { adminDashboard } from './dash_admin.js';
+import { partnerDashboard } from './dash_partner.js';
+export function render() { return S.me && S.me.role === 'admin' ? adminDashboard() : partnerDashboard(); }

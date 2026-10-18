@@ -43,8 +43,8 @@ try {
   const bt = (await bc.innerText()).replace(/\s+/g, ' '); ok(/سوتین/.test(bt) && /شورت/.test(bt) && /جوراب/.test(bt), 'سه دسته در انبار: ' + bt.slice(0, 90));
   await page.locator('.catf .chip', { hasText: 'جوراب' }).click(); await sleep(300); ok(await page.locator('.t tbody tr').count() >= 1 && !/سوتین اسپرت/.test(await page.locator('main, #view').first().innerText().catch(() => '')) || true, 'فیلتر دسته در موجودی');
   // داشبورد: سود دسته‌ها
-  await go('#/'); await page.locator('.tabs button', { hasText: 'کل MARA' }).click(); await sleep(300);
-  const card = page.locator('.card', { hasText: 'سود به تفکیک دسته‌ی کالا' }); ok(await card.count() === 1, 'کارت سود دسته‌ها در داشبورد');
+  const ap = await newPage(browser, url, { logs }); await login(ap, 'hamid@example.com', 'hamid-pass-333'); ap.setDefaultTimeout(8000); await sleep(800);
+  const card = ap.locator('.card', { hasText: 'سود به تفکیک دسته‌ی کالا' }); ok(await card.count() === 1, 'کارت سود دسته‌ها در داشبورد');
   await card.locator('.chip', { hasText: 'کل' }).click(); await sleep(300);
   const rowsT = await card.locator('tbody tr').allInnerTexts(); console.log('   ', rowsT.map(x => x.replace(/\s+/g, ' ')).join(' || '));
   ok(rowsT.some(r => /سوتین/.test(r)) && rowsT.some(r => /شورت/.test(r)) && rowsT.some(r => /جوراب/.test(r)), 'ردیف شورت، سوتین و جوراب');
@@ -53,10 +53,10 @@ try {
   const expect = t2.sale_lines.filter(l => okS.has(l.sale_id)).reduce((a, l) => a + l.qty * (l.unit_price - l.unit_cost), 0) + t2.returns.filter(r => !r.voided).reduce((a, r) => a + (r.profit_effect || 0), 0);
   const nums = await card.locator('tbody tr').evaluateAll(trs => trs.map(tr => tr.querySelectorAll('td')[2].innerText.replace(/[^0-9-]/g, '')));
   const got = nums.reduce((a, x) => a + Number(x || 0), 0); ok(Math.abs(got - expect) < 3, `جمع سود دسته‌ها ${got} = سود اقلام فروش ${Math.round(expect)}`);
-  await page.screenshot({ path: 'shots/f7_cat.png', fullPage: true });
-  const mp = await newPage(browser, url, { logs, viewport: { width: 390, height: 800 } }); await login(mp, 'rana@example.com', 'rana-pass-22'); await mp.evaluate(() => { location.hash = '#/items'; }); await mp.waitForTimeout(700);
+  await ap.screenshot({ path: 'shots/f7_cat.png', fullPage: true });
+  const mp = await newPage(browser, url, { logs, viewport: { width: 390, height: 800 } }); await login(mp, 'hamid@example.com', 'hamid-pass-333'); await mp.evaluate(() => { location.hash = '#/items'; }); await mp.waitForTimeout(700);
   ok(await mp.evaluate(() => document.documentElement.scrollWidth - innerWidth) <= 1, 'موبایل: بدون اسکرول افقی در کالاها');
-  await mp.evaluate(() => { location.hash = '#/'; }); await mp.waitForTimeout(500); await mp.locator('.tabs button', { hasText: 'کل MARA' }).click(); await mp.waitForTimeout(400);
+  await mp.evaluate(() => { location.hash = '#/'; }); await mp.waitForTimeout(500);
   ok(await mp.evaluate(() => document.documentElement.scrollWidth - innerWidth) <= 1, 'موبایل: بدون اسکرول افقی در داشبورد'); await mp.screenshot({ path: 'shots/f7_cat_mobile.png', fullPage: true });
   const real = logs.filter(l => !/ERR_FAILED|net::ERR|40\d/.test(l)); if (real.length) { console.log(real); fails++; }
 } catch (e) { console.log('ERR', e.message.split('\n')[0]); await page.screenshot({ path: 'shots/fail.png' }); fails++; }
