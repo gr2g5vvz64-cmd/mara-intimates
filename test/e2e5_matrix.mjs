@@ -13,7 +13,7 @@ const cases = async () => {
   return [
     ['save_item', { name: 'کالای آزمایشی', category: 'شورت' }, 'items'], ['save_supplier', { name: 'تامین‌کننده‌ی آزمایشی' }, 'suppliers'], ['save_customer', { name: 'مشتری آزمایشی' }, 'customers'],
     ['create_purchase', { supplier_id: sp, ship_cost: 0, lines: [{ item_id: it, qty: 2, unit_price: 100000, hold_m: 2, hold_r: 0 }], payments: [] }, 'purchase_invoices'],
-    ['create_sale', { seller: 'مهسا', channel: 'پیج اینستاگرام', received: null, account_id: acc('حساب مهسا')(t), lines: [{ item_id: it, qty: 1, unit_price: 300000, holder: 'مهسا' }] }, 'v_sales'],
+    ['create_sale', { seller: 'مهسا', channel: 'پیج اینستاگرام', received: null, customer: 'خریدار ماتریس', account_id: acc('حساب مهسا')(t), lines: [{ item_id: it, qty: 1, unit_price: 300000, holder: 'مهسا' }] }, 'v_sales'],
     ['add_expense', { category: 'تبلیغات', amount: 1000, account_id: acc('نقد مهسا')(t) }, 'expenses'],
     ['add_transfer', { from_account_id: acc('حساب مهسا')(t), to_account_id: acc('نقد مهسا')(t), amount: 1000, kind: 'transfer' }, 'transfers'],
     ['move_stock', { lot_id: lot.id, from_holder: 'مهسا', to_holder: 'رعنا', qty: 1 }, 'stock_moves'],

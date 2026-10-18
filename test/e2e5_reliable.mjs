@@ -1,4 +1,4 @@
-import { serve, launch, newPage, login, API } from './h5.mjs';
+import { serve, launch, newPage, login, API, buyer } from './h5.mjs';
 const { srv, url } = await serve(); const browser = await launch(); const logs = []; let fails = 0;
 const ok = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) fails++; };
 const tk = async (i, pw) => (await (await fetch(API + '/api/auth/login/', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ identifier: i, password: pw }) })).json()).data.token;
@@ -13,6 +13,7 @@ async function fillSale(price = '300000') {
   const card = M.locator('.lcard').first();
   await card.locator('.cmb input').fill('جوراب'); await card.locator('.cmb-o').first().click();
   await card.locator('.numinp').first().fill(price);
+  await buyer(page, M);
   await M.locator('button', { hasText: 'ثبت فروش' }).click();
 }
 const banner = () => page.locator('#savebar').innerText().catch(() => '');

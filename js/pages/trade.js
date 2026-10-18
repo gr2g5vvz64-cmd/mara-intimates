@@ -12,18 +12,19 @@ const sel = (opts, cur, cb, label) => {
 
 /* ============ فروش ============ */
 export function sales(query) {
-  const st = { q: '', seller: '', ch: '', month: '', open: query.get('open') === '1', voided: false };
+  const st = { q: '', seller: '', ch: '', month: '', cust: '', open: query.get('open') === '1', voided: false };
   const tbl = h('div');
   const months = [...new Set(S.vSales.map(s => jmonthKey(s.date)))].sort().reverse();
+  const buyers = [...new Set(S.vSales.filter(s => s.customer).map(s => s.customer))].sort((a, b) => a.localeCompare(b, 'fa'));
   const channels = [...new Set(S.vSales.map(s => s.channel))];
   const draw = () => {
-    const rows = S.vSales.filter(s => (st.voided || !s.voided) && (!st.seller || s.seller === st.seller) && (!st.ch || s.channel === st.ch) && (!st.month || jmonthKey(s.date) === st.month)
+    const rows = S.vSales.filter(s => (st.voided || !s.voided) && (!st.seller || s.seller === st.seller) && (!st.ch || s.channel === st.ch) && (!st.month || jmonthKey(s.date) === st.month) && (!st.cust || (st.cust === '__none' ? !s.customer : s.customer === st.cust))
       && (!st.open || s.outstanding > 0) && match(st.q, s.no, s.customer, s.items_text, s.seller, s.channel)).sort(sortNew);
     const act = rows.filter(r => !r.voided);
     tbl.replaceChildren(dtable([
       { k: 'no', label: 'شماره', main: true, render: r => h('span', null, r.no, ' ', r.voided ? pill('باطل', 'red') : null) },
       { label: 'تاریخ', render: r => jstr(r.date) }, { k: 'seller', label: 'فروشنده' }, { k: 'channel', label: 'محل فروش', hm: true },
-      { label: 'مشتری', hm: true, render: r => r.customer || '' }, { label: 'کالاها', cls: 'wrap', render: r => r.items_text },
+      { label: 'خریدار', render: r => r.customer || pill('بدون خریدار', 'red') }, { label: 'کالاها', cls: 'wrap', render: r => r.items_text },
       { label: 'جمع فروش', cls: 'num', render: r => N(r.total) }, { label: 'دریافتی', cls: 'num', hm: true, render: r => N(r.received + r.collected) },
       { label: 'نسیه‌ی باز', cls: 'num', render: r => (r.outstanding > 0 && !r.voided ? pill(fmt(r.outstanding), 'amber') : '') },
       { label: 'سررسید', render: r => (r.outstanding > 0 && !r.voided ? dueCell(r.due_date) : '') },
@@ -34,6 +35,7 @@ export function sales(query) {
   const ctr = h('div', { class: 'bar' }, searchBox(v => { st.q = v; draw(); }, 'جستجو: شماره، مشتری، کالا…'),
     sel([{ v: '', label: 'همه‌ی فروشنده‌ها' }, { v: 'مهسا', label: 'مهسا' }, { v: 'رعنا', label: 'رعنا' }], '', v => { st.seller = v; draw(); }, 'فروشنده'),
     sel([{ v: '', label: 'همه‌ی محل‌ها' }, ...channels.map(c => ({ v: c, label: c }))], '', v => { st.ch = v; draw(); }, 'محل فروش'),
+    sel([{ v: '', label: 'همه‌ی خریداران' }, ...buyers.map(c => ({ v: c, label: c })), ...(S.vSales.some(s => !s.customer) ? [{ v: '__none', label: '⚠ بدون خریدار' }] : [])], '', v => { st.cust = v; draw(); }, 'خریدار'),
     sel([{ v: '', label: 'همه‌ی ماه‌ها' }, ...months.map(m => ({ v: m, label: jmonthName(m) }))], '', v => { st.month = v; draw(); }, 'ماه'),
     h('label', { class: 'chk' }, h('input', { type: 'checkbox', checked: st.open || null, onchange: e => { st.open = e.target.checked; draw(); } }), 'فقط نسیه‌ی باز'),
     h('label', { class: 'chk' }, h('input', { type: 'checkbox', onchange: e => { st.voided = e.target.checked; draw(); } }), 'نمایش باطل‌شده‌ها'));

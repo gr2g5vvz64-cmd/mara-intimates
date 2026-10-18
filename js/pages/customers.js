@@ -9,12 +9,12 @@ import { saleDetail } from './trade.js';
 import { topCustomersCard } from './dashboard.js';
 
 export function render(query) {
-  let q = '', onlyDebt = query.get('debt') !== '0', tbl = h('div');
+  let q = '', onlyDebt = query.get('debt') !== '0', sortBy = 'debt', tbl = h('div');
   const debtors = S.vCus.filter(c => c.outstanding > 0.5);
   const total = sum(debtors, c => c.outstanding), over = sum(debtors, c => c.overdue_amount);
   const draw = () => {
     const rows = S.vCus.filter(c => (!onlyDebt || c.outstanding > 0.5) && c.active !== false && match(q, c.name, c.phone, c.note))
-      .sort((a, b) => b.overdue_amount - a.overdue_amount || b.outstanding - a.outstanding || a.name.localeCompare(b.name, 'fa'));
+      .sort((a, b) => sortBy === 'buy' ? b.sales_total - a.sales_total || a.name.localeCompare(b.name, 'fa') : b.overdue_amount - a.overdue_amount || b.outstanding - a.outstanding || a.name.localeCompare(b.name, 'fa'));
     tbl.replaceChildren(dtable([
       { label: 'مشتری', main: true, render: c => c.name }, { label: 'تلفن', render: c => h('span', { dir: 'ltr' }, c.phone || '') },
       { label: 'جمع فروش', cls: 'num', hm: true, render: c => N(c.sales_total) }, { label: 'تسویه‌شده', cls: 'num', hm: true, render: c => N(c.settled) },
@@ -29,6 +29,7 @@ export function render(query) {
     h('div', { class: 'kpis' }, kpi('جمع طلب ما از مشتریان', N(total), { sub: 'ریال', tone: total > 0 ? 'warn' : '' }), kpi('سررسید گذشته', N(over), { sub: 'ریال', tone: over > 0 ? 'neg' : '' }), kpi('مشتریان بدهکار', debtors.length, { sub: 'نفر' })),
     topCustomersCard(),
     h('div', { class: 'bar' }, searchBox(v => { q = v; draw(); }, 'جستجو: نام یا تلفن…'),
+      h('select', { class: 'sel', 'aria-label': 'مرتب‌سازی', onchange: e => { sortBy = e.target.value; draw(); } }, h('option', { value: 'debt' }, 'مرتب: بیشترین بدهی / سررسید'), h('option', { value: 'buy' }, 'مرتب: بیشترین خرید')),
       h('label', { class: 'chk' }, h('input', { type: 'checkbox', checked: onlyDebt || null, onchange: e => { onlyDebt = e.target.checked; draw(); } }), 'فقط بدهکارها')), tbl);
 }
 

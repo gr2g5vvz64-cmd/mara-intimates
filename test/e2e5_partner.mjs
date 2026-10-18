@@ -1,4 +1,4 @@
-import { serve, launch, newPage, login, API } from './h5.mjs';
+import { serve, launch, newPage, login, API, buyer } from './h5.mjs';
 const { srv, url } = await serve(); const browser = await launch(); const logs = []; let fails = 0;
 const ok = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) fails++; };
 const tk = async (i, pw) => (await (await fetch(API + '/api/auth/login/', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ identifier: i, password: pw }) })).json()).data.token;
@@ -29,6 +29,7 @@ try {
   await card.locator('.stp.big .stp-i').fill('9'); await sleep(300);
   ok(/کافی نیست/.test(await card.locator('.prev').innerText()), 'تعداد بیش از موجودی رعنا: هشدار');
   await card.locator('.stp.big .stp-i').fill('2'); await sleep(300);
+  await buyer(page, M);
   await M.locator('button', { hasText: 'ثبت فروش' }).click(); await sleep(1200);
   const t = await D(); const sale = t.v_sales.filter(s => s.items_text && s.items_text.includes('ست لاکچری')).sort((a, b) => b.id - a.id)[0];
   const sl = t.sale_lines.filter(l => l.sale_id === sale.id);

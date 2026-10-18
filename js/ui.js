@@ -76,13 +76,13 @@ export function accountPicker(accounts, value, onChange, { pockets = true, balan
   let cur = value;
   const wrap = h('div', { class: 'accpick' });
   const draw = () => {
-    const mk = list => list.map(a => h('button', {
+    const mk = (list, pocket) => list.map(a => h('button', {
       type: 'button', class: 'chip' + (a.id === cur ? ' on' : ''), role: 'radio', 'aria-checked': a.id === cur ? 'true' : 'false',
       onclick: () => { cur = a.id; draw(); onChange && onChange(cur); }
-    }, a.name, balances ? h('small', null, fmt(balances(a.id))) : null));
+    }, a.name, balances ? h('small', null, fmt(pocket ? -balances(a.id) : balances(a.id))) : null));
     wrap.replaceChildren(
       h('div', { class: 'grp-t' }, 'حساب‌های کسب‌وکار'), h('div', { class: 'chips', role: 'radiogroup' }, mk(biz)),
-      ...(pockets && pk.length ? [h('div', { class: 'grp-t' }, 'جیب شخصی (سرمایه‌ی خودشان)'), h('div', { class: 'chips', role: 'radiogroup' }, mk(pk))] : []));
+      ...(pockets && pk.length ? [h('div', { class: 'grp-t' }, 'جیب شخصی (عدد = سرمایه‌ی گذاشته‌شده‌ی او)'), h('div', { class: 'chips', role: 'radiogroup' }, mk(pk, true))] : []));
   };
   draw();
   wrap.get = () => cur; wrap.set = v => { cur = v; draw(); };

@@ -1,8 +1,9 @@
-import { h, fmt, jlong, jstr, jmonthKey, jmonthName, todayISO, lastMonths, sum, groupBy } from '../util.js';
+import { h, fmt, jlong, jstr, jmonthKey, jmonthName, todayISO, lastMonths, sum, groupBy, addDaysISO } from '../util.js';
 import { S, monthly, itemProfit, businessAccounts, accBalance, activeSales } from '../store.js';
 import { N, pill, kpi, tabsBar } from '../ui.js';
 import { tok } from '../theme.js';
 import { categoryStats } from '../insights.js';
+import { analysisModal } from '../analysis.js';
 import { chips } from '../ui.js';
 import { dueBuckets, topCustomers, goalProgress, reorderSuggestions, dayCloseOpen, negativeAccounts, overdue, soon } from '../insights.js';
 import { saleForm, purchaseForm } from '../forms_trade.js';
@@ -21,9 +22,9 @@ function barChart() {
   svg.append(sv('title', {}, 'فروش و سود ماهانه (میلیون ریال)'));
   data.forEach((d, i) => {
     const cx = W - 10 - gap * (i + .5);
-    const hs = (H - pb - pt) * d.sales / max, hp = (H - pb - pt) * Math.max(0, d.profit) / max;
+    const hs = (H - pb - pt) * d.sales / max, hp = d.profit < 0 ? 4 : (H - pb - pt) * d.profit / max;
     svg.append(sv('rect', { x: cx - bw - 2, y: H - pb - hs, width: bw, height: Math.max(hs, 1), rx: 4, fill: tok('--gold') }));
-    svg.append(sv('rect', { x: cx + 2, y: H - pb - hp, width: bw, height: Math.max(hp, 1), rx: 4, fill: tok('--green') }));
+    svg.append(sv('rect', { x: cx + 2, y: H - pb - hp, width: bw, height: Math.max(hp, 1), rx: 4, fill: d.profit < 0 ? tok('--red') : tok('--green') }));
     svg.append(sv('text', { x: cx - bw / 2 - 2, y: H - pb - hs - 4, 'text-anchor': 'middle', class: 'cv' }, mil(d.sales)));
     svg.append(sv('text', { x: cx + bw / 2 + 2, y: H - pb - hp - 4, 'text-anchor': 'middle', class: 'cv g' }, mil(d.profit)));
     svg.append(sv('text', { x: cx, y: H - 16, 'text-anchor': 'middle', class: 'cl' }, jmonthName(d.k).split(' ')[0]));
@@ -110,7 +111,7 @@ function partnersCard(act, today, mk) {
   const rows = [
     ['حساب بانکی', p => bal(p, 'bank')],
     ['نقد', p => bal(p, 'cash')],
-    ['جیب شخصی', p => bal(p, 'pocket')],
+    ['سرمایه‌ی گذاشته‌شده', p => (S.totals || {})[p === 'مهسا' ? 'capital_m' : 'capital_r'] || 0],
     ['جنس در دست (عدد)', p => sum(S.stock, i => i[col[p]] || 0), 'u'],
     ['ارزش جنس', p => sum(S.lots, l => (l[col[p]] || 0) * (l.landed_unit || 0))],
     ['فروش امروز', p => sum(mine(p).filter(s => s.date === today), s => s.total)],
@@ -134,7 +135,7 @@ export function render() {
   const M = monthly().find(m => m.key === mk) || { sales: 0, profit: 0 };
   const biz = businessAccounts();
   const debtSup = S.vSup.filter(x => x.balance > 0), debtTotal = sum(debtSup, x => x.balance);
-  const low = S.stock.filter(i => i.active && i.rem <= i.min_stock && i.rem > 0), out = S.stock.filter(i => i.active && i.rem === 0 && S.lines.some(l => l.item_id === i.id));
+  const low = S.stock.filter(i => i.active && i.rem <= i.min_stock && i.rem > 0), out = S.stock.filter(i => i.active && i.rem === 0 && S.saleLines.some(l => l.item_id === i.id && S.SALE[l.sale_id] && !S.SALE[l.sale_id].voided && S.SALE[l.sale_id].date >= addDaysISO(today, -30)));
   const owed = act.filter(s => s.outstanding > 0);
   const alerts = [];
   if (debtTotal > 0) alerts.push(h('a', { href: '#/invoices', class: 'alert warn' }, `بدهی به تامین‌کنندگان: ${fmt(debtTotal)} ریال`, h('small', null, debtSup.map(x => x.name).join('، '))));
@@ -162,9 +163,9 @@ export function render() {
   const lastBuys = S.vInvoices.filter(i => !i.voided).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id)).slice(0, 5);
 
   const kpisEl =
-    h('div', { class: 'kpis' }, kpi('فروش امروز', N(sToday), { sub: 'ریال' }), kpi('سود امروز', N(pToday), { sub: 'ریال', tone: pToday < 0 ? 'neg' : 'pos' }),
-      kpi('فروش این ماه', N(M.sales), { sub: 'ریال' }), kpi('سود این ماه', N(M.profit), { sub: 'ریال', tone: M.profit < 0 ? 'neg' : 'pos' }),
-      kpi('سود کل', N(T.profit || 0), { sub: 'ریال', tone: 'pos' }));
+    h('div', { class: 'kpis' }, kpi('فروش امروز', N(sToday), { sub: 'ریال' }), kpi('سود فروش‌های امروز', N(pToday), { sub: 'ریال (قبل از هزینه‌ها)', tone: pToday < 0 ? 'neg' : 'pos' }),
+      kpi('فروش این ماه', N(M.sales), { sub: 'ریال' }), kpi('سود خالص این ماه', N(M.profit), { sub: 'ریال (بعد از هزینه‌ها)', tone: M.profit < 0 ? 'neg' : 'pos' }),
+      kpi('سود کل', N(T.profit || 0), { sub: 'ریال (بعد از هزینه‌ها)', tone: (T.profit || 0) < 0 ? 'neg' : 'pos' }));
   const allView = () => [partnersCard(act, today, mk), goalsCard(), categoryProfitCard(), reorderCard(),
     h('div', { class: 'grid2' }, dueChart(), topCustomersCard()),
     h('div', { class: 'grid2' },
@@ -172,7 +173,7 @@ export function render() {
         h('div', { class: 'accs' }, biz.map(a => h('div', { class: 'acc' }, h('span', null, a.name), N(accBalance(a.id))))),
         h('div', { class: 'srow bold' }, h('span', null, 'جمع حساب‌های کسب‌وکار'), N(T.business_balance || 0))),
       h('div', { class: 'card' }, h('div', { class: 'ct' }, 'نیاز به توجه'), h('div', { class: 'alerts' }, alerts))),
-    h('div', { class: 'grid2' }, barChart(), h('div', null, hbars('فروش به تفکیک محل', byCh), hbars('پرسودترین کالاها', top, 'var(--green)'))),
+    h('div', { class: 'grid2' }, barChart(), h('div', null, hbars('فروش به تفکیک محل (از ابتدا)', byCh), hbars('پرسودترین کالاها (از ابتدا)', top, 'var(--green)'))),
     h('div', { class: 'grid2' },
       h('div', { class: 'card' }, h('div', { class: 'ct' }, 'آخرین فروش‌ها ', h('a', { href: '#/sales', class: 'more' }, 'همه ←')),
         lastSales.length ? lastSales.map(s => h('div', { class: 'li' }, h('div', null, h('b', null, s.items_text), h('small', null, `${s.no} · ${jstr(s.date)} · ${s.seller} · ${s.channel}`)), N(s.total))) : h('div', { class: 'empty sm' }, 'هنوز فروشی ثبت نشده')),
@@ -191,7 +192,7 @@ export function render() {
     return [
       h('p', { class: 'hint' }, who === S.me.name ? 'حساب و کتاب خودت' : `حساب و کتاب ${who} (فقط برای دیدن؛ همیشه برای هر دو نفر باز است)`),
       h('div', { class: 'kpis' }, kpi('فروش امروز', N(sum(dayS, s => s.total)), { sub: 'ریال' }), kpi('فروش این ماه', N(sum(monthS, s => s.total)), { sub: 'ریال' }),
-        kpi('سود فروش‌های این ماه', N(sum(monthS, s => s.profit)), { sub: 'ریال', tone: 'pos' }), kpi('جنس در دست', String(sum(S.stock, i => i[k] || 0)), { sub: `ارزش ${fmt(stockVal)} ریال` }),
+        kpi('سود فروش‌های این ماه', N(sum(monthS, s => s.profit)), { sub: 'ریال (قبل از هزینه‌ها)', tone: sum(monthS, s => s.profit) < 0 ? 'neg' : 'pos' }), kpi('جنس در دست', String(sum(S.stock, i => i[k] || 0)), { sub: `ارزش ${fmt(stockVal)} ریال` }),
         kpi('طلب از مشتریان', N(sum(owedS, s => s.outstanding)), { sub: `${owedS.length} فاکتور` })),
       goalsCard(who),
       h('div', { class: 'grid2' },
@@ -222,6 +223,6 @@ export function render() {
   return h('div', { class: 'dash' },
     h('div', { class: 'hello' }, h('div', null, h('h1', null, `سلام ${S.me.name}`), h('p', { class: 'sub' }, jlong(today))), h('img', { class: 'brand-mark', src: 'icons/logo-mark.jpg', alt: 'MR', width: 42, height: 42 })),
     tabsHost,
-    h('div', { class: 'qas' }, quick('فروش جدید', '🛍', 'gold', () => saleForm()), quick('خرید جدید', '📦', 'dark', () => purchaseForm()), quick('مرجوعی', '↩', 'line', () => returnForm()), quick('پرداخت / هزینه', '💳', 'line', () => location.hash = '#/pay')),
+    h('div', { class: 'qas' }, quick('فروش جدید', '🛍', 'gold', () => saleForm()), quick('خرید جدید', '📦', 'dark', () => purchaseForm()), quick('مرجوعی', '↩', 'line', () => returnForm()), quick('پرداخت / هزینه', '💳', 'line', () => location.hash = '#/pay'), ...(S.me.role === 'admin' ? [quick('تحلیل', '🔍', 'gold', () => analysisModal())] : [])),
     body);
 }

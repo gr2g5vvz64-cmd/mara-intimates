@@ -1,8 +1,9 @@
 import { h, fmt, jstr, jmonthName, sum } from '../util.js';
 import { S, businessAccounts, pockets, accBalance, monthly } from '../store.js';
 import { dtable, N, pill, kpi } from '../ui.js';
-import { transferForm, collectionForm, supplierPaymentForm, dayCloseForm } from '../forms_misc.js';
+import { transferForm, capitalForm, collectionForm, supplierPaymentForm, dayCloseForm } from '../forms_misc.js';
 import { dayCloseOpen, negativeAccounts } from '../insights.js';
+import { analysisModal } from '../analysis.js';
 import { head, btn } from './common.js';
 
 export function render() {
@@ -15,7 +16,7 @@ export function render() {
   const R = (k, v, c = '') => h('div', { class: 'srow ' + c }, h('span', null, k), N(v));
   const debts = S.vSales.filter(s => !s.voided && s.outstanding > 0);
   return h('div', null,
-    head('مالی و سرمایه', [btn('بستن روز', () => dayCloseForm()), btn('انتقال / برداشت سود', () => transferForm({ kind: 'transfer' })), btn('دریافت نسیه', () => collectionForm(), 'ghost')], 'سود کل کسب‌وکار از روی فروش حساب می‌شود و به میزان سرمایه ربطی ندارد؛ سهم‌ها فقط پیشنهاد است.'),
+    head('مالی و سرمایه', [btn('بستن روز', () => dayCloseForm()), btn('انتقال / برداشت سود', () => transferForm({ kind: 'transfer' })), btn('انتقال سرمایه', () => capitalForm(), 'ghost'), ...(S.me.role === 'admin' ? [btn('🔍 تحلیل', () => analysisModal(), 'ghost')] : []), btn('دریافت نسیه', () => collectionForm(), 'ghost')], 'سود کل کسب‌وکار از روی فروش حساب می‌شود و به میزان سرمایه ربطی ندارد؛ سهم‌ها فقط پیشنهاد است.'),
     dayCloseOpen() ? h('div', { class: 'alert warn' }, 'امروز هنوز بسته نشده؛ موجودی نقد و بانک را بشمار و «بستن روز» را بزن.') : null,
     negativeAccounts().length ? h('div', { class: 'alert red' }, 'مانده‌ی این حساب‌ها منفی است: ' + negativeAccounts().map(a => a.name).join('، ') + ' — احتمالاً ثبتی با حساب اشتباه یا دریافتی ثبت‌نشده داریم.') : null,
     h('div', { class: 'kpis' }, kpi('سود کل', N(profit), { tone: profit < 0 ? 'neg' : 'pos' }), kpi('جمع حساب‌های کسب‌وکار', N(T.business_balance)), kpi('ارزش موجودی', N(T.stock_value)), kpi('ارزش خالص', N(T.net_worth), { sub: 'حساب‌ها + موجودی + طلب − بدهی' })),
@@ -23,8 +24,10 @@ export function render() {
       h('div', { class: 'card' }, h('div', { class: 'ct' }, 'حساب‌ها'),
         h('div', { class: 'accs' }, biz.map(a => h('div', { class: 'acc' }, h('span', null, a.name), N(accBalance(a.id))))),
         h('div', { class: 'srow bold' }, h('span', null, 'جمع'), N(T.business_balance)),
-        h('div', { class: 'ct sub2' }, 'جیب‌های شخصی ', h('small', null, '(منفی = پولی که خودشان در کسب‌وکار گذاشته‌اند)')),
-        h('div', { class: 'accs' }, pk.map(a => h('div', { class: 'acc' }, h('span', null, a.name), N(accBalance(a.id)))))),
+        h('div', { class: 'ct sub2' }, 'سرمایه‌ی شرکا ', h('small', null, '(پولی که هر نفر از جیب خودش در کسب‌وکار گذاشته)')),
+        h('div', { class: 'accs' }, h('div', { class: 'acc' }, h('span', null, 'سرمایه‌ی مهسا'), N(capM)), h('div', { class: 'acc' }, h('span', null, 'سرمایه‌ی رعنا'), N(capR))),
+        h('div', { class: 'srow bold' }, h('span', null, 'جمع سرمایه'), N(capT)),
+        h('div', { style: 'margin-top:10px' }, btn('انتقال سرمایه بین مهسا و رعنا', () => capitalForm(), 'ghost sm'))),
       h('div', { class: 'card' }, h('div', { class: 'ct' }, 'سود چطور ساخته شد'),
         R('جمع فروش', T.revenue), R('− بهای تمام‌شده‌ی کالاهای فروخته‌شده', -T.cogs), R('− پیک و بسته‌بندی فروش‌ها', -T.sale_costs), R('− هزینه‌ها', -T.expenses), R('± مرجوعی‌ها', T.returns_effect), R('سود کل', profit, 'bold'),
         h('div', { class: 'checkline ' + (ok ? 'ok' : 'bad') }, ok ? '✓ کنترل حسابداری: ارزش خالص − سرمایه + برداشت‌ها = سود. اختلاف صفر است.' : `⚠ اختلاف کنترلی: ${fmt(T.check_diff)} ریال. با حمیدرضا تماس بگیر.`))),

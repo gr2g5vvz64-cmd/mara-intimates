@@ -27,7 +27,7 @@ try {
   await M.locator('button', { hasText: 'افزودن کالا' }).click(); await sleep(1500);
   const t1 = await D(); ok(t1.categories.some(c => c.name === 'لباس خواب') && t1.items.find(i => i.name === 'ست خواب ساتن').category === 'لباس خواب', 'دسته و کالا در دیتابیس ثبت شد');
   // ساخت کالا وسط خرید: باید دسته بپرسد
-  await go('#/purchases'); await page.locator('button', { hasText: /خرید جدید/ }).first().click(); await M.waitFor();
+  await go('#/purchases'); await page.locator('button', { hasText: /خرید جدید/ }).first().click(); await M.waitFor(); await sleep(600);
   await M.locator('.lcard .cmb input').first().fill('تاپ ورزشی نخی'); await sleep(300);
   await M.locator('.cmb-o.create').first().waitFor(); await M.locator('.cmb-o.create').first().click(); await page.locator('.ov').last().locator('.chip', { hasText: 'تاپ' }).waitFor();
   ok(await page.locator('.ov').last().innerText().then(x => /دسته‌ی «تاپ ورزشی نخی» چیست/.test(x)), 'وسط خرید برای کالای تازه دسته می‌پرسد');

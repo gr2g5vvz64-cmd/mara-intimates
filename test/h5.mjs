@@ -26,3 +26,9 @@ export async function login(page, ident, pw) {
   await page.fill('input[autocomplete=username]', ident); await page.fill('input[type=password]', pw); await page.click('button[type=submit]');
   await page.waitForSelector('#view', { timeout: 20000 });
 }
+/** نام خریدار (الزامی در فاکتور فروش): اولین فیلد ترکیبی فرم */
+let _b = 0;
+export async function buyer(page, M, name = 'خریدار تست ' + (++_b)) {
+  const c = M.locator('.cmb input').first(); await c.fill(name); await page.waitForTimeout(250);
+  const cr = M.locator('.cmb-o.create'); await (await cr.count() ? cr.first() : M.locator('.cmb-o').first()).click(); await page.waitForTimeout(1500);
+}

@@ -12,7 +12,7 @@ try {
   /* ---------- تم‌ها ---------- */
   ok(await page.locator('#themebtn').isVisible(), 'زبانه‌ی تم رنگی بالای صفحه هست');
   await page.click('#themebtn'); await sleep(200);
-  const opts = await page.locator('.tb-opt').count(); ok(opts === 8, 'هشت تم در پنل: ' + opts);
+  const opts = await page.locator('.tb-opt').count(); ok(opts === 9, 'نه تم در پنل: ' + opts);
   const names = await page.locator('.tb-opt b').allInnerTexts(); console.log('   ', names.map(n => n.replace(/\s+/g, ' ')).join(' | '));
   ok(await page.locator('.tb-opt.on').count() === 1, 'تم فعلی علامت دارد');
   const before = await vars();

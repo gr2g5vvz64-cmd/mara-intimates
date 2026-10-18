@@ -23,8 +23,8 @@ async function main() {
   await M.locator('button.chip', { hasText: 'بخشی / نسیه' }).click();
   await M.locator('.fld', { has: page.locator('.lbl', { hasText: 'چقدر گرفتی' }) }).locator('input').fill('1000000');
   await M.locator('button', { hasText: 'ثبت فروش' }).click(); await sleep(500);
-  ok((await err()).includes('مشتری'), 'نسیه بدون مشتری رد شد: ' + await err());
-  const cust = M.locator('.fld', { has: page.locator('.lbl', { hasText: /^مشتری$/ }) }).locator('.cmb input');
+  ok((await err()).includes('خریدار'), 'فروش بدون خریدار رد شد: ' + await err());
+  const cust = M.locator('.fld', { has: page.locator('.lbl', { hasText: /^خریدار/ }) }).locator('.cmb input');
   await cust.fill('سارا'); await M.locator('.cmb-o.create').first().click(); await sleep(700);
   await M.locator('button.chip', { hasText: /^۵ روز$/ }).click(); await sleep(200);
   const hintTxt = await M.locator('.hint', { hasText: 'سررسید:' }).innerText(); ok(/سررسید/.test(hintTxt), 'نمایش سررسید در فرم: ' + hintTxt);

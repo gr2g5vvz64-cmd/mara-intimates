@@ -121,6 +121,41 @@ export function transferForm(preset = {}) {
   const m = modal({ title: 'انتقال بین حساب‌ها', body: h('div', { class: 'form' }, kindChips, hk, field('تاریخ', dateField(date, v => { date = v; })), field('از حساب', from), field('به حساب', to), field('مبلغ', amt), field('توضیح', note)), footer: [btn] });
 }
 
+/* ----- انتقال سرمایه بین مهسا و رعنا (برابر کردن سهم‌ها) ----- */
+export function capitalForm() {
+  const T = S.totals || {}, capM = T.capital_m || 0, capR = T.capital_r || 0;
+  let date = todayISO(), payer = capM >= capR ? 'رعنا' : 'مهسا';
+  const other = p => (p === 'مهسا' ? 'رعنا' : 'مهسا');
+  const pocketOf = o => S.accounts.find(a => a.kind === 'pocket' && a.owner === o);
+  const who = chips([{ v: 'رعنا', label: 'رعنا به مهسا می‌دهد' }, { v: 'مهسا', label: 'مهسا به رعنا می‌دهد' }], payer, v => { payer = v; prev(); }, { cls: 'two' });
+  const amt = numField({ value: '', onInput: () => prev() });
+  const note = h('input', { class: 'inp', placeholder: 'توضیح (اختیاری)' });
+  const pv = h('div', { class: 'prev' });
+  const equal = h('button', { type: 'button', class: 'btn ghost', onclick: () => {
+    const big = capM >= capR ? 'مهسا' : 'رعنا', diff = Math.abs(capM - capR);
+    if (diff < 1) return toast('سرمایه‌ها همین حالا برابرند', 'ok');
+    payer = other(big); who.set(payer); amt.set(Math.floor(diff / 2)); prev();
+  } }, 'برابر کردن سهم‌ها (محاسبه‌ی خودکار)');
+  const prev = () => {
+    const a = amt.get() || 0, rcv = other(payer), cm = capM + (rcv === 'مهسا' ? -a : a), cr = capR + (rcv === 'رعنا' ? -a : a);
+    pv.textContent = `سرمایه پس از انتقال: مهسا ${fmt(cm)} · رعنا ${fmt(cr)}`; pv.classList.toggle('bad', a > (rcv === 'مهسا' ? capM : capR));
+  };
+  prev();
+  const btn = h('button', { class: 'btn primary lg', type: 'button' }, 'ثبت انتقال سرمایه');
+  btn.onclick = async () => {
+    const a = amt.get(), rcv = other(payer);
+    if (!a) return toast('مبلغ را بنویس', 'err');
+    const from = pocketOf(payer), to = pocketOf(rcv);
+    if (!from || !to) return toast('جیب شخصی پیدا نشد', 'err');
+    const r = await run(btn, () => rpc('add_transfer', { date, from_account_id: from.id, to_account_id: to.id, amount: a, kind: 'capital', note: note.value }));
+    if (r) finish(m, 'انتقال سرمایه ثبت شد');
+  };
+  const m = modal({ title: 'انتقال سرمایه', body: h('div', { class: 'form' },
+    h('div', { class: 'hint' }, `الان سرمایه‌ی مهسا ${fmt(capM)} و سرمایه‌ی رعنا ${fmt(capR)} ریال است. وقتی یکی از شرکا بخشی از سرمایه‌ی دیگری را از جیب خودش به او پرداخت می‌کند، همین‌جا ثبت کن؛ مجموع سرمایه و حساب‌های کسب‌وکار تغییر نمی‌کند.`),
+    equal, who, field('تاریخ', dateField(date, v => { date = v; })), field('مبلغ پرداختی (ریال)', amt), pv, field('توضیح', note)), footer: btn });
+  return m;
+}
+
 /* ----- مرجوعی از مشتری ----- */
 export function returnForm(saleId, edit) {
   let date = edit ? edit.date : todayISO(), cond = edit ? edit.condition : 'سالم', toSup = edit ? !!edit.to_supplier : false, holder = edit ? edit.holder : null;

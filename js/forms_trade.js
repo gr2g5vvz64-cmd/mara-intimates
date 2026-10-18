@@ -40,7 +40,7 @@ export function saleForm(preset = {}) {
   const channel = chips(CHANNELS.map(c => ({ v: c, label: c })), edit ? edit.channel : pref('channel', CHANNELS[0]), () => {}, { label: 'محل فروش' });
   const custOpts = () => customers().map(c => { const b = S.vCus.find(x => x.id === c.id); return { v: c.id, label: c.name, sub: (c.phone || '') + (b && b.outstanding > 0 ? ' · بدهکار ' + fmt(b.outstanding) : '') }; });
   const customer = combo({
-    placeholder: 'نام مشتری (اختیاری؛ برای نسیه الزامی)', createLabel: 'مشتری جدید', options: custOpts(),
+    placeholder: 'نام خریدار را تایپ کن یا انتخاب کن (الزامی)', createLabel: 'مشتری جدید', options: custOpts(),
     onCreate: async name => { try { const r = await rpc('save_customer', { name }, { queue: false }); await loadAll(); customer.setOptions(custOpts()); customer.set(r.id); toast('مشتری اضافه شد'); recalc(); return r.id; } catch (e) { toast(errText(e), 'err'); return null; } },
     onChange: () => recalc()
   });
@@ -187,7 +187,7 @@ export function saleForm(preset = {}) {
     if (discount.get() > t.gross) return toast('تخفیف نمی‌تواند از جمع کالاها بیشتر باشد', 'err');
     if (lines.some(l => !l.price)) { if (!confirm0('فی فروش یکی از کالاها صفر است. مطمئنی؟')) return; }
     if (lines.some(l => l.short > 0)) return toast('موجودی کافی نیست', 'err');
-    if (t.recv < t.total && !customer.get()) { customer.input.focus(); return toast('برای فروش نسیه مشتری را انتخاب کن یا بساز', 'err'); }
+    if (!customer.get()) { customer.input.focus(); return toast('نام خریدار را انتخاب کن یا بساز؛ هر فاکتور فروش باید خریدار داشته باشد', 'err'); }
     if (t.recv > 0 && !recvAcc.get()) return toast('حسابی که پول به آن آمد را انتخاب کن', 'err');
     if (t.c > 0 && !costAcc.get()) return toast('حساب پرداخت هزینه را انتخاب کن', 'err');
     const payload = {
@@ -204,7 +204,7 @@ export function saleForm(preset = {}) {
     title: edit ? `ویرایش فروش ${edit.no}` : 'فروش جدید', wide: true, onClose: () => undo.forEach(f => f()),
     body: h('div', { class: 'form' },
       h('div', { class: 'two-col dt' }, field('فروشنده', sellerChips), field('تاریخ', dateCtl)),
-      field('مشتری', [customer, custInfo]),
+      field('خریدار *', [customer, custInfo]),
       h('h3', { class: 'sec' }, 'کالاها'), linesBox,
       h('button', { class: 'btn dashed', type: 'button', onclick: addLine }, '＋ افزودن کالای دیگر'),
       field('تخفیف فروش (ریال)', discount, 'اختیاری؛ از جمع فاکتور کم می‌شود و روی طلب، دریافتی و سود اثر می‌گذارد.'), discSum,
