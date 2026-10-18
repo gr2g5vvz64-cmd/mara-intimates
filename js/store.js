@@ -125,6 +125,7 @@ export const catNames = (withOff = false) => {
 export const catOf = it => (it && it.category) || NO_CAT;
 export const customers = () => S.customersT.filter(c => c.active);
 /** ویرایش و ابطال: فقط حمیدرضا و مهسا (سرور هم همین را اجرا می‌کند). رعنا فقط ثبت و مشاهده دارد. */
+export const isViewer = () => !!(S.me && S.me.role === 'viewer');
 export const canEdit = () => !!(S.me && (S.me.can_edit || S.me.role === 'admin'));
 export const canVoid = () => canEdit();
 /** درصد سود پیش‌فرض (عدد؛ مثلاً 20): اول درصد دسته‌ی کالا، اگر نبود درصد پیش‌فرض کل، اگر آن هم نبود ۲۰ */

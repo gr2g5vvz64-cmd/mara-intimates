@@ -2,7 +2,7 @@
   "name": "mara-web-tests",
   "version": "1.0.0",
   "scripts": {
-    "test": "node util_test.mjs && node e2e5_render.mjs && node e2e5_flow.mjs && node e2e5_partner.mjs && node e2e5_returns.mjs && node e2e5_reliable.mjs && node e2e5_matrix.mjs && node e2e6_features.mjs && node e2e7_categories.mjs && node e2e8_nav.mjs && node e2e9_saleform.mjs && node e2e10_discount.mjs && node e2e11_edit.mjs && node e2e13_capital.mjs && node e2e14_analysis.mjs && node e2e15_markup.mjs && node e2e16_dash.mjs"
+    "test": "node util_test.mjs && node e2e5_render.mjs && node e2e5_flow.mjs && node e2e5_partner.mjs && node e2e5_returns.mjs && node e2e5_reliable.mjs && node e2e5_matrix.mjs && node e2e6_features.mjs && node e2e7_categories.mjs && node e2e8_nav.mjs && node e2e9_saleform.mjs && node e2e10_discount.mjs && node e2e11_edit.mjs && node e2e13_capital.mjs && node e2e14_analysis.mjs && node e2e15_markup.mjs && node e2e16_dash.mjs && node e2e17_analysis_viewer.mjs"
   },
   "dependencies": {
     "playwright-core": "^1.64.1"

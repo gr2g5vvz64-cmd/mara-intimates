@@ -49,6 +49,7 @@ async function send(fn, payload, id) {
 
 /** ثبت یک عملیات. نتیجه یا خود پاسخ است، یا {queued:true} وقتی در صف ذخیره قرار گرفته. خطای کاربر (مثل موجودی ناکافی) پرتاب می‌شود تا فرم نشان دهد. */
 export async function rpc(fn, payload, { queue = true } = {}) {
+  if (S.me && S.me.role === 'viewer') { const e = new Error('این حساب فقط برای مشاهده است.'); e.code = 'E_PERM'; throw e; }
   const id = uid(), t0 = performance.now();
   try {
     const j = await send(fn, payload, id);

@@ -24,25 +24,25 @@ export function partnerTasks(me) {
   }
   const low = S.stock.filter(i => i.active && i.rem > 0 && i.rem <= i.min_stock);
   if (low.length) T.push({ tone: 'amber', text: `${fmt(low.length)} جنس کم‌موجودی است: ${low.slice(0, 3).map(i => i.name).join('، ')}`, href: '#/stock' });
-  if (dayCloseOpen()) T.push({ tone: 'info', text: 'امروز کار ثبت شده ولی روز بسته نشده', act: () => dayCloseForm() });
+  if (dayCloseOpen() && S.me.role !== 'viewer') T.push({ tone: 'info', text: 'امروز کار ثبت شده ولی روز بسته نشده', act: () => dayCloseForm() });
   return T.slice(0, 5);
 }
 
-export function partnerDashboard() {
-  const me = S.me.name, key = me === 'مهسا' ? 'rem_m' : 'rem_r', other = me === 'مهسا' ? 'رعنا' : 'مهسا', okey = key === 'rem_m' ? 'rem_r' : 'rem_m';
+export function partnerDashboard(who) {
+  const viewer = S.me.role === 'viewer', me = who || S.me.name, own = viewer ? me : 'من',  key = me === 'مهسا' ? 'rem_m' : 'rem_r', other = me === 'مهسا' ? 'رعنا' : 'مهسا', okey = key === 'rem_m' ? 'rem_r' : 'rem_m';
   const today = todayISO(), T = S.totals || {};
   const mineAll = activeSales().filter(s => s.seller === me), todays = mineAll.filter(s => s.date === today);
   const qa = (label, icon, cls, fn) => h('button', { type: 'button', class: 'qa ' + cls, onclick: fn }, h('span', { class: 'qi', 'aria-hidden': 'true' }, icon), label);
 
-  const todayCard = h('div', { class: 'card' }, h('div', { class: 'ct' }, 'امروز من'),
+  const todayCard = h('div', { class: 'card' }, h('div', { class: 'ct' }, `امروز ${own}`),
     h('div', { class: 'kpis' },
       h('div', { class: 'kpi' }, h('div', { class: 'k-l' }, 'فروش امروز'), h('div', { class: 'k-v' }, N(sum(todays, s => s.total)))),
       h('div', { class: 'kpi' }, h('div', { class: 'k-l' }, 'تعداد فاکتور'), h('div', { class: 'k-v' }, h('span', { class: 'n' }, fmt(todays.length)))),
-      h('div', { class: 'kpi pos' }, h('div', { class: 'k-l' }, 'سود من امروز'), h('div', { class: 'k-v' }, N(sum(todays, s => s.profit))))),
+      h('div', { class: 'kpi pos' }, h('div', { class: 'k-l' }, `سود ${own} امروز`), h('div', { class: 'k-v' }, N(sum(todays, s => s.profit))))),
     goalsCard(me));
 
   const tasks = partnerTasks(me);
-  const taskCard = h('div', { class: 'card' }, h('div', { class: 'ct' }, 'کارهای من'),
+  const taskCard = h('div', { class: 'card' }, h('div', { class: 'ct' }, `کارهای ${own}`),
     tasks.length ? tasks.map(t => h('div', { class: 'li task ' + t.tone }, h('div', null, t.text), t.act ? h('button', { type: 'button', class: 'mini', onclick: t.act }, 'انجام') : h('a', { class: 'more', href: t.href }, 'ببین ←')))
       : h('div', { class: 'alert ok' }, 'همه‌چیز مرتب است ✓'));
 
@@ -51,22 +51,22 @@ export function partnerDashboard() {
   const cap = T[key === 'rem_m' ? 'capital_m' : 'capital_r'];
   const otherUnits = sum(S.stock.filter(i => i.active), i => i[okey] || 0);
   const otherItems = S.stock.filter(i => i.active && i[okey] > 0).sort((a, b) => b[okey] - a[okey]);
-  const money = h('div', { class: 'card' }, h('div', { class: 'ct' }, 'جنس و پول من'),
-    h('div', { class: 'srow' }, 'جنس دست من', h('b', null, `${fmt(units)} عدد · ${fmt(val)} ریال`)),
+  const money = h('div', { class: 'card' }, h('div', { class: 'ct' }, `جنس و پول ${own}`),
+    h('div', { class: 'srow' }, `جنس دست ${own}`, h('b', null, `${fmt(units)} عدد · ${fmt(val)} ریال`)),
     ...accs.filter(a => a.kind !== 'pocket').map(a => h('div', { class: 'srow' }, a.name, h('b', null, fmt(accBalance(a.id))))),
-    h('div', { class: 'srow' }, 'طلب من از مشتری‌ها', h('b', null, fmt(recv))),
-    cap != null ? h('div', { class: 'srow' }, 'سرمایه‌ی من', h('b', null, fmt(cap))) : null);
+    h('div', { class: 'srow' }, `طلب ${own} از مشتری‌ها`, h('b', null, fmt(recv))),
+    cap != null ? h('div', { class: 'srow' }, `سرمایه‌ی ${own}`, h('b', null, fmt(cap))) : null);
 
   const otherCard = h('div', { class: 'card' }, h('div', { class: 'ct' }, `جنس دست ${other}`, h('small', null, ` · ${fmt(otherUnits)} عدد`)),
     otherItems.length ? otherItems.slice(0, 12).map(i => h('div', { class: 'srow' }, i.name, h('b', null, fmt(i[okey]) + ' عدد'))) : h('div', { class: 'empty sm' }, 'جنسی دستش نیست.'),
     otherItems.length > 12 ? h('p', { class: 'hint' }, `و ${fmt(otherItems.length - 12)} جنس دیگر`) : null);
 
   const last = mineAll.slice().sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : (b.no || 0) - (a.no || 0))).slice(0, 3);
-  const lastCard = h('div', { class: 'card' }, h('div', { class: 'ct' }, 'آخرین فروش‌های من', h('a', { href: '#/sales', class: 'more' }, 'همه ←')),
-    last.length ? last.map(s => h('div', { class: 'li' }, h('div', null, h('b', null, s.customer || 'بدون نام'), h('small', null, `${s.no} · ${jstr(s.date)}${s.outstanding > 0.5 ? ' · مانده ' + fmt(s.outstanding) : ''}`)), N(s.total))) : h('div', { class: 'empty sm' }, 'هنوز فروشی ثبت نکرده‌ای.'));
+  const lastCard = h('div', { class: 'card' }, h('div', { class: 'ct' }, `آخرین فروش‌های ${own}`, h('a', { href: '#/sales', class: 'more' }, 'همه ←')),
+    last.length ? last.map(s => h('div', { class: 'li' }, h('div', null, h('b', null, s.customer || 'بدون نام'), h('small', null, `${s.no} · ${jstr(s.date)}${s.outstanding > 0.5 ? ' · مانده ' + fmt(s.outstanding) : ''}`)), N(s.total))) : h('div', { class: 'empty sm' }, viewer ? 'هنوز فروشی ثبت نشده.' : 'هنوز فروشی ثبت نکرده‌ای.'));
 
   return h('div', { class: 'dash partner' },
-    h('div', { class: 'hello' }, h('div', null, h('h1', null, `سلام ${me}`), h('p', { class: 'sub' }, jlong(today))), h('img', { class: 'brand-mark', src: 'icons/logo-mark.jpg', alt: 'MR', width: 42, height: 42 })),
-    h('div', { class: 'qas' }, qa('فروش جدید', '🛍', 'gold', () => saleForm()), qa('خرید جدید', '📦', 'dark', () => purchaseForm()), qa('مرجوعی', '↩️', 'line', () => returnForm()), qa('پرداخت / هزینه', '💸', 'line', () => expenseForm())),
+    h('div', { class: 'hello' }, h('div', null, h('h1', null, `سلام ${S.me.name}`), h('p', { class: 'sub' }, jlong(today) + (viewer ? ` · نمای ${me} (فقط مشاهده)` : ''))), h('img', { class: 'brand-mark', src: 'icons/logo-mark.jpg', alt: 'MR', width: 42, height: 42 })),
+    viewer ? null : h('div', { class: 'qas' }, qa('فروش جدید', '🛍', 'gold', () => saleForm()), qa('خرید جدید', '📦', 'dark', () => purchaseForm()), qa('مرجوعی', '↩️', 'line', () => returnForm()), qa('پرداخت / هزینه', '💸', 'line', () => expenseForm())),
     h('div', { class: 'dbody' }, todayCard, taskCard, money, otherCard, lastCard));
 }

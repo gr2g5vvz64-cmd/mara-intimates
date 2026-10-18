@@ -44,7 +44,7 @@ export function render() {
     sec('قفل‌ها و تاریخچه', h('ul', null,
       li('هیچ ردیفی پاک یا ویرایش نمی‌شود. اشتباه را «ابطال» کن (دلیل لازم است): ثبت‌کننده تا ۲۴ ساعت و حمیدرضا همیشه.'),
       li('هر کار هر نفر (ورود، ثبت، ابطال، خروجی) با زمان و IP در «تاریخچه» می‌ماند و هرگز پاک نمی‌شود.'))),
-    sec('حساب من', h('p', null, `وارد شده‌ای با نام ${me.name} (${me.role === 'admin' ? 'مدیر' : 'همکار'}).`),
+    sec('حساب من', h('p', null, `وارد شده‌ای با نام ${me.name} (${me.role === 'admin' ? 'مدیر' : me.role === 'viewer' ? 'مشاهده‌گر' : 'همکار'}).`),
       h('ul', null, botLine('telegram', 'تلگرام', 't.me'), botLine('bale', 'بله', 'ble.ir')),
       h('div', { class: 'acts' }, btn('تغییر رمز', passwordForm, 'ghost'), btn('خروج', async () => { try { await api('/api/auth/logout/', { method: 'POST' }); } catch {} setToken(null); location.reload(); }, 'danger ghost'))),
     sec('نصب روی گوشی', h('p', null, 'در مرورگر گوشی منوی اشتراک‌گذاری/سه‌نقطه را بزن و «افزودن به صفحه‌ی اصلی» را انتخاب کن تا مثل یک برنامه باز شود.')),

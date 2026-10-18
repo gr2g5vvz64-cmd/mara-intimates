@@ -1,11 +1,13 @@
 // اجزای رابط: مودال، چیپ، فیلد عدد، تاریخ شمسی، کومبو، جدول
 import { h, fa2en, parseNum, fmt, norm, todayISO, toJ, fromJ, jMonthLen, JM, toast, addDaysISO, jstr } from './util.js';
-import { errText } from './store.js';
+import { errText, isViewer } from './store.js';
 
 /* ---------- مودال / شیت ---------- */
 const modalStack = [];
 export const closeTopModal = () => { const m = modalStack[modalStack.length - 1]; if (m) m.close(); };
 export function modal({ title, body, footer, wide = false, onClose }) {
+  if (isViewer() && body && body.classList && body.classList.contains('form')) { toast('این حساب فقط برای مشاهده است؛ ثبت یا تغییر ندارد.', 'err'); return { el: h('div'), body: h('div'), footer: null, close() {} }; }
+  if (isViewer()) footer = null;
   const prevFocus = document.activeElement;
   let closed = false; const me = { close: () => close() };
   const onKey = e => { if (e.key !== 'Escape') return; const all = document.querySelectorAll('.ov'); if (all[all.length - 1] === ov) close(); };

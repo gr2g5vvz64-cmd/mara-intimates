@@ -4,7 +4,7 @@ import { S, businessAccounts, accBalance } from '../store.js';
 import { N, pill, kpi, chips, dtable } from '../ui.js';
 import { tok } from '../theme.js';
 import { RANGES, period, salesStats, buyerStats, supplierStats, buyerTable, supplierTable, concentration, monthTrend, weekTrend, peopleTrend, rangeOfMonthKey, pct, stockAge, receivableAge } from '../analytics.js';
-import { analyze, analysisModal } from '../analysis.js';
+import { analyze } from '../analysis.js';
 import { saleForm, purchaseForm } from '../forms_trade.js';
 import { sv, mil, hbars, dueChart, categoryProfitCard, reorderCard, goalsCard } from './dashboard.js';
 
@@ -106,7 +106,7 @@ export function adminDashboard() {
 
     /* سلامت */
     const A = analyze().findings, nE = A.filter(f => f.lvl === 'err').length, nW = A.filter(f => f.lvl === 'warn').length;
-    const health = h('div', { class: 'card' }, h('div', { class: 'ct' }, '🔍 سلامت سیستم ', h('button', { type: 'button', class: 'mini', onclick: () => analysisModal() }, 'تحلیل کامل')),
+    const health = h('div', { class: 'card' }, h('div', { class: 'ct' }, '🔍 سلامت سیستم ', h('button', { type: 'button', class: 'mini', onclick: () => { location.hash = '#/analysis'; } }, 'تحلیل کامل')),
       nE || nW ? h('div', { class: 'alert ' + (nE ? 'red' : 'amber') }, `${nE ? '🔴 ' + nE + ' مشکل' : ''}${nE && nW ? ' · ' : ''}${nW ? '🟡 ' + nW + ' هشدار' : ''} — ${A.filter(f => f.lvl !== 'info').slice(0, 3).map(f => f.title).join('، ')}`)
         : h('div', { class: 'alert ok' }, '✅ مشکل یا هشداری نیست.'));
 
@@ -117,7 +117,7 @@ export function adminDashboard() {
   const rangeBar = chips(RANGES.map(r => ({ v: r.v, label: r.label })), rangeN, v => { rangeN = v; draw(); }, { label: 'بازه' });
   const quick = (label, icon, cls, fn) => h('button', { type: 'button', class: 'qa ' + cls, onclick: fn }, h('span', { class: 'qi', 'aria-hidden': 'true' }, icon), label);
   host.append(h('div', { class: 'hello' }, h('div', null, h('h1', null, `سلام ${S.me.name}`), h('p', { class: 'sub' }, jlong(today) + ' · داشبورد تحلیلی')), h('img', { class: 'brand-mark', src: 'icons/logo-mark.jpg', alt: 'MR', width: 42, height: 42 })),
-    h('div', { class: 'qas' }, quick('فروش جدید', '🛍', 'gold', () => saleForm()), quick('خرید جدید', '📦', 'dark', () => purchaseForm()), quick('تحلیل', '🔍', 'line', () => analysisModal())),
+    h('div', { class: 'qas' }, quick('فروش جدید', '🛍', 'gold', () => saleForm()), quick('خرید جدید', '📦', 'dark', () => purchaseForm()), quick('تحلیل', '🔍', 'line', () => { location.hash = '#/analysis'; })),
     rangeBar, body);
   draw(); return host;
 }

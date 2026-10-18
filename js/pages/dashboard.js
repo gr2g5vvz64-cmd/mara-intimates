@@ -230,4 +230,4 @@ export function legacyRender() {
 /** هر نقش داشبورد خودش را می‌بیند: مدیر ← تحلیلی، مهسا و رعنا ← کار روزانه */
 import { adminDashboard } from './dash_admin.js';
 import { partnerDashboard } from './dash_partner.js';
-export function render() { return S.me && S.me.role === 'admin' ? adminDashboard() : partnerDashboard(); }
+export function render() { return S.me && S.me.role === 'admin' ? adminDashboard() : partnerDashboard(S.me && S.me.role === 'viewer' ? (S.me.view_as || 'رعنا') : S.me.name); }

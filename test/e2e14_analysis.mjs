@@ -7,10 +7,10 @@ try {
   ok(await pm.locator('button.qa', { hasText: 'تحلیل' }).count() === 0, 'مهسا دکمه‌ی «تحلیل» را نمی‌بیند');
   const pa = await newPage(browser, url, { logs }); await login(pa, 'hamid@example.com', 'hamid-pass-333'); pa.setDefaultTimeout(8000); await sleep(pa, 800);
   const b = pa.locator('button.qa', { hasText: 'تحلیل' }); ok(await b.count() === 1, 'مدیر دکمه‌ی «تحلیل» را می‌بیند');
-  await b.click(); await sleep(pa, 600);
-  const M = pa.locator('.ov').last(); const t = await M.innerText();
-  ok(t.includes('تحلیل سلامت سیستم') && t.includes('سالم'), 'پنجره‌ی تحلیل باز شد و بخش «سالم» دارد');
-  ok(/مشکل|هشدار|همه‌چیز سالم/.test(t), 'نتیجه‌ی کلی نمایش داده شد: ' + t.split('\n').find(x => /مشکل|هشدار|سالم است/.test(x)));
+  await b.click(); await sleep(pa, 2500);
+  ok(pa.url().includes('#/analysis'), 'دکمه‌ی تحلیل به صفحه‌ی «تحلیل» می‌برد');
+  const t = await pa.locator('#view').innerText();
+  ok(t.includes('بررسی اشتباهات') && /بررسی سالم/.test(t), 'صفحه‌ی تحلیل باز شد و بخش «بررسی سالم» دارد');
   // یک فروش زیر قیمت تمام‌شده بسازیم تا تحلیل آن را پیدا کند
   const r = await pa.evaluate(async () => { const st = await import('/js/store.js'); const l = st.S.saleLines[0]; l.net_unit = l.unit_cost - 1000; const a = await import('/js/analysis.js'); return a.analyze().findings.map(f => f.title); });
   ok(r.some(x => x.includes('زیر قیمت تمام‌شده')), 'تحلیل فروش زیر قیمت تمام‌شده را پیدا می‌کند: ' + r.join(' | '));
