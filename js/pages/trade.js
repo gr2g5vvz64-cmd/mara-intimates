@@ -41,6 +41,8 @@ export function sales(query) {
   return h('div', null, head('فروش', [btn('＋ فروش جدید', () => saleForm())], 'جدیدترین بالا است. ردیف‌ها قابل حذف یا ویرایش نیستند؛ فقط باطل می‌شوند.'), ctr, tbl);
 }
 
+const itemCell = (id, name) => { const d = S.I[id] && S.I[id].description; return d ? h('span', null, name || S.I[id].name, h('small', { class: 'idesc-s' }, d)) : (name || S.I[id].name); };
+
 export function saleDetail(id) {
   const s = S.SALE[id]; const lines = S.saleLines.filter(l => l.sale_id === id);
   const cols = S.collections.filter(c => c.sale_id === id);
@@ -48,13 +50,14 @@ export function saleDetail(id) {
   const m = detail({
     title: `فروش ${s.no}`,
     rows: [['تاریخ', jstr(s.date)], ['فروشنده', s.seller], ['محل فروش', s.channel], s.customer ? ['مشتری', s.customer] : null,
-      ['جمع فروش', N(s.total)], ['دریافتی هنگام فروش', h('span', null, N(s.received), s.account_id ? ' → ' + accName(s.account_id) : '')],
+      ...(s.discount > 0 ? [['جمع کالاها', N(s.total + s.discount)], ['تخفیف', N(-s.discount, 'neg')]] : []),
+      ['مبلغ فاکتور' + (s.discount > 0 ? ' (پس از تخفیف)' : ''), N(s.total)], ['دریافتی هنگام فروش', h('span', null, N(s.received), s.account_id ? ' → ' + accName(s.account_id) : '')],
       s.outstanding > 0 && !s.voided ? ['سررسید', s.due_date ? dueCell(s.due_date) : 'تعیین نشده'] : null,
       s.courier ? ['پیک', N(s.courier)] : null, s.pack ? ['بسته‌بندی', N(s.pack)] : null, (s.courier + s.pack) ? ['هزینه از حساب', accName(s.cost_account_id)] : null,
       ['بهای تمام‌شده‌ی کالا', N(s.cogs)], ['سود این فروش', N(s.profit, s.profit < 0 ? 'neg' : 'pos')], s.outstanding > 0 && !s.voided ? ['نسیه‌ی باز', N(s.outstanding, 'neg')] : null,
       s.note ? ['یادداشت', s.note] : null, ['ثبت‌کننده', stamp(s)], s.voided ? ['باطل‌شده', `${s.void_reason || ''}`] : null],
     extra: [h('h3', { class: 'sec' }, 'ردیف‌های فروش'), dtable([
-      { label: 'کالا', main: true, render: l => S.I[l.item_id].name }, { label: 'دسته', render: l => S.LOT[l.lot_id].lot_no }, { label: 'تعداد', cls: 'num', render: l => l.qty },
+      { label: 'کالا', main: true, render: l => itemCell(l.item_id) }, { label: 'دسته', render: l => S.LOT[l.lot_id].lot_no }, { label: 'تعداد', cls: 'num', render: l => l.qty },
       { label: 'فی فروش', cls: 'num', render: l => N(l.unit_price) }, { label: 'تمام‌شده', cls: 'num', render: l => N(l.unit_cost) }, { label: 'جمع', cls: 'num', render: l => N(l.qty * l.unit_price) },
       { label: 'برگشتی', cls: 'num', render: l => l.returned_qty || '' }], lines),
     cols.length ? [h('h3', { class: 'sec' }, 'دریافت‌های بعدی'), dtable([{ label: 'تاریخ', render: c => jstr(c.date) }, { label: 'مبلغ', cls: 'num', render: c => N(c.amount) }, { label: 'حساب', render: c => accName(c.account_id) }, { label: 'وضعیت', render: c => c.voided ? pill('باطل', 'red') : '' }], cols)] : null,
@@ -90,11 +93,12 @@ export function purchaseDetail(id) {
   const full = S.invoices.find(x => x.id === id);
   const m = detail({
     title: `فاکتور ${i.no} · ${i.supplier}`,
-    rows: [['تاریخ', jstr(i.date)], ['جمع کالا', N(i.goods_total)], i.ship_cost ? ['هزینه حمل', h('span', null, N(i.ship_cost), ' ← ', i.ship_account)] : null, ['قیمت تمام‌شده', N(i.landed_total)],
+    rows: [['تاریخ', jstr(i.date)], ...(i.discount > 0 ? [['جمع کالاها', N(i.goods_total + i.discount)], ['تخفیف', N(-i.discount, 'neg')]] : []), ['جمع کالا' + (i.discount > 0 ? ' (پس از تخفیف)' : ''), N(i.goods_total)], i.ship_cost ? ['هزینه حمل', h('span', null, N(i.ship_cost), ' ← ', i.ship_account)] : null, ['قیمت تمام‌شده', N(i.landed_total)],
       ['پرداخت‌شده', N(i.paid)], i.credit ? ['اعتبار مرجوعی', N(i.credit)] : null, ['مانده‌ی بدهی', N(i.debt, i.debt > 0 ? 'neg' : '')], i.debt > 0 && !i.voided ? ['سررسید', i.due_date ? dueCell(i.due_date) : 'تعیین نشده'] : null, i.note ? ['یادداشت', i.note] : null, ['ثبت‌کننده', stamp(i)], i.voided ? ['باطل‌شده', full.void_reason || ''] : null],
     extra: [h('h3', { class: 'sec' }, 'اقلام و دسته‌ها'), dtable([
-      { label: 'دسته', main: true, render: l => l.lot_no }, { label: 'کالا', render: l => l.item }, { label: 'تعداد', cls: 'num', render: l => l.qty }, { label: 'فی خرید', cls: 'num', render: l => N(l.unit_price) },
-      { label: 'سهم حمل', cls: 'num', hm: true, render: l => N(l.ship_share) }, { label: 'تمام‌شده‌ی هر عدد', cls: 'num', render: l => N(l.landed_unit) },
+      { label: 'دسته', main: true, render: l => l.lot_no }, { label: 'کالا', render: l => itemCell(l.item_id, l.item) }, { label: 'تعداد', cls: 'num', render: l => l.qty }, { label: 'فی خرید', cls: 'num', render: l => N(l.unit_price) },
+      { label: 'سهم حمل', cls: 'num', hm: true, render: l => N(l.ship_share) },
+      ...(i.discount > 0 ? [{ label: 'سهم تخفیف', cls: 'num', hm: true, render: l => N(-(S.lines.find(x => x.id === l.id) || {}).disc_share) }] : []), { label: 'تمام‌شده‌ی هر عدد', cls: 'num', render: l => N(l.landed_unit) },
       { label: 'تحویل م/ر', cls: 'num', hm: true, render: l => `${l.hold_m} / ${l.hold_r}` }, { label: 'مانده م/ر', cls: 'num', render: l => `${l.rem_m} / ${l.rem_r}` }], ls),
     pays.length ? [h('h3', { class: 'sec' }, 'پرداخت‌ها'), dtable([{ label: 'تاریخ', render: p => jstr(p.date) }, { label: 'مبلغ', cls: 'num', render: p => N(p.amount) }, { label: 'از حساب', render: p => accName(p.account_id) }, { label: 'ثبت‌کننده', render: p => p.created_by }, { label: 'وضعیت', render: p => (p.voided ? pill('باطل', 'red') : '') }], pays)] : null],
     actions: i.voided ? [] : [i.debt > 0 ? btn('ثبت پرداخت', () => { m.close(); supplierPaymentForm({ supplier_id: i.supplier_id, invoice_id: id }); }, 'gold') : null, i.debt > 0 ? btn('تغییر سررسید', () => { m.close(); setDueForm('purchase', i); }, 'ghost') : null, btn('ابطال فاکتور', async () => { if (await voidEntry('purchase', full, `فاکتور ${i.no}`)) m.close(); }, 'danger ghost')]

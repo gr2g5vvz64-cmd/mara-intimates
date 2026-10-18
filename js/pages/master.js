@@ -10,7 +10,7 @@ export function items() {
     catHost.replaceChildren(catFilter(cat, v => { cat = v; draw(); }, S.stock.filter(i => showOff || i.active)));
     const rows = S.stock.filter(i => (showOff || i.active) && inCat(cat, i) && match(q, i.name, i.category)).sort((a, b) => a.name.localeCompare(b.name, 'fa'));
     tbl.replaceChildren(dtable([
-      { label: 'کالا', main: true, render: i => h('span', null, i.name, ' ', i.active ? null : pill('غیرفعال', 'gray')) }, { label: 'دسته', render: i => i.category || '' }, { label: 'موجودی', cls: 'num', render: i => i.rem },
+      { label: 'کالا', main: true, render: i => h('span', null, i.name, ' ', i.active ? null : pill('غیرفعال', 'gray'), i.description ? h('small', { class: 'idesc-s' }, i.description) : null) }, { label: 'دسته', render: i => i.category || '' }, { label: 'موجودی', cls: 'num', render: i => i.rem },
       { label: 'هشدار از', cls: 'num', hm: true, render: i => i.min_stock }, { label: 'آخرین تمام‌شده', cls: 'num', hm: true, render: i => (i.last_cost ? N(i.last_cost) : '') }, { label: 'آخرین فی فروش', cls: 'num', hm: true, render: i => (i.last_price ? N(i.last_price) : '') }
     ], rows, { onRow: i => itemForm(S.I[i.id]), empty: 'هنوز کالایی تعریف نشده. با «خرید جدید» هم می‌توانی کالا بسازی.' }));
   };
