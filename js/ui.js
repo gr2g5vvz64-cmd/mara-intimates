@@ -154,6 +154,7 @@ export function dueField(getBase, { label = 'تا چه زمانی می‌دهد�
   const dc = dateField(addDaysISO(getBase(), 7), v => { custom = v; show(); }); box.append(dc);
   const wrap = h('div', null, h('label', { class: 'lbl' }, label), c, box, info);
   wrap.get = get; wrap.refresh = show; show();
+  wrap.setDate = iso => { if (!iso) return; mode = 'custom'; custom = iso; c.set('custom'); box.hidden = false; box.replaceChildren(dateField(iso, v => { custom = v; show(); })); show(); };   // برای ویرایش فاکتور
   return wrap;
 }
 

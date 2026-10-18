@@ -1,6 +1,6 @@
 // فرم‌های اصلی: فروش و خرید
 import { h, fmt, parseNum, todayISO, toast, sum, jstr } from './util.js';
-import { S, rpc, loadAll, bus, pref, setPref, simulateFifo, holdKey, customers, businessAccounts, CHANNELS, accBalance, errText } from './store.js';
+import { S, rpc, loadAll, bus, pref, setPref, simulateFifo, holdKey, customers, businessAccounts, CHANNELS, accBalance, errText, canEdit } from './store.js';
 import { modal, field, chips, accountPicker, numField, intField, dateField, dueField, combo, run, promptBox } from './ui.js';
 import { pickCategoryDialog } from './forms_misc.js';
 
@@ -12,9 +12,21 @@ const MARKUP = 0.20;                                  // فی فروش پیش‌
 const roundK = n => Math.round(n / 1000) * 1000;       // گرد به هزار ریال
 export function saleForm(preset = {}) {
   const me = S.me && S.me.name !== 'حمیدرضا' ? S.me.name : 'مهسا';
-  let seller = preset.seller || me;
-  let date = todayISO();
+  const edit = preset.edit ? S.SALE[preset.edit] : null;          // ویرایش یک فروش موجود (فقط حمیدرضا و مهسا)
+  if (edit && !canEdit()) { toast('ویرایش فقط برای حمیدرضا و مهسا باز است', 'err'); return; }
+  if (edit && (S.collections.some(c => c.sale_id === edit.id && !c.voided) || S.returns.some(r => !r.voided && r.sale_line_id && S.saleLines.some(l => l.id === r.sale_line_id && l.sale_id === edit.id)))) {
+    toast('این فروش دریافت یا مرجوعی دارد؛ اول آن‌ها را باطل کن، بعد ویرایش کن.', 'err'); return;
+  }
+  let seller = edit ? edit.seller : (preset.seller || me);
+  let date = edit ? edit.date : todayISO();
   const lines = [];
+  /* در ویرایش، کالای همین فروش را موقتاً به موجودی برمی‌گردانیم تا فرم موجودی درست نشان دهد (با بستن فرم برمی‌گردد) */
+  const undo = [];
+  if (edit) for (const l of S.saleLines.filter(x => x.sale_id === edit.id)) {
+    const lot = S.LOT[l.lot_id], k = holdKey(l.holder), st = S.stock.find(x => x.id === l.item_id);
+    if (lot) { lot[k] += l.qty; lot.rem += l.qty; undo.push(() => { lot[k] -= l.qty; lot.rem -= l.qty; }); }
+    if (st) { st[k] += l.qty; st.rem += l.qty; undo.push(() => { st[k] -= l.qty; st.rem -= l.qty; }); }
+  }
   const linesBox = h('div', { class: 'lines' });
   const warn = h('div', { class: 'warnbox', hidden: true });
   const totalEl = h('b', { class: 'n' }, '0'), profitEl = h('b', { class: 'n' }, '0');
@@ -25,7 +37,7 @@ export function saleForm(preset = {}) {
 
   const sellerChips = chips([{ v: 'مهسا', label: 'مهسا' }, { v: 'رعنا', label: 'رعنا' }], seller, v => { seller = v; lines.forEach(l => l.refreshItems()); defaultAccounts(); recalc(); }, { cls: 'two', label: 'فروشنده' });
   const dateCtl = dateField(date, v => { date = v; due.refresh(); });
-  const channel = chips(CHANNELS.map(c => ({ v: c, label: c })), pref('channel', CHANNELS[0]), () => {}, { label: 'محل فروش' });
+  const channel = chips(CHANNELS.map(c => ({ v: c, label: c })), edit ? edit.channel : pref('channel', CHANNELS[0]), () => {}, { label: 'محل فروش' });
   const custOpts = () => customers().map(c => { const b = S.vCus.find(x => x.id === c.id); return { v: c.id, label: c.name, sub: (c.phone || '') + (b && b.outstanding > 0 ? ' · بدهکار ' + fmt(b.outstanding) : '') }; });
   const customer = combo({
     placeholder: 'نام مشتری (اختیاری؛ برای نسیه الزامی)', createLabel: 'مشتری جدید', options: custOpts(),
@@ -123,6 +135,11 @@ export function saleForm(preset = {}) {
           chip(0, [cell('پارت', 'خودکار'), cell('تعداد', 'قدیمی‌ترین اول')]),
           ...ls.map(l => chip(l.id, [cell('پارت', l.lot_no), cell('تعداد', fmt(l[key]) + ' عدد'), cell('بهای تمام‌شده', fmt(Math.round(l.landed_unit)))]))));
     }
+    L.prefill = d => {   // پر کردن ردیف هنگام ویرایش
+      sel.set(d.item); L.item = d.item; L.qty = d.qty; qty.set(d.qty); L.lot = d.lot || null;
+      L.holder = d.holder && d.holder !== seller ? d.holder : null; L.manual = !!L.holder; showDesc(); drawHolder(); drawLots(); showCost();
+      L.price = d.price; priceCtl.set(d.price); L.touched = true; recalc();
+    };
     L.refreshItems = () => { sel.setOptions(items()); L.manual = false; autoHolder(); autoPrice(false); };
     L.update = () => {
       const f = L.item ? simulateFifo(L.item, hl(), L.qty, L.lot) : { parts: [], short: 0, cost: 0 };
@@ -137,8 +154,7 @@ export function saleForm(preset = {}) {
       else prev.textContent = 'کسر از موجودی: ' + f.parts.map(p => `${p.qty} از ${p.lot.lot_no}`).join(' + ') + ` · بهای تمام‌شده: ${fmt(f.cost)}`;
     };
     sel.setOptions(items());
-    L.el = card; lines.push(L); linesBox.append(card); drawLots(); recalc();
-    return L;
+    L.el = card; lines.push(L); linesBox.append(card); drawLots(); recalc(); return L;
   }
 
   function totals() {
@@ -163,7 +179,7 @@ export function saleForm(preset = {}) {
     warn.hidden = !bad; warn.textContent = bad ? 'موجودی کافی نیست؛ ثبت ممکن نیست.' : '';
   }
 
-  const submit = h('button', { class: 'btn primary lg', type: 'button' }, 'ثبت فروش');
+  const submit = h('button', { class: 'btn primary lg', type: 'button' }, edit ? 'ذخیره‌ی ویرایش فروش' : 'ثبت فروش');
   submit.onclick = async () => {
     const t = totals();
     if (!lines.length || lines.some(l => !l.item)) return toast('کالای هر ردیف را انتخاب کن', 'err');
@@ -179,13 +195,13 @@ export function saleForm(preset = {}) {
       courier: courier.get(), pack: pack.get(), cost_account_id: t.c > 0 ? costAcc.get() : null, note: note.value.trim(),
       lines: lines.map(l => ({ item_id: l.item, qty: l.qty, unit_price: l.price, lot_id: l.lot, holder: l.holder || seller }))
     };
-    const r = await run(submit, () => rpc('create_sale', payload));
+    const r = await run(submit, () => rpc(edit ? 'edit_sale' : 'create_sale', edit ? { ...payload, id: edit.id } : payload));
     if (!r) return;
     setPref('channel', payload.channel); if (payload.account_id) setPref('recvAcc_' + seller, payload.account_id); if (payload.cost_account_id) setPref('costAcc_' + seller, payload.cost_account_id);
-    toast(`فروش ${r.no} ثبت شد`); m.close(); await bus.refresh();
+    toast(`فروش ${r.no} ${edit ? 'ویرایش شد' : 'ثبت شد'}`); m.close(); await bus.refresh();
   };
   const m = modal({
-    title: 'فروش جدید', wide: true,
+    title: edit ? `ویرایش فروش ${edit.no}` : 'فروش جدید', wide: true, onClose: () => undo.forEach(f => f()),
     body: h('div', { class: 'form' },
       h('div', { class: 'two-col dt' }, field('فروشنده', sellerChips), field('تاریخ', dateCtl)),
       field('مشتری', [customer, custInfo]),
@@ -201,16 +217,32 @@ export function saleForm(preset = {}) {
       field('یادداشت', note), warn),
     footer: [h('div', { class: 'sum' }, h('div', null, 'جمع فروش ', totalEl, ' ریال'), h('div', { class: 'sm' }, 'سود تقریبی ', profitEl)), submit]
   });
-  defaultAccounts(); addLine();
-  if (preset.item) lines[0].pick(preset.item);
+  defaultAccounts(); if (!edit) addLine();
+  if (preset.item && !edit) lines[0].pick(preset.item);
   if (preset.customer) { customer.set(preset.customer); recalc(); }
+  if (edit) {   // پیش‌پر کردن فرم با اطلاعات فروش قبلی
+    const grp = new Map();
+    for (const l of S.saleLines.filter(x => x.sale_id === edit.id)) {
+      const g = grp.get(l.item_id) || { item: l.item_id, qty: 0, price: l.unit_price, lots: new Set(), holder: l.holder }; g.qty += l.qty; g.lots.add(l.lot_id); grp.set(l.item_id, g);
+    }
+    for (const g of grp.values()) addLine().prefill({ item: g.item, qty: g.qty, price: g.price, lot: g.lots.size === 1 ? [...g.lots][0] : null, holder: g.holder });
+    if (edit.customer_id) customer.set(edit.customer_id);
+    discount.set(edit.discount || '');
+    if (edit.received < edit.total) { payMode = 'part'; payChips.set('part'); partBox.hidden = false; received.set(edit.received); }
+    if (edit.due_date) due.setDate(edit.due_date);
+    if (edit.account_id) recvAcc.set(edit.account_id);
+    courier.set(edit.courier || ''); pack.set(edit.pack || ''); if (edit.cost_account_id) costAcc.set(edit.cost_account_id);
+    note.value = edit.note || ''; recalc();
+  }
   return m;
 }
 const confirm0 = msg => window.confirm(msg);
 
 /* ======================= خرید جدید ======================= */
-export function purchaseForm() {
-  let date = todayISO();
+export function purchaseForm(preset = {}) {
+  const edit = preset.edit ? S.INV[preset.edit] : null;           // ویرایش یک فاکتور خرید موجود (فقط حمیدرضا و مهسا)
+  if (edit && !canEdit()) { toast('ویرایش فقط برای حمیدرضا و مهسا باز است', 'err'); return; }
+  let date = edit ? edit.date : todayISO();
   const lines = [], pays = [];
   const linesBox = h('div', { class: 'lines' }), paysBox = h('div', { class: 'lines' });
   const sum1 = h('div', { class: 'sumbox' });
@@ -254,6 +286,10 @@ export function purchaseForm() {
       h('div', { class: 'two-col' }, field('تعداد', qty), field('فی خرید', price)),
       h('div', { class: 'two-col' }, field('تحویل مهسا', mS), field('تحویل رعنا', rS)), quick, prev,
       h('div', { class: 'ltot' }, 'جمع این قلم: ', tot, ' ریال'));
+    L.prefill = d => {   // پر کردن قلم هنگام ویرایش
+      sel.set(d.item); L.item = d.item; L.qty = d.qty; qty.set(d.qty); L.price = d.price; price.set(d.price);
+      L.m = d.m; L.r = d.r; L.manual = true; mS.set(d.m); rS.set(d.r); showDesc(); recalc();
+    };
     L.setHold = () => {}; L.el = card; lines.push(L); linesBox.append(card); recalc(); return L;
   }
 
@@ -265,6 +301,7 @@ export function purchaseForm() {
     const card = h('div', { class: 'lcard' },
       h('div', { class: 'lrow' }, h('b', null, 'پرداخت ' + (pays.length + 1)), pays.length ? h('button', { class: 'rm', type: 'button', 'aria-label': 'حذف', onclick: () => { pays.splice(pays.indexOf(P), 1); card.remove(); recalc(); } }, '✕') : null),
       field('مبلغ پرداخت‌شده به تامین‌کننده', amt), field('از کدام حساب؟ (شرکت یا جیب شخصی)', acc));
+    P.set = (a, n) => { acc.set(a); P.acc = a; amt.set(n); P.amt = n; P.touched = true; };
     pays.push(P); paysBox.append(card); recalc(); return P;
   }
 
@@ -282,7 +319,7 @@ export function purchaseForm() {
   }
   const row = (k, v, c = '') => h('div', { class: 'srow ' + c }, h('span', null, k), h('b', { class: 'n' }, fmt(v)));
 
-  const submit = h('button', { class: 'btn primary lg', type: 'button' }, 'ثبت فاکتور');
+  const submit = h('button', { class: 'btn primary lg', type: 'button' }, edit ? 'ذخیره‌ی ویرایش فاکتور' : 'ثبت فاکتور');
   submit.onclick = async () => {
     if (!supplier.get()) return toast('تامین‌کننده را انتخاب کن', 'err');
     if (!lines.length || lines.some(l => !l.item)) return toast('کالای هر قلم را انتخاب کن', 'err');
@@ -298,12 +335,12 @@ export function purchaseForm() {
       lines: lines.map(l => ({ item_id: l.item, qty: l.qty, unit_price: l.price, hold_m: l.m, hold_r: l.r })),
       payments: used.map(p => ({ account_id: p.acc, amount: p.amt }))
     };
-    const r = await run(submit, () => rpc('create_purchase', payload));
+    const r = await run(submit, () => rpc(edit ? 'edit_purchase' : 'create_purchase', edit ? { ...payload, id: edit.id } : payload));
     if (!r) return;
-    toast(`فاکتور ${r.no} ثبت شد`); m.close(); await bus.refresh();
+    toast(`فاکتور ${r.no} ${edit ? 'ویرایش شد' : 'ثبت شد'}`); m.close(); await bus.refresh();
   };
   const m = modal({
-    title: 'خرید جدید', wide: true,
+    title: edit ? `ویرایش فاکتور ${edit.no}` : 'خرید جدید', wide: true,
     body: h('div', { class: 'form' },
       h('div', { class: 'two-col dt' }, field('تامین‌کننده', supplier), field('تاریخ', dateCtl)),
       h('h3', { class: 'sec' }, 'اقلام فاکتور'), linesBox,
@@ -315,6 +352,15 @@ export function purchaseForm() {
       sum1, dueBox, field('یادداشت', note)),
     footer: [submit]
   });
-  addLine(); addPay();
+  if (!edit) { addLine(); addPay(); }
+  else {   // پیش‌پر کردن فرم با اطلاعات فاکتور قبلی
+    supplier.set(edit.supplier_id);
+    for (const l of S.lines.filter(x => x.invoice_id === edit.id)) addLine().prefill({ item: l.item_id, qty: l.qty, price: l.unit_price, m: l.hold_m, r: l.hold_r });
+    discount.set(edit.discount || ''); ship.set(edit.ship_cost || ''); if (edit.ship_account_id) shipAcc.set(edit.ship_account_id);
+    const old = S.payments.filter(p => p.invoice_id === edit.id && !p.voided);
+    if (old.length) old.forEach(p => addPay().set(p.account_id, p.amount)); else addPay();
+    if (edit.due_date) due.setDate(edit.due_date);
+    note.value = edit.note || ''; recalc();
+  }
   return m;
 }

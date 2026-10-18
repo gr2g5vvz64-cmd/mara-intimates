@@ -1,6 +1,6 @@
 // فرم‌های جانبی: دریافت، پرداخت، هزینه، انتقال، مرجوعی، جابجایی کالا، کالا/تامین‌کننده، ابطال
 import { h, fmt, todayISO, toast, sum, jstr, addDaysISO } from './util.js';
-import { S, rpc, bus, pref, setPref, businessAccounts, accBalance, EXPCATS, holdKey, canVoid, errText, catNames } from './store.js';
+import { S, rpc, bus, pref, setPref, businessAccounts, accBalance, EXPCATS, holdKey, canVoid, canEdit, errText, catNames } from './store.js';
 import { willGoNegative } from './insights.js';
 import { jmonthKey, jmonthName } from './util.js';
 import { modal, field, chips, accountPicker, numField, intField, dateField, dueField, combo, run, confirmBox, promptBox, dl, pill, N } from './ui.js';
@@ -122,8 +122,9 @@ export function transferForm(preset = {}) {
 }
 
 /* ----- مرجوعی از مشتری ----- */
-export function returnForm(saleId) {
-  let date = todayISO(), cond = 'سالم', toSup = false, holder = null;
+export function returnForm(saleId, edit) {
+  let date = edit ? edit.date : todayISO(), cond = edit ? edit.condition : 'سالم', toSup = edit ? !!edit.to_supplier : false, holder = edit ? edit.holder : null;
+  const avail = l => l.qty - l.returned_qty + (edit && l.id === edit.sale_line_id ? edit.qty : 0);   // در ویرایش، تعداد همین مرجوعی هم قابل انتخاب است
   const sales = S.vSales.filter(s => !s.voided);
   const sale = combo({ placeholder: 'کدام فروش؟ شماره، کالا یا مشتری…', options: sales.slice().reverse().map(s => ({ v: s.id, label: `${s.no} · ${jstr(s.date)}`, sub: s.items_text + (s.customer ? ' · ' + s.customer : ''), keywords: s.items_text + ' ' + (s.customer || '') })), value: saleId || null, onChange: () => drawLines() });
   const lineSel = h('select', { class: 'sel full', 'aria-label': 'کالای برگشتی', onchange: () => setupLine() });
@@ -150,13 +151,13 @@ export function returnForm(saleId) {
   let lines = [];
   function drawLines() {
     const s = S.SALE[sale.get()];
-    lines = s ? S.saleLines.filter(l => l.sale_id === s.id && l.qty - l.returned_qty > 0) : [];
-    lineSel.replaceChildren(...lines.map(l => h('option', { value: l.id }, `${S.I[l.item_id].name} · ${l.qty - l.returned_qty} عدد قابل برگشت · فی ${fmt(Math.round(l.net_unit))}${l.net_unit < l.unit_price ? ' (پس از تخفیف)' : ''} · ${S.LOT[l.lot_id].lot_no}`)));
-    debtBox.hidden = !(s && s.outstanding > 0);
+    lines = s ? S.saleLines.filter(l => l.sale_id === s.id && avail(l) > 0) : [];
+    lineSel.replaceChildren(...lines.map(l => h('option', { value: l.id }, `${S.I[l.item_id].name} · ${avail(l)} عدد قابل برگشت · فی ${fmt(Math.round(l.net_unit))}${l.net_unit < l.unit_price ? ' (پس از تخفیف)' : ''} · ${S.LOT[l.lot_id].lot_no}`)));
+    debtBox.hidden = !(s && s.outstanding + (edit ? edit.debt_cancel || 0 : 0) > 0);
     setupLine();
   }
   const cur = () => lines.find(l => l.id === +lineSel.value);
-  function setupLine() { const l = cur(); holder = l ? l.holder : null; if (l) { qty.setMax(l.qty - l.returned_qty); qty.set(1); } defaults(); }
+  function setupLine() { const l = cur(); holder = l ? l.holder : null; if (l) { qty.setMax(avail(l)); qty.set(1); } defaults(); }
   function defaults() { const l = cur(); if (l) { refund.set(Math.round(qty.get() * l.net_unit)); debt.set(''); } preview(); }
   function preview() {
     const l = cur(); prev.replaceChildren(); syncHolder(); if (!l) return;
@@ -168,24 +169,32 @@ export function returnForm(saleId) {
       r(eff >= 0 ? 'سود این مرجوعی' : 'ضرر این مرجوعی', Math.abs(eff), eff >= 0 ? 'ok' : 'warn'));
     if (!toSup && cond === 'سالم') prev.append(h('div', { class: 'hint' }, `کالا به موجودی ${holder || l.holder} برمی‌گردد.` + (holder && holder !== l.holder ? ` (در فروش از موجودی ${l.holder} کم شده بود.)` : '')));
   }
-  const btn = h('button', { class: 'btn primary lg', type: 'button' }, 'ثبت مرجوعی');
+  const btn = h('button', { class: 'btn primary lg', type: 'button' }, edit ? 'ذخیره‌ی ویرایش مرجوعی' : 'ثبت مرجوعی');
   btn.onclick = async () => {
     const l = cur(); if (!l) return toast('کالای برگشتی را انتخاب کن', 'err');
     if (refund.get() > 0 && !acc.get()) return toast('حساب بازگشت پول را انتخاب کن', 'err');
-    const r = await run(btn, () => rpc('create_return', { date, sale_line_id: l.id, holder: holder || l.holder, qty: qty.get(), condition: cond, to_supplier: toSup, refund_amount: refund.get(), refund_account_id: refund.get() > 0 ? acc.get() : null, debt_cancel: debt.get(), note: note.value }));
-    if (r) { setPref('payAcc', acc.get()); finish(m, `مرجوعی ${r.no} ثبت شد`); }
+    const r = await run(btn, () => rpc(edit ? 'edit_return' : 'create_return', { ...(edit ? { id: edit.id } : {}), date, sale_line_id: l.id, holder: holder || l.holder, qty: qty.get(), condition: cond, to_supplier: toSup, refund_amount: refund.get(), refund_account_id: refund.get() > 0 ? acc.get() : null, debt_cancel: debt.get(), note: note.value }));
+    if (r) { setPref('payAcc', acc.get()); finish(m, `مرجوعی ${r.no} ${edit ? 'ویرایش شد' : 'ثبت شد'}`); }
   };
-  const m = modal({ title: 'مرجوعی از مشتری', wide: true, body: h('div', { class: 'form' },
+  const m = modal({ title: edit ? `ویرایش مرجوعی ${edit.no}` : 'مرجوعی از مشتری', wide: true, body: h('div', { class: 'form' },
     field('تاریخ', dateField(date, v => { date = v; })), field('کدام فروش؟', sale), field('کدام کالا؟', lineSel), field('چند عدد برگشت؟', qty),
     field('وضعیت کالا', condC, 'سالم = به موجودی برمی‌گردد. معیوب = ضرر ثبت می‌شود.'), field('به تامین‌کننده پس داده شد؟', supC, 'اگر بله، بهای خرید کالا از بدهی همان تامین‌کننده کم می‌شود.'),
     holdBox, field('چقدر به مشتری پس دادیم؟', refund), accBox, debtBox, prev, field('دلیل', note)), footer: [btn] });
   drawLines();
+  if (edit) {                                   // پیش‌پر کردن با اطلاعات مرجوعی قبلی
+    const sl0 = S.saleLines.find(l => l.id === edit.sale_line_id);
+    if (sl0) { sale.set(sl0.sale_id); drawLines(); lineSel.value = String(edit.sale_line_id); setupLine(); }
+    qty.set(edit.qty); condC.set(edit.condition); supC.set(!!edit.to_supplier); holder = edit.holder;
+    refund.set(edit.refund_amount || ''); debt.set(edit.debt_cancel || '');
+    if (edit.refund_account_id && S.A[edit.refund_account_id]) acc.set(edit.refund_account_id);
+    note.value = edit.note || ''; preview();
+  }
 }
 
 /* ----- برگشت کالای فروش‌نرفته به تامین‌کننده ----- */
-export function supplierReturnForm() {
-  let date = todayISO(), holder = 'مهسا';
-  const lots = () => S.lots.filter(l => !l.voided && l[holdKey(holder)] > 0);
+export function supplierReturnForm(edit) {
+  let date = edit ? edit.date : todayISO(), holder = edit ? edit.holder : 'مهسا';
+  const lots = () => S.lots.filter(l => !l.voided && (l[holdKey(holder)] > 0 || (edit && l.id === edit.lot_id && holder === edit.holder)));
   const opts = () => lots().map(l => ({ v: l.id, label: `${l.item} · ${l.lot_no}`, sub: `${l.supplier} · فاکتور ${l.invoice_no} · نزد ${holder} ${l[holdKey(holder)]} عدد` }));
   const lot = combo({ placeholder: 'کالا / دسته…', options: opts(), onChange: () => prev() });
   const hold = chips([{ v: 'مهسا', label: 'مهسا' }, { v: 'رعنا', label: 'رعنا' }], holder, v => { holder = v; lot.set(null); lot.setOptions(opts()); prev(); }, { cls: 'two' });
@@ -194,8 +203,9 @@ export function supplierReturnForm() {
   const note = h('input', { class: 'inp', placeholder: 'دلیل' });
   function prev() { const l = S.LOT[lot.get()]; prevE.replaceChildren(); if (!l) return; const cr = qty.get() * l.net_price; prevE.append(h('div', { class: 'srow' }, h('span', null, 'اعتبار از بدهی ' + l.supplier), h('b', { class: 'n' }, fmt(cr)))); }
   const btn = h('button', { class: 'btn primary lg', type: 'button' }, 'ثبت برگشت به تامین‌کننده');
-  btn.onclick = async () => { if (!lot.get()) return toast('دسته را انتخاب کن', 'err'); const r = await run(btn, () => rpc('create_supplier_return', { date, lot_id: lot.get(), holder, qty: qty.get(), note: note.value })); if (r) finish(m, `ثبت شد (${r.no})`); };
-  const m = modal({ title: 'برگشت کالا به تامین‌کننده', body: h('div', { class: 'form' }, field('تاریخ', dateField(date, v => { date = v; })), field('چه کسی کالا را به تامین‌کننده پس داد؟ (از موجودی همین نفر کم می‌شود)', hold), field('کدام کالا؟', lot), field('تعداد', qty), prevE, field('دلیل', note), P('مبلغ به‌ازای قیمت خرید از بدهی تامین‌کننده کم می‌شود؛ اگر بدهی صفر شود، تامین‌کننده بدهکار ما می‌شود.')), footer: [btn] });
+  btn.onclick = async () => { if (!lot.get()) return toast('دسته را انتخاب کن', 'err'); const r = await run(btn, () => rpc(edit ? 'edit_return' : 'create_supplier_return', { ...(edit ? { id: edit.id } : {}), date, lot_id: lot.get(), holder, qty: qty.get(), note: note.value })); if (r) finish(m, `${edit ? 'ویرایش شد' : 'ثبت شد'} (${r.no})`); };
+  const m = modal({ title: edit ? `ویرایش برگشت به تامین‌کننده ${edit.no}` : 'برگشت کالا به تامین‌کننده', body: h('div', { class: 'form' }, field('تاریخ', dateField(date, v => { date = v; })), field('چه کسی کالا را به تامین‌کننده پس داد؟ (از موجودی همین نفر کم می‌شود)', hold), field('کدام کالا؟', lot), field('تعداد', qty), prevE, field('دلیل', note), P('مبلغ به‌ازای قیمت خرید از بدهی تامین‌کننده کم می‌شود؛ اگر بدهی صفر شود، تامین‌کننده بدهکار ما می‌شود.')), footer: [btn] });
+  if (edit) { lot.setOptions(opts()); lot.set(edit.lot_id); qty.set(edit.qty); note.value = edit.note || ''; hold.set(edit.holder); prev(); }
 }
 
 /* ----- جابجایی کالا بین مهسا و رعنا ----- */
@@ -256,6 +266,7 @@ export function categoriesForm() {
 }
 
 export function itemForm(it) {
+  if (it && !canEdit()) { toast("ویرایش فقط برای حمیدرضا و مهسا باز است", "err"); return; }
   const name = h('input', { class: 'inp', value: it ? it.name : '', placeholder: 'مثلاً سوتین اسپرت' });
   const desc = h('input', { class: 'inp', value: it && it.description || '', placeholder: 'مثلاً جنس، رنگ، سایز، مدل (اختیاری)', maxlength: 300 });
   const cat = categoryPicker(it && it.category || '');
@@ -264,20 +275,26 @@ export function itemForm(it) {
   const used = it && S.lines.some(l => l.item_id === it.id);
   const btn = h('button', { class: 'btn primary lg', type: 'button' }, it ? 'ذخیره' : 'افزودن کالا');
   btn.onclick = async () => { if (!cat.get()) return toast('دسته‌ی کالا را انتخاب کن', 'err'); const r = await run(btn, () => rpc('save_item', { id: it && it.id, name: name.value, description: desc.value, category: cat.get(), min_stock: min.get(), active: act.get() })); if (r) finish(m, 'ذخیره شد'); };
-  const m = modal({ title: it ? 'ویرایش کالا' : 'کالای جدید', body: h('div', { class: 'form' }, field('نام کالا', name, used && S.me.role !== 'admin' ? 'این کالا در خرید/فروش استفاده شده؛ نامش را فقط حمیدرضا می‌تواند عوض کند.' : null), field('توضیحات کالا', desc, 'در فاکتور خرید و فروش کنار این کالا دیده می‌شود.'), field('دسته', cat), field('هشدار کم‌موجودی از … عدد', min), it ? field('وضعیت', act) : null), footer: [btn] });
+  const delBtn = h('button', { class: 'btn danger ghost', type: 'button' }, 'حذف کالا');
+  delBtn.onclick = async () => { if (!(await confirmBox(`«${it.name}» حذف شود؟ از لیست‌ها کنار می‌رود و سوابق مالی‌اش (فاکتورها و سود) می‌ماند. کالایی که موجودی دارد حذف نمی‌شود.`, 'حذف کن', true))) return; const r = await run(delBtn, () => rpc('save_item', { id: it.id, name: it.name, category: it.category, min_stock: it.min_stock, active: false })); if (r) finish(m, 'کالا حذف شد'); };
+  const m = modal({ title: it ? 'ویرایش کالا' : 'کالای جدید', body: h('div', { class: 'form' }, field('نام کالا', name, used && S.me.role !== 'admin' ? 'این کالا در خرید/فروش استفاده شده؛ نامش را فقط حمیدرضا می‌تواند عوض کند.' : null), field('توضیحات کالا', desc, 'در فاکتور خرید و فروش کنار این کالا دیده می‌شود.'), field('دسته', cat), field('هشدار کم‌موجودی از … عدد', min), it ? field('وضعیت', act) : null), footer: [btn, ...(it ? [delBtn] : [])] });
 }
 export function supplierForm(s) {
+  if (s && !canEdit()) { toast("ویرایش فقط برای حمیدرضا و مهسا باز است", "err"); return; }
   const name = h('input', { class: 'inp', value: s ? s.name : '' }), phone = h('input', { class: 'inp', value: s && s.phone || '', dir: 'ltr', inputmode: 'tel' });
   const addr = h('input', { class: 'inp', value: s && s.address || '' }), note = h('input', { class: 'inp', value: s && s.note || '' });
   const act = chips([{ v: true, label: 'فعال' }, { v: false, label: 'غیرفعال' }], s ? s.active : true, () => {}, { cls: 'two' });
   const used = s && S.invoices.some(i => i.supplier_id === s.id);
   const btn = h('button', { class: 'btn primary lg', type: 'button' }, s ? 'ذخیره' : 'افزودن تامین‌کننده');
   btn.onclick = async () => { const r = await run(btn, () => rpc('save_supplier', { id: s && s.id, name: name.value, phone: phone.value, address: addr.value, note: note.value, active: act.get() })); if (r) finish(m, 'ذخیره شد'); };
-  const m = modal({ title: s ? 'ویرایش تامین‌کننده' : 'تامین‌کننده‌ی جدید', body: h('div', { class: 'form' }, field('نام', name, used && S.me.role !== 'admin' ? 'با این تامین‌کننده فاکتور ثبت شده؛ نامش را فقط حمیدرضا می‌تواند عوض کند.' : null), field('تلفن', phone), field('نشانی', addr), field('یادداشت', note), s ? field('وضعیت', act) : null), footer: [btn] });
+  const delBtn = h('button', { class: 'btn danger ghost', type: 'button' }, 'حذف تامین‌کننده');
+  delBtn.onclick = async () => { if (!(await confirmBox(`«${s.name}» حذف شود؟ از لیست‌ها کنار می‌رود و فاکتورهایش می‌ماند. تا حساب باز دارید حذف نمی‌شود.`, 'حذف کن', true))) return; const r = await run(delBtn, () => rpc('save_supplier', { id: s.id, name: s.name, phone: s.phone, address: s.address, note: s.note, active: false })); if (r) finish(m, 'تامین‌کننده حذف شد'); };
+  const m = modal({ title: s ? 'ویرایش تامین‌کننده' : 'تامین‌کننده‌ی جدید', body: h('div', { class: 'form' }, field('نام', name, used && S.me.role !== 'admin' ? 'با این تامین‌کننده فاکتور ثبت شده؛ نامش را فقط حمیدرضا می‌تواند عوض کند.' : null), field('تلفن', phone), field('نشانی', addr), field('یادداشت', note), s ? field('وضعیت', act) : null), footer: [btn, ...(s ? [delBtn] : [])] });
 }
 
 /* ----- مشتری ----- */
 export function customerForm(c, after) {
+  if (c && !canEdit()) { toast("ویرایش فقط برای حمیدرضا و مهسا باز است", "err"); return; }
   const name = h('input', { class: 'inp', value: c ? c.name : '', placeholder: 'نام مشتری' });
   const phone = h('input', { class: 'inp', value: c && c.phone || '', dir: 'ltr', inputmode: 'tel', placeholder: '09…' });
   const note = h('input', { class: 'inp', value: c && c.note || '', placeholder: 'یادداشت (مثلاً اینستاگرام: @sara)' });
@@ -285,7 +302,9 @@ export function customerForm(c, after) {
   const used = c && S.vSales.some(x => x.customer_id === c.id);
   const btn = h('button', { class: 'btn primary lg', type: 'button' }, c ? 'ذخیره' : 'افزودن مشتری');
   btn.onclick = async () => { const r = await run(btn, () => rpc('save_customer', { id: c && c.id, name: name.value, phone: phone.value, note: note.value, active: act.get() })); if (r) { await finish(m, 'ذخیره شد'); after && after(r); } };
-  const m = modal({ title: c ? 'ویرایش مشتری' : 'مشتری جدید', body: h('div', { class: 'form' }, field('نام', name, used && S.me.role !== 'admin' ? 'برای این مشتری فروش ثبت شده؛ نامش را فقط حمیدرضا می‌تواند عوض کند.' : null), field('تلفن', phone), field('یادداشت', note), c ? field('وضعیت', act) : null), footer: [btn] });
+  const delBtn = h('button', { class: 'btn danger ghost', type: 'button' }, 'حذف مشتری');
+  delBtn.onclick = async () => { if (!(await confirmBox(`«${c.name}» حذف شود؟ از لیست‌ها کنار می‌رود و فروش‌هایش می‌ماند. مشتری بدهکار حذف نمی‌شود.`, 'حذف کن', true))) return; const r = await run(delBtn, () => rpc('save_customer', { id: c.id, name: c.name, phone: c.phone, note: c.note, active: false })); if (r) { await finish(m, 'مشتری حذف شد'); after && after(r); } };
+  const m = modal({ title: c ? 'ویرایش مشتری' : 'مشتری جدید', body: h('div', { class: 'form' }, field('نام', name, used && S.me.role !== 'admin' ? 'برای این مشتری فروش ثبت شده؛ نامش را فقط حمیدرضا می‌تواند عوض کند.' : null), field('تلفن', phone), field('یادداشت', note), c ? field('وضعیت', act) : null), footer: [btn, ...(c ? [delBtn] : [])] });
 }
 
 /* ----- دریافت کلی از مشتری (کامل یا قسطی؛ روی قدیمی‌ترین بدهی‌ها می‌نشیند) ----- */
@@ -332,7 +351,7 @@ export function setDueForm(kind, row) {
 
 /* ----- ابطال ----- */
 export async function voidEntry(kind, row, label) {
-  if (!canVoid(row)) return toast('فقط ثبت‌کننده (تا ۲۴ ساعت) یا حمیدرضا می‌تواند باطل کند', 'err');
+  if (!canVoid(row)) return toast('ابطال و ویرایش فقط برای حمیدرضا و مهسا باز است', 'err');
   const ok = await confirmBox(`«${label}» باطل شود؟ چیزی پاک نمی‌شود؛ فقط از حساب‌ها کنار می‌رود و در لیست خط‌خورده می‌ماند.`, 'باطل کن', true);
   if (!ok) return;
   const why = await promptBox('دلیل ابطال', 'مثلاً اشتباه در مبلغ');
@@ -375,4 +394,56 @@ export function goalForm() {
     if (r) finish(m, 'هدف ثبت شد ✔');
   };
   const m = modal({ title: 'هدف فروش ' + jmonthName(mk), body: h('div', { class: 'form' }, P('مبلغی که هر نفر می‌خواهد این ماه بفروشد (ریال). هر وقت خواستی دوباره عوضش کن.'), field('هدف مهسا', fm), field('هدف رعنا', fr)), footer: [btn] });
+}
+
+
+/* ----- ویرایش پرداخت / دریافت / هزینه / انتقال / جابجایی (ابطال نسخه‌ی قبلی + ثبت نسخه‌ی اصلاح‌شده؛ فقط حمیدرضا و مهسا) ----- */
+export function editEntryForm(kind, row) {
+  if (!canEdit()) { toast('ویرایش فقط برای حمیدرضا و مهسا باز است', 'err'); return; }
+  let date = row.date;
+  const dateCtl = dateField(date, v => { date = v; });
+  const amt = numField({ value: row.amount || '' });
+  const note = h('input', { class: 'inp', value: row.note || '', placeholder: 'توضیح' });
+  const body = [field('تاریخ', dateCtl)]; let build, title;
+  if (kind === 'payment') {
+    title = 'ویرایش پرداخت به ' + S.SUP[row.supplier_id].name;
+    const acc = accountPicker(S.accounts, row.account_id, () => {}, { pockets: true, balances: accBalance });
+    body.push(field('مبلغ', amt), field('از کدام حساب؟', acc), field('توضیح', note));
+    build = () => ({ supplier_id: row.supplier_id, invoice_id: row.invoice_id || null, account_id: acc.get(), amount: amt.get(), note: note.value });
+  } else if (kind === 'collection') {
+    title = 'ویرایش دریافت';
+    const acc = accountPicker(businessAccounts(), row.account_id, () => {}, { pockets: false, balances: accBalance });
+    body.push(field('مبلغ', amt), field('به کدام حساب آمد؟', acc), field('توضیح', note));
+    build = () => ({ sale_id: row.sale_id, account_id: acc.get(), amount: amt.get(), note: note.value });
+  } else if (kind === 'expense') {
+    title = 'ویرایش هزینه';
+    let cat = row.category; const known = EXPCATS.includes(cat);
+    const catChips = chips(EXPCATS.map(c => ({ v: c, label: c })), known ? cat : null, v => { cat = v; custom.value = ''; });
+    const custom = h('input', { class: 'inp', value: known ? '' : cat, placeholder: 'یا دسته‌ی دیگر را بنویس' });
+    custom.oninput = () => { if (custom.value) catChips.set(null); };
+    const acc = accountPicker(S.accounts, row.account_id, () => {}, { pockets: true, balances: accBalance });
+    body.push(field('دسته', [catChips, custom]), field('مبلغ', amt), field('از کدام حساب؟', acc), field('توضیح', note));
+    build = () => ({ category: custom.value.trim() || catChips.get() || cat, amount: amt.get(), account_id: acc.get(), note: note.value });
+  } else if (kind === 'transfer') {
+    title = 'ویرایش انتقال';
+    const from = accountPicker(S.accounts, row.from_account_id, () => {}, { pockets: true, balances: accBalance });
+    const to = accountPicker(S.accounts, row.to_account_id, () => {}, { pockets: true, balances: accBalance });
+    body.push(field('از حساب', from), field('به حساب', to), field('مبلغ', amt), field('توضیح', note));
+    build = () => ({ from_account_id: from.get(), to_account_id: to.get(), amount: amt.get(), kind: row.kind, note: note.value });
+  } else if (kind === 'move') {
+    title = 'ویرایش جابجایی کالا';
+    let from = row.from_holder;
+    const fc = chips([{ v: 'مهسا', label: 'از مهسا به رعنا' }, { v: 'رعنا', label: 'از رعنا به مهسا' }], from, v => { from = v; }, { cls: 'two' });
+    const q = intField({ value: row.qty, min: 1, big: true });
+    body.push(fc, field('چند عدد؟', q), field('توضیح', note));
+    build = () => ({ lot_id: row.lot_id, from_holder: from, to_holder: from === 'مهسا' ? 'رعنا' : 'مهسا', qty: q.get(), note: note.value });
+  } else return;
+  const btn = h('button', { class: 'btn primary lg', type: 'button' }, 'ذخیره‌ی ویرایش');
+  btn.onclick = async () => {
+    const pl = build();
+    if (kind !== 'move' && !pl.amount) return toast('مبلغ را بنویس', 'err');
+    const r = await run(btn, () => rpc('edit_entry', { entry: kind, id: row.id, date, ...pl }));
+    if (r) finish(m, 'ویرایش شد');
+  };
+  const m = modal({ title, body: h('div', { class: 'form' }, ...body, P('ویرایش یعنی: ردیف قبلی باطل می‌شود (در تاریخچه می‌ماند) و ردیف اصلاح‌شده ثبت می‌شود.')), footer: [btn] });
 }

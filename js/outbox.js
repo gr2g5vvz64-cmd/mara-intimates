@@ -14,7 +14,7 @@ const emit = (type, data) => subs.forEach(f => { try { f(type, data); } catch (e
 export const onOutbox = f => { subs.add(f); return () => subs.delete(f); };
 
 export const LABELS = {
-  create_sale: 'فروش', create_purchase: 'فاکتور خرید', add_collection: 'دریافت از مشتری', collect_customer: 'دریافت از مشتری', add_supplier_payment: 'پرداخت به تامین‌کننده',
+  create_sale: 'فروش', edit_sale: 'ویرایش فروش', edit_purchase: 'ویرایش فاکتور خرید', edit_return: 'ویرایش مرجوعی', edit_entry: 'ویرایش ثبت', create_purchase: 'فاکتور خرید', add_collection: 'دریافت از مشتری', collect_customer: 'دریافت از مشتری', add_supplier_payment: 'پرداخت به تامین‌کننده',
   add_expense: 'هزینه', add_transfer: 'انتقال بین حساب‌ها', move_stock: 'جابجایی کالا', create_return: 'مرجوعی از مشتری', create_supplier_return: 'برگشت به تامین‌کننده',
   void_entry: 'ابطال', set_due_date: 'تغییر سررسید', save_item: 'کالا', save_supplier: 'تامین‌کننده', save_customer: 'مشتری'
 };

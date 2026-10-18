@@ -124,11 +124,9 @@ export const catNames = (withOff = false) => {
 };
 export const catOf = it => (it && it.category) || NO_CAT;
 export const customers = () => S.customersT.filter(c => c.active);
-export function canVoid(row) {
-  if (!S.me) return false;
-  if (S.me.role === 'admin') return true;
-  return row.created_by === S.me.name && Date.now() - new Date(row.created_at).getTime() < 24 * 3600 * 1000;
-}
+/** ویرایش و ابطال: فقط حمیدرضا و مهسا (سرور هم همین را اجرا می‌کند). رعنا فقط ثبت و مشاهده دارد. */
+export const canEdit = () => !!(S.me && (S.me.can_edit || S.me.role === 'admin'));
+export const canVoid = () => canEdit();
 export const today = todayISO;
 
 export const bus = { refresh: async () => {} };
