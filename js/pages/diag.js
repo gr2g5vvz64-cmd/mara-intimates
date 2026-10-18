@@ -23,7 +23,7 @@ export function render() {
       row(true, 'سرور جواب داد', `نسخه ${H.version} · ${ms} میلی‌ثانیه`),
       row(db.ok, 'اتصال به دیتابیس', db.ok ? `${db.name} · منطقه‌ی زمانی ${db.timezone}` : db.error, db.hint),
       db.ok ? row(db.schema_ok, 'جدول‌ها و توابع حسابداری', `${db.tables_found}/6 جدول · ${db.functions_found}/5 تابع`, 'دستور migrate باید اجرا شود (Render → Manual Deploy).') : null,
-      db.ok ? row(db.check_diff === 0, 'ترازنامه‌ی کنترلی (باید صفر باشد)', 'اختلاف: ' + db.check_diff, 'با حمیدرضا/پشتیبان تماس بگیر؛ یک ردیف ناسازگار وجود دارد.') : null,
+      db.ok ? row(Math.abs(db.check_diff || 0) < 1, 'ترازنامه‌ی کنترلی (باید صفر باشد)', 'اختلاف: ' + (Math.abs(db.check_diff || 0) < 1 ? '۰ (کمتر از یک ریال؛ فقط خطای گرد کردن)' : Math.round(db.check_diff).toLocaleString('en') + ' ریال'), 'اختلاف واقعی است: صفحه‌ی «تحلیل › بررسی اشتباهات» نشان می‌دهد کدام ثبت مشکل دارد.') : null,
       db.ok ? row(true, 'تاریخچه', `${db.audit_rows} ردیف ثبت شده`) : null));
     parts.push(sec('۲ · تنظیمات Render (Environment)',
       row(c.users === 3, 'کاربران', `${c.users} نفر · ${c.users_with_email} ایمیل · ${c.users_with_phone} موبایل`, 'متغیرهای MAHSA_/RANA_/HAMID_ را در Render پر کن و دوباره Deploy بزن.'),
