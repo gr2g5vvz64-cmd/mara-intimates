@@ -15,7 +15,7 @@ export function items() {
     ], rows, { onRow: i => itemForm(S.I[i.id]), empty: 'هنوز کالایی تعریف نشده. با «خرید جدید» هم می‌توانی کالا بسازی.' }));
   };
   draw();
-  return h('div', null, head('کالاها', [btn('دسته‌ها', () => categoriesForm(), 'ghost'), btn('＋ کالای جدید', () => itemForm())], 'هر کالا فقط یک بار تعریف می‌شود. نام کالای استفاده‌شده را فقط حمیدرضا می‌تواند عوض کند (خرید و فروش‌های قبلی با شناسه به آن وصل‌اند و خراب نمی‌شوند).'),
+  return h('div', null, head('کالاها', [btn('دسته‌ها', () => categoriesForm(), 'ghost'), btn('＋ کالای جدید', () => itemForm())], 'هر کالا فقط یک بار تعریف می‌شود. نام کالای استفاده‌شده را فقط حمیدرضا و مهسا می‌توانند عوض کنند (خرید و فروش‌های قبلی با شناسه به آن وصل‌اند و خراب نمی‌شوند).'),
     h('div', { class: 'bar' }, searchBox(v => { q = v; draw(); }), h('label', { class: 'chk' }, h('input', { type: 'checkbox', onchange: e => { showOff = e.target.checked; draw(); } }), 'نمایش غیرفعال‌ها')), catHost, tbl);
 }
 export function suppliers() {
