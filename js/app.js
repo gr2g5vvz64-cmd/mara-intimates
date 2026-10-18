@@ -37,7 +37,8 @@ const ROUTES = {
   analysis: { t: 'تحلیل', i: '🔍', f: () => ana.render() },
   calc: { t: 'محاسبات و درصد سود', i: '％', f: () => calc.render() },
   savelog: { t: 'گزارش ذخیره', i: '✔', f: () => savelog.render() },
-  diag: { t: 'عیب‌یابی', i: '🛠', f: () => diag.render() }
+  diag: { t: 'عیب‌یابی', i: '🛠', f: () => diag.render() },
+  settings: { t: 'تم رنگی', i: '🎨', f: () => h('div', null, h('div', { class: 'phead' }, h('h1', null, 'تنظیمات ظاهر')), h('p', { class: 'hint' }, 'تمی که انتخاب می‌کنی فقط برای خودت و روی همین دستگاه می‌ماند.'), themePanel(true)) }
 };
 /* منوی کناری در پنج گروه (زیرمجموعه‌ها با کلیک روی عنوان باز و بسته می‌شوند) */
 const GROUPS = [
@@ -45,7 +46,7 @@ const GROUPS = [
   { id: 'buy', t: 'خرید', i: '📦', kids: ['purchases', 'invoices', 'suppliers', 'returns'] },
   { id: 'wh', t: 'انبار', i: '▤', kids: ['stock', 'items'] },
   { id: 'money', t: 'مالی', i: '◎', kids: ['finance', 'pay', 'expenses', 'history'] },
-  { id: 'set', t: 'تنظیمات', i: '⚙', kids: ['analysis', 'calc', 'help', 'savelog', 'diag'] }
+  { id: 'set', t: 'تنظیمات', i: '⚙', kids: ['settings', 'analysis', 'calc', 'help', 'savelog', 'diag'] }
 ];
 const NAVLBL = { sales: 'فروش‌ها', purchases: 'خریدها', finance: 'خلاصه‌ی مالی', pay: 'پرداخت به تامین‌کننده' };
 const isAdmin = () => !!(S.me && S.me.role === 'admin');
@@ -138,7 +139,7 @@ onOutbox((type, d) => {
 });
 window.addEventListener('online', () => { renderBar(); if (staleErr) refresh(); }); window.addEventListener('offline', renderBar);
 
-function themePanel() {
+function themePanel(startOpen = false) {
   const wrap = h('section', { class: 'themebar', 'aria-label': 'تم رنگی' });
   const strip = t => h('span', { class: 'tb-sw', 'aria-hidden': 'true' }, t.sw.map(c => h('i', { style: { background: c } })));
   const draw = open => {
@@ -150,7 +151,7 @@ function themePanel() {
           onclick: () => { chooseTheme(t.id, S.me.name); toast(`تم «${t.name}» انتخاب شد و برایت می‌ماند ✔`); draw(true); if (!document.querySelector('.ov')) route(); } },
           strip(t), h('b', null, t.name, t.id === cur.id ? h('span', { class: 'ok' }, '✓ فعلی') : null), h('small', null, t.desc)))));
   };
-  draw(false); return wrap;
+  draw(startOpen); return wrap;
 }
 
 function shell() {
@@ -176,7 +177,7 @@ function shell() {
       h('nav', { 'aria-label': 'بخش‌ها' }, navList('sl')),
       h('div', { class: 'who' }, h('div', { class: 'av' }, S.me.name[0]), h('div', null, h('b', null, S.me.name), h('small', null, jlong(todayISO()))))),
     h('header', { class: 'top' }, h('button', { type: 'button', class: 'menu', 'aria-label': 'منو', onclick: () => { drawer.hidden = false; } }, '☰', h('b', { class: 'cnt red', id: 'menucnt', hidden: true })), h('div', { class: 'brand sm' }, h('img', { class: 'brand-mark', src: 'icons/logo-mark.jpg', alt: 'MR', width: 40, height: 40 }), h('b', null, 'MARA')), h('div', { class: 'av' }, S.me.name[0])),
-    h('div', { class: 'content' }, themePanel(), h('div', { id: 'savebar', hidden: true, role: 'status', 'aria-live': 'polite' }), view), drawer,
+    h('div', { class: 'content' }, h('div', { id: 'savebar', hidden: true, role: 'status', 'aria-live': 'polite' }), view), drawer,
     h('nav', { class: 'bottom', 'aria-label': 'ناوبری اصلی' }, BOTTOM.map(k => mk(k, 'bl'))),
     h('div', { class: 'progress' }));
   const op = savedOpen(); GROUPS.forEach(g => setGroup(g.id, op.has(g.id), false));
