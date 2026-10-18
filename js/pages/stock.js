@@ -29,19 +29,23 @@ function flowCard() {
     const ls = S.saleLines.filter(x => okSale.has(x.sale_id) && x.holder === n);
     const sold = ls.reduce((a, x) => a + x.qty, 0), soldV = ls.reduce((a, x) => a + x.qty * x.net_unit, 0);
     const rem = L.reduce((a, l) => a + (l[rk] || 0), 0), remV = valOf(L, rk);
-    return { n, bought, boughtV, sold, soldV, other: rem - bought + sold, rem, remV };
+    // جابجایی بین مهسا و رعنا: تعداد و ارزش (قیمت تمام‌شده‌ی همان دسته) از یکی کم و به دیگری اضافه می‌شود
+    let mq = 0, mv = 0;
+    for (const m of (S.moves || [])) { if (m.voided) continue; const lot = S.LOT && S.LOT[m.lot_id]; const c = lot ? lot.landed_unit || 0 : 0, sg = m.to_holder === n ? 1 : m.from_holder === n ? -1 : 0; mq += sg * m.qty; mv += sg * m.qty * c; }
+    return { n, bought, boughtV, sold, soldV, mq, mv, other: rem - bought + sold - mq, rem, remV };
   });
-  const tot = rows.reduce((a, r) => ({ n: 'جمع کل', bought: a.bought + r.bought, boughtV: a.boughtV + r.boughtV, sold: a.sold + r.sold, soldV: a.soldV + r.soldV, other: a.other + r.other, rem: a.rem + r.rem, remV: a.remV + r.remV }), { bought: 0, boughtV: 0, sold: 0, soldV: 0, other: 0, rem: 0, remV: 0 });
+  const tot = rows.reduce((a, r) => ({ n: 'جمع کل', bought: a.bought + r.bought, boughtV: a.boughtV + r.boughtV, sold: a.sold + r.sold, soldV: a.soldV + r.soldV, mq: a.mq + r.mq, mv: a.mv + r.mv, other: a.other + r.other, rem: a.rem + r.rem, remV: a.remV + r.remV }), { bought: 0, boughtV: 0, sold: 0, soldV: 0, mq: 0, mv: 0, other: 0, rem: 0, remV: 0 });
   const pct = tot.bought ? Math.round(tot.sold / tot.bought * 100) : 0;
   return h('div', { class: 'card' }, h('div', { class: 'ct' }, 'گردش کل کالا: خرید ← فروش ← مانده', h('small', null, tot.bought ? `${pct}٪ از کل خرید فروخته شده` : '')),
     dtable([
       { label: 'دست چه کسی', main: true, render: r => r.n },
       { label: 'خریدیم (تعداد)', cls: 'num', render: r => h('b', null, fmt(r.bought)) }, { label: 'ارزش خرید', cls: 'num', render: r => N(r.boughtV) },
       { label: 'فروختیم (تعداد)', cls: 'num', render: r => h('b', null, fmt(r.sold)) }, { label: 'مبلغ فروش', cls: 'num', render: r => N(r.soldV) },
-      { label: 'مرجوعی و جابجایی', cls: 'num', hm: true, render: r => h('span', { class: 'n' }, (r.other > 0 ? '+' : '') + fmt(r.other)) },
+      { label: 'جابجایی (+ورودی / −خروجی)', cls: 'num', render: r => h('span', { class: 'n' }, (r.mq > 0 ? '+' : '') + fmt(r.mq)) }, { label: 'ارزش جابجایی', cls: 'num', render: r => N(r.mv) },
+      { label: 'مرجوعی', cls: 'num', hm: true, render: r => h('span', { class: 'n' }, (r.other > 0 ? '+' : '') + fmt(r.other)) },
       { label: 'مانده (تعداد)', cls: 'num', render: r => h('b', null, fmt(r.rem)) }, { label: 'ارزش مانده', cls: 'num', render: r => N(r.remV) }
     ], [...rows, tot], { empty: '' }),
-    h('p', { class: 'hint' }, 'خریدیم = جنسی که از ابتدا دست هر نفر رفته؛ مانده = خرید − فروش ± مرجوعی و جابجایی بین مهسا و رعنا. ارزش خرید و مانده به قیمت تمام‌شده است.'));
+    h('p', { class: 'hint' }, 'خریدیم = جنسی که از ابتدا دست هر نفر رفته؛ مانده = خرید − فروش ± جابجایی ± مرجوعی. وقتی جنسی از یکی به دیگری می‌رود، تعداد و ارزشش (به قیمت تمام‌شده) از مانده‌ی فرستنده کم و به مانده‌ی گیرنده اضافه می‌شود؛ فروش‌ها همیشه به نام کسی می‌مانند که فروخته است. ارزش خرید و مانده به قیمت تمام‌شده است.'));
 }
 
 function byCategoryCard() {
