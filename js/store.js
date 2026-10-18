@@ -50,7 +50,7 @@ export async function reportError(code, message, where, detail = '') {
 export const S = {
   me: null, loaded: false, bots: {},
   accounts: [], items: [], suppliers: [], customersT: [], invoices: [], lines: [], payments: [], sales: [], saleLines: [],
-  collections: [], returns: [], expenses: [], transfers: [], moves: [], goals: [], dayCloses: [], categories: [], diagErrors: null,
+  collections: [], returns: [], expenses: [], transfers: [], moves: [], goals: [], dayCloses: [], categories: [], settings: [], diagErrors: null,
   lots: [], stock: [], vInvoices: [], vSup: [], vCus: [], due: [], bal: [], vSales: [], totals: {},
   A: {}, I: {}, SUP: {}, LOT: {}, SALE: {}, INV: {}, CUS: {}
 };
@@ -62,7 +62,7 @@ export async function loadAll() {
     accounts: t.accounts, items: t.items, suppliers: t.suppliers, customersT: t.customers, invoices: t.purchase_invoices, lines: t.purchase_lines, payments: t.supplier_payments,
     saleLines: t.sale_lines, collections: t.collections, returns: t.returns, expenses: t.expenses, transfers: t.transfers, moves: t.stock_moves,
     lots: t.v_lots, stock: t.v_stock, vInvoices: t.v_invoices, vSup: t.v_supplier_balance, vCus: t.v_customer_balance, due: t.v_due, bal: t.v_account_balance,
-    vSales: t.v_sales, goals: t.goals || [], dayCloses: t.day_closes || [], categories: t.categories || [], totals: t.v_totals || {}, me: r.data.user, bots: r.data.bots || {}
+    vSales: t.v_sales, goals: t.goals || [], dayCloses: t.day_closes || [], categories: t.categories || [], settings: t.app_settings || [], totals: t.v_totals || {}, me: r.data.user, bots: r.data.bots || {}
   });
   S.sales = S.vSales;
   S.A = Object.fromEntries(S.accounts.map(x => [x.id, x]));
@@ -127,6 +127,12 @@ export const customers = () => S.customersT.filter(c => c.active);
 /** ویرایش و ابطال: فقط حمیدرضا و مهسا (سرور هم همین را اجرا می‌کند). رعنا فقط ثبت و مشاهده دارد. */
 export const canEdit = () => !!(S.me && (S.me.can_edit || S.me.role === 'admin'));
 export const canVoid = () => canEdit();
+/** درصد سود پیش‌فرض (عدد؛ مثلاً 20): اول درصد دسته‌ی کالا، اگر نبود درصد پیش‌فرض کل، اگر آن هم نبود ۲۰ */
+export const defaultMarkup = () => { const r = (S.settings || []).find(x => x.key === 'default_markup'); return r && r.value != null ? Number(r.value) : 20; };
+export const markupOf = itemId => {
+  const it = S.I && S.I[itemId], c = it && it.category ? S.categories.find(x => x.name === it.category) : null;
+  return c && c.markup_pct != null ? Number(c.markup_pct) : defaultMarkup();
+};
 export const today = todayISO;
 
 export const bus = { refresh: async () => {} };

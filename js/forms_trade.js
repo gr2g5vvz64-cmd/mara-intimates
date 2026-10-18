@@ -1,6 +1,6 @@
 // فرم‌های اصلی: فروش و خرید
 import { h, fmt, parseNum, todayISO, toast, sum, jstr } from './util.js';
-import { S, rpc, loadAll, bus, pref, setPref, simulateFifo, holdKey, customers, businessAccounts, CHANNELS, accBalance, errText, canEdit } from './store.js';
+import { S, rpc, loadAll, bus, pref, setPref, simulateFifo, holdKey, customers, businessAccounts, CHANNELS, accBalance, errText, canEdit, markupOf } from './store.js';
 import { modal, field, chips, accountPicker, numField, intField, dateField, dueField, combo, run, promptBox } from './ui.js';
 import { pickCategoryDialog } from './forms_misc.js';
 
@@ -8,7 +8,7 @@ const accOf = name => S.accounts.find(a => a.name === name);
 const seg = (mode, on, cb, a, b) => chips([{ v: 'a', label: a }, { v: 'b', label: b }], mode, cb, { cls: 'two' });
 
 /* ======================= فروش جدید ======================= */
-const MARKUP = 0.20;                                  // فی فروش پیش‌فرض = بهای تمام‌شده + ۲۰٪
+// فی فروش پیش‌فرض = بهای تمام‌شده + درصد سودِ دسته‌ی کالا (از تنظیمات؛ پیش‌فرض ۲۰٪)
 const roundK = n => Math.round(n / 1000) * 1000;       // گرد به هزار ریال
 export function saleForm(preset = {}) {
   const me = S.me && S.me.name !== 'حمیدرضا' ? S.me.name : 'مهسا';
@@ -81,7 +81,7 @@ export function saleForm(preset = {}) {
     const autoPrice = force => {
       showCost();
       if (!force && L.touched) return;
-      const p = L.unit ? roundK(L.unit * (1 + MARKUP)) : 0;
+      const p = L.unit ? roundK(L.unit * (1 + markupOf(L.item) / 100)) : 0;
       L.price = p; priceCtl.set(p || ''); if (force) L.touched = false;
     };
     const choose = v => {

@@ -11,6 +11,7 @@ import * as cust from './pages/customers.js';
 import * as hist from './pages/history.js';
 import * as diag from './pages/diag.js';
 import * as savelog from './pages/savelog.js';
+import * as calc from './pages/calc.js';
 import { onOutbox, initOutbox, pendingCount, blockedCount, pump, state as obState } from './outbox.js';
 import { saleForm, purchaseForm } from './forms_trade.js';
 import { navCounts } from './insights.js';
@@ -32,6 +33,7 @@ const ROUTES = {
   suppliers: { t: 'تامین‌کنندگان', i: '🏭', f: () => master.suppliers() },
   history: { t: 'تاریخچه', i: '🕘', f: () => hist.render() },
   help: { t: 'راهنما و پشتیبان', i: '?', f: () => help.render() },
+  calc: { t: 'محاسبات و درصد سود', i: '％', f: () => calc.render() },
   savelog: { t: 'گزارش ذخیره', i: '✔', f: () => savelog.render() },
   diag: { t: 'عیب‌یابی', i: '🛠', f: () => diag.render() }
 };
@@ -41,7 +43,7 @@ const GROUPS = [
   { id: 'buy', t: 'خرید', i: '📦', kids: ['purchases', 'invoices', 'suppliers', 'returns'] },
   { id: 'wh', t: 'انبار', i: '▤', kids: ['stock', 'items'] },
   { id: 'money', t: 'مالی', i: '◎', kids: ['finance', 'pay', 'expenses', 'history'] },
-  { id: 'set', t: 'تنظیمات', i: '⚙', kids: ['help', 'savelog', 'diag'] }
+  { id: 'set', t: 'تنظیمات', i: '⚙', kids: ['calc', 'help', 'savelog', 'diag'] }
 ];
 const NAVLBL = { sales: 'فروش‌ها', purchases: 'خریدها', finance: 'خلاصه‌ی مالی', pay: 'پرداخت به تامین‌کننده' };
 const isAdmin = () => !!(S.me && S.me.role === 'admin');
@@ -153,7 +155,7 @@ function shell() {
   const mk = (k, cls) => { const r = ROUTES[k]; const a = h('a', { href: '#/' + k, 'data-r': k, class: cls }, h('span', { class: 'ni', 'aria-hidden': 'true' }, r.i), h('b', { class: 'cnt zero', 'data-c': k, role: 'status' }, '۰'), h('span', { class: 'nt' }, NAVLBL[k] || r.t)); navEls.push(a); return a; };
   navEls = []; grpEls = [];
   const grp = (g, cls) => {
-    const kids = g.kids.filter(k => k !== 'diag' || isAdmin());
+    const kids = g.kids.filter(k => (k !== 'diag' && k !== 'calc') || isAdmin());
     const cnt = h('b', { class: 'cnt amber', hidden: true, role: 'status' });
     const kidsEl = h('div', { class: 'gk', id: `gk-${cls}-${g.id}` }, kids.map(k => mk(k, cls)));
     const btn = h('button', { type: 'button', class: 'gh', 'aria-expanded': 'false', 'aria-controls': kidsEl.id, onclick: () => setGroup(g.id, !el.classList.contains('open')) },
