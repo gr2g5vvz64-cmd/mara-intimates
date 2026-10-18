@@ -407,3 +407,16 @@ ul.plain{list-style:none;padding:0;margin:4px 0}
 .xrow small{color:var(--brown);font-size:12px;line-height:1.6}
 .xrow.sum{background:var(--tint);font-weight:800}
 .xsub{margin:12px 0 6px;font-weight:800;font-size:13px}
+
+/* ---- v5.20: تمام‌عرض و جدول افقی بدون اسکرول ---- */
+.content{max-width:none}
+@media (min-width:701px){
+  .t th,.t td{padding:8px 7px;font-size:13px}
+  .t td{white-space:normal;line-height:1.55}
+  .t td .n,.t td.num,.t th{white-space:nowrap}
+  .t td.wrap{min-width:130px;max-width:none}
+  .t td:first-child{position:static}
+  .t th:first-child{position:sticky;inset-inline-start:auto}
+  .tw{max-height:none;overflow-x:auto}
+}
+@media (min-width:701px){.t td:first-child{white-space:nowrap}}

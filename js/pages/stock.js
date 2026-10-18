@@ -21,6 +21,29 @@ function warehouseCard() {
       [...rows, { n: 'جمع کل', q: tq, v: tv, avg: tq ? tv / tq : 0 }], { empty: '' }));
 }
 
+/* گردش کل کالا: چقدر خریدیم، چقدرش را فروختیم، چقدر مانده و دست کیست (همه به تفکیک مهسا و رعنا) */
+function flowCard() {
+  const L = liveLots(), okSale = new Set(S.vSales.filter(x => !x.voided).map(x => x.id));
+  const rows = [['مهسا', 'hold_m', 'rem_m'], ['رعنا', 'hold_r', 'rem_r']].map(([n, hk, rk]) => {
+    const bought = L.reduce((a, l) => a + (l[hk] || 0), 0), boughtV = L.reduce((a, l) => a + (l[hk] || 0) * (l.landed_unit || 0), 0);
+    const ls = S.saleLines.filter(x => okSale.has(x.sale_id) && x.holder === n);
+    const sold = ls.reduce((a, x) => a + x.qty, 0), soldV = ls.reduce((a, x) => a + x.qty * x.net_unit, 0);
+    const rem = L.reduce((a, l) => a + (l[rk] || 0), 0), remV = valOf(L, rk);
+    return { n, bought, boughtV, sold, soldV, other: rem - bought + sold, rem, remV };
+  });
+  const tot = rows.reduce((a, r) => ({ n: 'جمع کل', bought: a.bought + r.bought, boughtV: a.boughtV + r.boughtV, sold: a.sold + r.sold, soldV: a.soldV + r.soldV, other: a.other + r.other, rem: a.rem + r.rem, remV: a.remV + r.remV }), { bought: 0, boughtV: 0, sold: 0, soldV: 0, other: 0, rem: 0, remV: 0 });
+  const pct = tot.bought ? Math.round(tot.sold / tot.bought * 100) : 0;
+  return h('div', { class: 'card' }, h('div', { class: 'ct' }, 'گردش کل کالا: خرید ← فروش ← مانده', h('small', null, tot.bought ? `${pct}٪ از کل خرید فروخته شده` : '')),
+    dtable([
+      { label: 'دست چه کسی', main: true, render: r => r.n },
+      { label: 'خریدیم (تعداد)', cls: 'num', render: r => h('b', null, fmt(r.bought)) }, { label: 'ارزش خرید', cls: 'num', render: r => N(r.boughtV) },
+      { label: 'فروختیم (تعداد)', cls: 'num', render: r => h('b', null, fmt(r.sold)) }, { label: 'مبلغ فروش', cls: 'num', render: r => N(r.soldV) },
+      { label: 'مرجوعی و جابجایی', cls: 'num', hm: true, render: r => h('span', { class: 'n' }, (r.other > 0 ? '+' : '') + fmt(r.other)) },
+      { label: 'مانده (تعداد)', cls: 'num', render: r => h('b', null, fmt(r.rem)) }, { label: 'ارزش مانده', cls: 'num', render: r => N(r.remV) }
+    ], [...rows, tot], { empty: '' }),
+    h('p', { class: 'hint' }, 'خریدیم = جنسی که از ابتدا دست هر نفر رفته؛ مانده = خرید − فروش ± مرجوعی و جابجایی بین مهسا و رعنا. ارزش خرید و مانده به قیمت تمام‌شده است.'));
+}
+
 function byCategoryCard() {
   const L = liveLots(), rows = [...catNames(true), NO_CAT].map(c => {
     const ls = L.filter(l => catOf(S.I[l.item_id]) === c), qm = ls.reduce((a, l) => a + (l.rem_m || 0), 0), qr = ls.reduce((a, l) => a + (l.rem_r || 0), 0);
@@ -64,7 +87,7 @@ export function render(query) {
   };
   const tot = S.totals.stock_value || 0;
   root.append(head('موجودی', [btn('برگشت به تامین‌کننده', () => supplierReturnForm(), 'ghost'), btn('＋ خرید', () => purchaseForm(), 'primary')], 'فروش از قدیمی‌ترین دسته شروع می‌شود (FIFO) و با قیمت تمام‌شده‌ی همان دسته حساب می‌شود.'),
-    warehouseCard(), byCategoryCard(),
+    flowCard(), warehouseCard(), byCategoryCard(),
     h('div', { class: 'kpis' }, kpi('ارزش کل موجودی', N(tot), { sub: 'به قیمت تمام‌شده' }), kpi('تعداد کل', h('span', { class: 'n' }, fmt(S.stock.reduce((a, i) => a + i.rem, 0)))), kpi('کم‌موجودی', h('span', { class: 'n' }, T.filter(i => i.rem > 0 && i.rem <= i.min_stock).length), { tone: 'warn' })),
     h('div', { class: 'bar' }, searchBox(v => { q = v; draw(); }, 'جستجو در نام کالا یا دسته…'), h('label', { class: 'chk' }, h('input', { type: 'checkbox', onchange: e => { hideZero = e.target.checked; draw(); } }), 'پنهان کردن تمام‌شده‌ها')),
     h('div', { class: 'tabs' }), catHost, body);
