@@ -26,7 +26,8 @@ const ROUTES = {
   stock: { t: 'موجودی', i: '▤', f: q => stock.render(q) },
   pay: { t: 'پرداخت‌ها', i: '💳', f: q => pay.render(q, 'sup') },
   expenses: { t: 'هزینه‌ها', i: '🧾', f: q => pay.render(q, 'exp') },
-  returns: { t: 'مرجوعی', i: '↩', f: () => pay.returns() },
+  returns: { t: 'مرجوعی فروش', i: '↩', f: () => pay.returns('customer') },
+  sreturns: { t: 'مرجوعی خرید', i: '↪', f: () => pay.returns('supplier') },
   customers: { t: 'مشتریان و طلب‌ها', i: '👥', f: q => cust.render(q) },
   invoices: { t: 'بدهی به تامین‌کننده', i: '📄', f: () => trade.invoices() },
   finance: { t: 'مالی', i: '◎', f: () => fin.render() },
@@ -42,13 +43,16 @@ const ROUTES = {
 };
 /* منوی کناری در پنج گروه (زیرمجموعه‌ها با کلیک روی عنوان باز و بسته می‌شوند) */
 const GROUPS = [
-  { id: 'sales', t: 'فروش', i: '🛍', kids: ['sales', 'customers'] },
-  { id: 'buy', t: 'خرید', i: '📦', kids: ['purchases', 'invoices', 'suppliers', 'returns'] },
+  { id: 'dash', t: 'داشبورد', i: '▦', kids: ['', 'analysis', 'calc'] },
+  { id: 'sales', t: 'فروش', i: '🛍', kids: ['sales', 'customers', 'returns'] },
+  { id: 'buy', t: 'خرید', i: '📦', kids: ['purchases', 'suppliers', 'sreturns'] },
   { id: 'wh', t: 'انبار', i: '▤', kids: ['stock', 'items'] },
-  { id: 'money', t: 'مالی', i: '◎', kids: ['finance', 'pay', 'expenses', 'history'] },
-  { id: 'set', t: 'تنظیمات', i: '⚙', kids: ['settings', 'analysis', 'calc', 'help', 'savelog', 'diag'] }
+  { id: 'money', t: 'مالی', i: '◎', kids: ['finance', 'pay', 'invoices', 'expenses'] },
+  { id: 'set', t: 'تنظیمات', i: '⚙', kids: ['settings', 'history', 'help', 'savelog', 'diag'] }
 ];
-const NAVLBL = { sales: 'فروش‌ها', purchases: 'خریدها', finance: 'خلاصه‌ی مالی', pay: 'پرداخت به تامین‌کننده' };
+const NAVLBL = { sales: 'فاکتور فروش', purchases: 'فاکتور خرید', finance: 'خلاصه‌ی مالی', pay: 'پرداخت به تامین‌کننده', calc: 'محاسبات درصد' };
+const BLBL = { '': 'خانه', sales: 'فروش', purchases: 'خرید', stock: 'موجودی', finance: 'مالی' };
+const navLabel = (k, cls) => (cls === 'bl' && BLBL[k]) || (k === '' && isAdmin() ? 'داشبورد مدیریت' : NAVLBL[k] || ROUTES[k].t);
 const isAdmin = () => !!(S.me && S.me.role === 'admin');
 const groupOf = k => (GROUPS.find(g => g.kids.includes(k)) || {}).id;
 let grpEls = [];
@@ -158,7 +162,7 @@ function themePanel(startOpen = false) {
 }
 
 function shell() {
-  const mk = (k, cls) => { const r = ROUTES[k]; const a = h('a', { href: '#/' + k, 'data-r': k, class: cls }, h('span', { class: 'ni', 'aria-hidden': 'true' }, r.i), h('b', { class: 'cnt zero', 'data-c': k, role: 'status' }, '۰'), h('span', { class: 'nt' }, NAVLBL[k] || r.t)); navEls.push(a); return a; };
+  const mk = (k, cls) => { const r = ROUTES[k]; const a = h('a', { href: '#/' + k, 'data-r': k, class: cls }, h('span', { class: 'ni', 'aria-hidden': 'true' }, r.i), h('b', { class: 'cnt zero', 'data-c': k, role: 'status' }, '۰'), h('span', { class: 'nt' }, navLabel(k, cls))); navEls.push(a); return a; };
   navEls = []; grpEls = [];
   const grp = (g, cls) => {
     const kids = g.kids.filter(k => (k !== 'diag' && k !== 'calc' && k !== 'analysis') || isAdmin());
@@ -169,7 +173,7 @@ function shell() {
     const el = h('div', { class: 'grp' }, btn, kidsEl);
     grpEls.push({ g, kids, el, btn, cnt }); return el;
   };
-  const navList = cls => [mk('', cls), ...GROUPS.map(g => grp(g, cls))];
+  const navList = cls => GROUPS.map(g => grp(g, cls));
   const drawer = h('div', { class: 'drawer', hidden: true, onclick: e => { if (e.target === drawer || e.target.closest('a')) drawer.hidden = true; } },
     h('nav', { class: 'dnav', 'aria-label': 'همه‌ی بخش‌ها' }, h('div', { class: 'dh' }, h('b', null, 'همه‌ی بخش‌ها'), h('button', { type: 'button', class: 'x', 'aria-label': 'بستن', onclick: () => { drawer.hidden = true; } }, '✕')), navList('dl'), h('div', { class: 'dfoot' }, logoutBtn())));
   document.body.classList.toggle('ro', !!(S.me && S.me.role === 'viewer'));

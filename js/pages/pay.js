@@ -47,10 +47,10 @@ export function render(query, defTab = 'sup') {
   return root;
 }
 
-export function returns() {
+export function returns(kind = 'customer') {
   let q = ''; const tbl = h('div');
   const draw = () => {
-    const rows = S.returns.filter(r => match(q, r.no, S.I[r.item_id].name, r.holder)).sort(sortNew);
+    const rows = S.returns.filter(r => r.kind === kind && match(q, r.no, S.I[r.item_id].name, r.holder)).sort(sortNew);
     tbl.replaceChildren(dtable([
       { label: 'شماره', main: true, render: r => h('span', null, r.no, ' ', r.voided ? pill('باطل', 'red') : null) }, { label: 'تاریخ', render: r => jstr(r.date) },
       { label: 'نوع', render: r => (r.kind === 'customer' ? pill('از مشتری', 'blue') : pill('به تامین‌کننده', 'gray')) }, { label: 'کالا', render: r => S.I[r.item_id].name }, { label: 'تعداد', cls: 'num', render: r => r.qty },
@@ -63,6 +63,6 @@ export function returns() {
       ['اثر بر سود', N(r.profit_effect, r.profit_effect < 0 ? 'neg' : 'pos')], r.note ? ['توضیح', r.note] : null], r) }));
   };
   draw();
-  return h('div', null, head('مرجوعی', [btn('برگشت به تامین‌کننده', () => supplierReturnForm(), 'ghost'), btn('＋ مرجوعی از مشتری', () => returnForm())], 'کالای سالم به موجودی برمی‌گردد؛ معیوب ضرر می‌شود؛ اگر به تامین‌کننده پس بدهیم، از بدهی او کم می‌شود.'),
+  return h('div', null, head(kind === 'customer' ? 'مرجوعی فروش' : 'مرجوعی خرید (برگشت به تامین‌کننده)', [kind === 'customer' ? btn('＋ مرجوعی از مشتری', () => returnForm()) : btn('＋ برگشت به تامین‌کننده', () => supplierReturnForm())], 'کالای سالم به موجودی برمی‌گردد؛ معیوب ضرر می‌شود؛ اگر به تامین‌کننده پس بدهیم، از بدهی او کم می‌شود.'),
     h('div', { class: 'bar' }, searchBox(v => { q = v; draw(); })), tbl);
 }

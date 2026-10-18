@@ -40,7 +40,7 @@ export function sales(query) {
     h('label', { class: 'chk' }, h('input', { type: 'checkbox', checked: st.open || null, onchange: e => { st.open = e.target.checked; draw(); } }), 'فقط نسیه‌ی باز'),
     h('label', { class: 'chk' }, h('input', { type: 'checkbox', onchange: e => { st.voided = e.target.checked; draw(); } }), 'نمایش باطل‌شده‌ها'));
   draw();
-  return h('div', null, head('فروش', [btn('＋ فروش جدید', () => saleForm())], 'جدیدترین بالا است. ردیف‌ها قابل حذف یا ویرایش نیستند؛ فقط باطل می‌شوند.'), ctr, tbl);
+  return h('div', null, head('فاکتور فروش', [btn('＋ فروش جدید', () => saleForm())], 'جدیدترین بالا است. ردیف‌ها قابل حذف یا ویرایش نیستند؛ فقط باطل می‌شوند.'), ctr, tbl);
 }
 
 const itemCell = (id, name) => { const d = S.I[id] && S.I[id].description; return d ? h('span', null, name || S.I[id].name, h('small', { class: 'idesc-s' }, d)) : (name || S.I[id].name); };
@@ -87,7 +87,7 @@ export function purchases() {
     sel([{ v: '', label: 'همه‌ی تامین‌کننده‌ها' }, ...S.suppliers.map(s => ({ v: String(s.id), label: s.name }))], '', v => { st.sup = v; draw(); }, 'تامین‌کننده'),
     h('label', { class: 'chk' }, h('input', { type: 'checkbox', onchange: e => { st.voided = e.target.checked; draw(); } }), 'نمایش باطل‌شده‌ها'));
   draw();
-  return h('div', null, head('خرید', [btn('＋ خرید جدید', () => purchaseForm())], 'هر فاکتور شامل چند قلم است. «بدهی کالا» = جمع کالا − تخفیف، همان مبلغی که به تامین‌کننده می‌دهیم. کرایه (حمل) را جداگانه به باربر می‌دهیم و فقط روی قیمت تمام‌شده‌ی اقلام سرشکن می‌شود: قیمت تمام‌شده = بدهی کالا + حمل. پس «پرداخت‌شده» می‌تواند از «قیمت تمام‌شده» کمتر باشد و بدهی باز هم تسویه است.'), ctr, tbl);
+  return h('div', null, head('فاکتور خرید', [btn('＋ خرید جدید', () => purchaseForm())], 'هر فاکتور شامل چند قلم است. «بدهی کالا» = جمع کالا − تخفیف، همان مبلغی که به تامین‌کننده می‌دهیم. کرایه (حمل) را جداگانه به باربر می‌دهیم و فقط روی قیمت تمام‌شده‌ی اقلام سرشکن می‌شود: قیمت تمام‌شده = بدهی کالا + حمل. پس «پرداخت‌شده» می‌تواند از «قیمت تمام‌شده» کمتر باشد و بدهی باز هم تسویه است.'), ctr, tbl);
 }
 
 export function purchaseDetail(id) {
