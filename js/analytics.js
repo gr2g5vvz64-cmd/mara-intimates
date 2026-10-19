@@ -79,6 +79,21 @@ export function concentration(rows, grand) {
   return { k, n: r.length, share: Math.round(top / tot * 100) };
 }
 
+/** خرید، فروش و پول دریافتی؛ ok(d) تعیین می‌کند تاریخ داخل بازه است.
+    دریافتی = پولی که هنگام فروش گرفتیم + نسیه‌هایی که بعداً وصول شد (به تاریخ وصول) */
+export function flowStats(ok) {
+  const ss = activeSales().filter(s => ok(s.date)), inv = S.vInvoices.filter(i => !i.voided && ok(i.date));
+  const atSale = sum(ss, s => s.received || 0), later = sum(S.collections.filter(c => !c.voided && ok(c.date)), c => c.amount);
+  const sold = sum(ss, s => s.total);
+  return { bought: sum(inv, i => i.goods_total), boughtN: inv.length, sold, soldN: ss.length, received: atSale + later, atSale, later, owed: sum(ss, s => Math.max(0, s.outstanding || 0)) };
+}
+/** هر فروشنده به چند مشتری (نام‌دار) فروخته: مشتری یکتا، فاکتور، فروش، فاکتور بدون نام */
+export function sellerStats(a, b, seller) {
+  const ss = activeSales().filter(s => s.seller === seller && inR(s.date, a, b)), ids = new Set(ss.filter(s => s.customer_id).map(s => s.customer_id));
+  const before = new Set(activeSales().filter(s => s.customer_id && s.date < a).map(s => s.customer_id));
+  return { seller, customers: ids.size, fresh: [...ids].filter(id => !before.has(id)).length, count: ss.length, total: sum(ss, s => s.total), profit: sum(ss, s => s.profit), anon: ss.filter(s => !s.customer_id).length };
+}
+
 /** روند ماهانه‌ی شمسی با کلید ماه */
 export function monthTrend() {
   return lastMonths(6).map(k => {
@@ -86,13 +101,13 @@ export function monthTrend() {
     const exp = sum(S.expenses.filter(e => !e.voided && jmonthKey(e.date) === k), e => e.amount);
     const sup = sum(S.returns.filter(r => !r.voided && r.kind === 'supplier' && jmonthKey(r.date) === k), r => r.profit_effect);
     const dates = ss.map(s => s.date).concat(S.vInvoices.filter(i => !i.voided && jmonthKey(i.date) === k).map(i => i.date)).sort();
-    return { label: k, sales: sum(ss, s => s.total), profit: sum(ss, s => s.profit) - exp + sup, a: dates[0] || null, b: dates[dates.length - 1] || null, key: k };
+    return { label: k, ...(({ bought, received }) => ({ bought, received }))(flowStats(d => jmonthKey(d) === k)), sales: sum(ss, s => s.total), profit: sum(ss, s => s.profit) - exp + sup, a: dates[0] || null, b: dates[dates.length - 1] || null, key: k };
   });
 }
 /** روند هفتگی: ۸ بازه‌ی ۷ روزه */
 export function weekTrend() {
   const to = todayISO(), out = [];
-  for (let i = 7; i >= 0; i--) { const b = addDaysISO(to, -7 * i), a = addDaysISO(b, -6), st = salesStats(a, b); out.push({ label: i === 0 ? 'این هفته' : i === 1 ? 'پیش' : `${i} پیش`, a, b, sales: st.sales, profit: st.profit }); }
+  for (let i = 7; i >= 0; i--) { const b = addDaysISO(to, -7 * i), a = addDaysISO(b, -6), st = salesStats(a, b); { const f = flowStats(d => d >= a && d <= b); out.push({ label: i === 0 ? 'این هفته' : i === 1 ? 'پیش' : `${i} پیش`, a, b, sales: st.sales, profit: st.profit, bought: f.bought, received: f.received }); } }
   return out;
 }
 /** خریداران فعال و جدید در هر بازه‌ی روند */
