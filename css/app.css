@@ -549,3 +549,8 @@ ul.plain{list-style:none;padding:0;margin:4px 0}
 .advbox.hold{background:var(--amber-bg);color:var(--amber);border-color:var(--warn-bd)}
 .advbox[hidden]{display:none}
 .rs{display:block;font-size:12.5px;line-height:1.7}.rs small{display:block;color:var(--green);font-weight:700}
+/* ---- فاکتور خرید (پنل کناری) ---- */
+@media (min-width:721px){.pgrid .ihead,.pgrid .irow{grid-template-columns:34px minmax(120px,2.2fr) 64px minmax(96px,1.2fr) minmax(92px,1.1fr) 60px 60px minmax(88px,1fr) 38px}}
+.pgrid .irow .in small.pos{color:var(--green);font-weight:700}.pgrid .irow .in small.neg{color:var(--red);font-weight:700}
+.paylist .lcard{margin-bottom:8px}
+.sel>.sline.pl{grid-template-columns:1fr 1.3fr}

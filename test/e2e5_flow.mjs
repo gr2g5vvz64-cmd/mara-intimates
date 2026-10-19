@@ -60,9 +60,10 @@ async function main() {
   // ۴) خرید نسیه با سررسید
   await go('purchases'); await page.click('text=＋ خرید جدید');
   await M.locator('.cmb input').first().fill('بازار تهران'); await M.locator('.cmb-o', { hasText: 'بازار تهران' }).first().click(); await sleep(200);
-  card = M.locator('.lcard').first();
-  await card.locator('.cmb input').fill('سوتین'); await card.locator('.cmb-o').first().click();
-  await card.locator('.stp.big .stp-i').fill('4'); await card.locator('.numinp').first().fill('2500000');
+  card = M.locator('.dpanel');
+  await card.locator('.cmb input').fill('سوتین'); await card.locator('.ilist .cmb-o').first().click();
+  await card.locator('.stp.big .stp-i').fill('4'); await card.locator('.sline .numinp').first().fill('2500000'); await card.locator('.add').click(); await sleep(200);
+  await M.locator('button.chip', { hasText: 'پرداخت جزئی' }).click(); await sleep(150);
   const p1 = M.locator('.lcard', { hasText: 'پرداخت 1' }); await p1.locator('.numinp').fill('4000000'); await p1.locator('button.chip', { hasText: 'حساب مهسا' }).click();
   await sleep(200); ok(await M.locator('button.chip', { hasText: /^۱۰ روز$/ }).count() === 1, 'سررسید برای باقی‌مانده نمایش داده شد');
   await M.locator('button.chip', { hasText: /^۱۰ روز$/ }).click();

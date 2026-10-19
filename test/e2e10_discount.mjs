@@ -24,14 +24,14 @@ try {
   // ۲) خرید با تخفیف
   await go('#/purchases'); await page.locator('button', { hasText: /خرید جدید/ }).first().click(); await M.waitFor(); await sleep(700);
   await M.locator('.cmb input').first().click(); await M.locator('.cmb-o').first().click(); await sleep(200);
-  const c = M.locator('.lcard').first(); await c.locator('.cmb input').fill('تاپ'); await c.locator('.cmb-o').first().click(); await sleep(300);
+  const c = M.locator('.dpanel'); await c.locator('.cmb input').fill('تاپ'); await c.locator('.ilist .cmb-o').first().click(); await sleep(300);
   ok(await c.locator('.idesc').isVisible() && (await c.locator('.idesc').innerText()).includes(DESC), 'توضیحات کالا زیر نام کالا در فاکتور خرید دیده می‌شود');
-  await c.locator('.stp.big .stp-i').fill('10'); await c.locator('.numinp').first().fill('100000'); await sleep(200);
+  await c.locator('.stp.big .stp-i').fill('10'); await c.locator('.sline .numinp').first().fill('100000'); await sleep(200); await c.locator('.add').click(); await sleep(200);
   const allL = await M.locator('.fld > .lbl').allInnerTexts(); ok(allL.some(x => x.includes('تخفیف خرید')), 'فیلد «تخفیف خرید» در فرم هست');
   await F('تخفیف خرید').locator('input').fill('200000'); await sleep(250);
-  const sumTxt = (await M.locator('.sumbox').first().innerText()).replace(/\s+/g, ' '); console.log('   ', sumTxt);
+  const sumTxt = (await M.locator('.sm2').first().innerText()).replace(/\s+/g, ' '); console.log('   ', sumTxt);
   ok(/تخفیف/.test(sumTxt) && fa(sumTxt).includes('800000'), 'خلاصه‌ی فاکتور: جمع پس از تخفیف ۸۰۰٬۰۰۰');
-  ok(fa(await c.locator('.prev').innerText()).includes('80000'), 'قیمت تمام‌شده‌ی هر عدد پس از تخفیف ۸۰٬۰۰۰: ' + await c.locator('.prev').innerText());
+  ok(fa(await M.locator('.pgrid .irow').first().innerText()).includes('80000'), 'قیمت تمام‌شده‌ی هر عدد پس از تخفیف ۸۰٬۰۰۰');
   await M.locator('.lcard', { hasText: 'پرداخت 1' }).locator('button.chip', { hasText: 'حساب مهسا' }).click(); await sleep(150);
   await M.locator('button', { hasText: 'ثبت فاکتور' }).click(); await sleep(2000);
   const t1 = await D(); const inv = t1.purchase_invoices.filter(i => i.supplier_id).sort((a, b) => b.id - a.id)[0];
