@@ -62,7 +62,7 @@ export async function loadAll() {
     accounts: t.accounts, items: t.items, suppliers: t.suppliers, customersT: t.customers, invoices: t.purchase_invoices, lines: t.purchase_lines, payments: t.supplier_payments,
     saleLines: t.sale_lines, collections: t.collections, returns: t.returns, expenses: t.expenses, transfers: t.transfers, moves: t.stock_moves,
     lots: t.v_lots, stock: t.v_stock, vInvoices: t.v_invoices, vSup: t.v_supplier_balance, vCus: t.v_customer_balance, due: t.v_due, bal: t.v_account_balance,
-    vSales: t.v_sales, goals: t.goals || [], dayCloses: t.day_closes || [], categories: t.categories || [], settings: t.app_settings || [], totals: t.v_totals || {}, me: r.data.user, bots: r.data.bots || {}
+    vSales: t.v_sales, goals: t.goals || [], dayCloses: t.day_closes || [], periodLocks: t.period_locks || [], categories: t.categories || [], settings: t.app_settings || [], totals: t.v_totals || {}, me: r.data.user, bots: r.data.bots || {}
   });
   S.sales = S.vSales;
   S.A = Object.fromEntries(S.accounts.map(x => [x.id, x]));

@@ -1,6 +1,6 @@
 // فرم‌های جانبی: دریافت، پرداخت، هزینه، انتقال، مرجوعی، جابجایی کالا، کالا/تامین‌کننده، ابطال
 import { h, fmt, todayISO, toast, sum, jstr, addDaysISO } from './util.js';
-import { S, rpc, bus, pref, setPref, businessAccounts, accBalance, EXPCATS, holdKey, canVoid, canEdit, errText, catNames } from './store.js';
+import { S, rpc, bus, loadAll, customers, pref, setPref, businessAccounts, accBalance, EXPCATS, holdKey, canVoid, canEdit, errText, catNames } from './store.js';
 import { willGoNegative } from './insights.js';
 import { jmonthKey, jmonthName } from './util.js';
 import { modal, field, chips, accountPicker, numField, intField, dateField, dueField, combo, run, confirmBox, promptBox, dl, pill, N } from './ui.js';
@@ -505,4 +505,21 @@ export function editEntryForm(kind, row) {
     if (r) finish(m, 'ویرایش شد');
   };
   const m = modal({ title, body: h('div', { class: 'form' }, ...body, P('ویرایش یعنی: ردیف قبلی باطل می‌شود (در تاریخچه می‌ماند) و ردیف اصلاح‌شده ثبت می‌شود.')), footer: [btn] });
+}
+
+
+/* ----- ثبت نام خریدار روی فاکتور فروشِ بدون‌نام (بدون ابطال و ثبت دوباره؛ شماره و حساب‌ها دست‌نخورده می‌مانند) ----- */
+export function setBuyerForm(sale) {
+  const opts = () => customers().map(c => { const b = S.vCus.find(x => x.id === c.id); return { v: c.id, label: c.name, sub: (c.phone || '') + (b && b.outstanding > 0 ? ' · بدهکار ' + fmt(b.outstanding) : '') }; });
+  const customer = combo({
+    placeholder: 'نام خریدار را تایپ کن یا انتخاب کن (الزامی)', createLabel: 'مشتری جدید', options: opts(),
+    onCreate: async name => { try { const r = await rpc('save_customer', { name }, { queue: false }); await loadAll(); customer.setOptions(opts()); customer.set(r.id); toast('مشتری اضافه شد'); return r.id; } catch (e) { toast(errText(e), 'err'); return null; } }
+  });
+  const btn = h('button', { class: 'btn primary lg', type: 'button' }, 'ثبت نام خریدار');
+  btn.onclick = async () => {
+    if (!customer.get()) { customer.input.focus(); return toast('نام خریدار را انتخاب کن یا بساز', 'err'); }
+    const r = await run(btn, () => rpc('set_sale_customer', { id: sale.id, customer_id: customer.get() }, { queue: false }));
+    if (r) finish(m, 'نام خریدار ثبت شد ✔');
+  };
+  const m = modal({ title: `خریدار فاکتور ${sale.no}`, body: h('div', { class: 'form' }, P(`فاکتور ${sale.no} (${jstr(sale.date)}، ${fmt(sale.total)} ریال) خریدار ندارد. نام را که ثبت کنی، فاکتور ابطال نمی‌شود و شماره و حساب‌ها همان می‌ماند؛ فقط اسم به آن اضافه می‌شود و در تاریخچه ثبت می‌شود.`), field('خریدار *', customer)), footer: [btn] });
 }

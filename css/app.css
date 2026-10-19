@@ -427,3 +427,10 @@ ul.plain{list-style:none;padding:0;margin:4px 0}
 .voidbox{margin-top:14px;border:1.5px dashed var(--line2);border-radius:var(--r);padding:8px 12px;background:var(--card)}
 .voidbox>summary{cursor:pointer;font-weight:700;color:var(--brown);padding:8px 0;min-height:44px;display:flex;align-items:center}
 .voidbox[open]>summary{border-bottom:1px solid var(--line);margin-bottom:10px}
+
+/* ---- گزارش‌های ماهانه و پیش‌نمایش صورت‌حساب ---- */
+.rep .dlt{font-size:12px;font-weight:700;margin-inline-start:4px}.rep .dlt.up{color:var(--green,#1B7F4B)}.rep .dlt.dn{color:var(--red,#B3261E)}
+.rep .b{font-weight:800}.rep .subl{padding-inline-start:18px;color:var(--brown)}.rep .sg{display:inline-block;min-width:16px;color:var(--brown)}
+.stm-wrap{max-height:62vh;overflow:auto;border:1px solid var(--line);border-radius:12px;background:#fff;margin-top:8px}.stm-img{display:block;width:100%;height:auto}
+.stm textarea.inp{width:100%;resize:vertical}
+@media print{.no-print,.sheet-f{display:none!important}.rep{font-size:13px}}

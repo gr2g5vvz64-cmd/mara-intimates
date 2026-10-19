@@ -13,6 +13,7 @@ import * as diag from './pages/diag.js';
 import * as savelog from './pages/savelog.js';
 import * as calc from './pages/calc.js';
 import * as ana from './pages/analysis_page.js';
+import * as rep from './pages/reports.js';
 import { onOutbox, initOutbox, pendingCount, blockedCount, pump, state as obState } from './outbox.js';
 import { saleForm, purchaseForm } from './forms_trade.js';
 import { navCounts } from './insights.js';
@@ -37,20 +38,22 @@ const ROUTES = {
   help: { t: 'راهنما و پشتیبان', i: '?', f: () => help.render() },
   analysis: { t: 'تحلیل', i: '🔍', f: () => ana.render() },
   calc: { t: 'محاسبات و درصد سود', i: '％', f: () => calc.render() },
+  pnl: { t: 'صورت سود و زیان', i: '📒', f: () => rep.pnlPage() },
+  settle: { t: 'حساب‌وکتاب ماهانه', i: '🤝', f: () => rep.settlePage() },
   savelog: { t: 'گزارش ذخیره', i: '✔', f: () => savelog.render() },
   diag: { t: 'عیب‌یابی', i: '🛠', f: () => diag.render() },
   settings: { t: 'تم رنگی', i: '🎨', f: () => h('div', null, h('div', { class: 'phead' }, h('h1', null, 'تنظیمات ظاهر')), h('p', { class: 'hint' }, 'تمی که انتخاب می‌کنی فقط برای خودت و روی همین دستگاه می‌ماند.'), themePanel(true), h('h3', { class: 'sec' }, 'حساب کاربری'), h('div', { class: 'card' }, h('p', null, 'وارد شده با نام «' + S.me.name + '».'), logoutBtn())) }
 };
 /* منوی کناری در پنج گروه (زیرمجموعه‌ها با کلیک روی عنوان باز و بسته می‌شوند) */
 const GROUPS = [
-  { id: 'dash', t: 'داشبورد', i: '▦', kids: ['', 'analysis', 'calc'] },
+  { id: 'dash', t: 'داشبورد', i: '▦', kids: ['', 'analysis', 'pnl', 'calc'] },
   { id: 'sales', t: 'فروش', i: '🛍', kids: ['sales', 'customers', 'returns'] },
   { id: 'buy', t: 'خرید', i: '📦', kids: ['purchases', 'suppliers', 'sreturns'] },
   { id: 'wh', t: 'انبار', i: '▤', kids: ['stock', 'items'] },
-  { id: 'money', t: 'مالی', i: '◎', kids: ['finance', 'pay', 'invoices'] },
+  { id: 'money', t: 'مالی', i: '◎', kids: ['finance', 'pay', 'invoices', 'settle'] },
   { id: 'set', t: 'تنظیمات', i: '⚙', kids: ['settings', 'history', 'help', 'savelog', 'diag'] }
 ];
-const NAVLBL = { sales: 'فاکتور فروش', purchases: 'فاکتور خرید', finance: 'خلاصه‌ی مالی', pay: 'پرداخت و هزینه', calc: 'محاسبات درصد' };
+const NAVLBL = { sales: 'فاکتور فروش', purchases: 'فاکتور خرید', finance: 'خلاصه‌ی مالی', pay: 'پرداخت و هزینه', calc: 'محاسبات درصد', pnl: 'سود و زیان ماهانه', settle: 'حساب‌وکتاب ماهانه' };
 const BLBL = { '': 'خانه', sales: 'فروش', purchases: 'خرید', stock: 'موجودی', finance: 'مالی' };
 const navLabel = (k, cls) => (cls === 'bl' && BLBL[k]) || (k === '' && isAdmin() ? 'داشبورد مدیریت' : NAVLBL[k] || ROUTES[k].t);
 const isAdmin = () => !!(S.me && S.me.role === 'admin');
@@ -74,7 +77,8 @@ function parseHash() {
 function route() {
   if (!view) return;
   let { path, q } = parseHash();
-  if ((path === 'diag' || path === 'analysis') && !(S.me && S.me.role === 'admin')) { path = ''; history.replaceState(null, '', '#/'); }
+  if ((path === 'diag' || path === 'analysis' || path === 'pnl') && !(S.me && S.me.role === 'admin')) { path = ''; history.replaceState(null, '', '#/'); }
+  if (path === 'settle' && (!S.me || S.me.role === 'viewer')) { path = ''; history.replaceState(null, '', '#/'); }
   const r = ROUTES[path] || ROUTES[''];
   const key = ROUTES[path] ? path : '';
   document.title = `${r.t} · MARA INTIMATES`;
@@ -166,7 +170,7 @@ function shell() {
   const mk = (k, cls) => { const r = ROUTES[k]; const a = h('a', { href: '#/' + k, 'data-r': k, class: cls }, h('span', { class: 'ni', 'aria-hidden': 'true' }, r.i), h('b', { class: 'cnt zero', 'data-c': k, role: 'status' }, '۰'), h('span', { class: 'nt' }, navLabel(k, cls))); navEls.push(a); return a; };
   navEls = []; grpEls = [];
   const grp = (g, cls) => {
-    const kids = g.kids.filter(k => (k !== 'diag' && k !== 'calc' && k !== 'analysis') || isAdmin());
+    const kids = g.kids.filter(k => (k !== 'diag' && k !== 'calc' && k !== 'analysis' && k !== 'pnl') || isAdmin()).filter(k => k !== 'settle' || (S.me && S.me.role !== 'viewer'));
     const cnt = h('b', { class: 'cnt amber', hidden: true, role: 'status' });
     const kidsEl = h('div', { class: 'gk', id: `gk-${cls}-${g.id}` }, kids.map(k => mk(k, cls)));
     const btn = h('button', { type: 'button', class: 'gh', 'aria-expanded': 'false', 'aria-controls': kidsEl.id, onclick: () => setGroup(g.id, !el.classList.contains('open')) },

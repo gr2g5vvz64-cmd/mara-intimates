@@ -248,7 +248,7 @@ export function purchaseForm(preset = {}) {
   const sum1 = h('div', { class: 'sumbox' });
   const dateCtl = dateField(date, v => { date = v; due.refresh(); });
   const supplier = combo({
-    placeholder: 'تامین‌کننده را تایپ کن…', createLabel: 'تامین‌کننده‌ی جدید',
+    placeholder: 'نام تامین‌کننده را تایپ کن یا انتخاب کن (الزامی)', createLabel: 'تامین‌کننده‌ی جدید',
     options: S.suppliers.filter(s => s.active).map(s => ({ v: s.id, label: s.name, sub: s.phone || '' })),
     onCreate: async name => { try { const r = await rpc('save_supplier', { name }, { queue: false }); await loadAll(); supplier.setOptions(S.suppliers.filter(s => s.active).map(s => ({ v: s.id, label: s.name, sub: s.phone || '' }))); supplier.set(r.id); toast('تامین‌کننده اضافه شد'); return r.id; } catch (e) { toast(errText(e), 'err'); return null; } }
   });
@@ -320,7 +320,7 @@ export function purchaseForm(preset = {}) {
 
   const submit = h('button', { class: 'btn primary lg', type: 'button' }, edit ? 'ذخیره‌ی ویرایش فاکتور' : 'ثبت فاکتور');
   submit.onclick = async () => {
-    if (!supplier.get()) return toast('تامین‌کننده را انتخاب کن', 'err');
+    if (!supplier.get()) { supplier.input.focus(); return toast('تامین‌کننده را انتخاب کن یا بساز؛ هر فاکتور خرید باید تامین‌کننده داشته باشد', 'err'); }
     if (!lines.length || lines.some(l => !l.item)) return toast('کالای هر قلم را انتخاب کن', 'err');
     if (lines.some(l => !l.price)) return toast('قیمت خرید هر قلم را بنویس', 'err');
     if (lines.some(l => l.m + l.r !== l.qty)) return toast('جمع تحویل مهسا و رعنا باید برابر تعداد باشد', 'err');
@@ -341,7 +341,7 @@ export function purchaseForm(preset = {}) {
   const m = modal({
     title: edit ? `ویرایش فاکتور ${edit.no}` : 'خرید جدید', wide: true,
     body: h('div', { class: 'form' },
-      h('div', { class: 'two-col dt' }, field('تامین‌کننده', supplier), field('تاریخ', dateCtl)),
+      h('div', { class: 'two-col dt' }, field('تامین‌کننده *', supplier), field('تاریخ', dateCtl)),
       h('h3', { class: 'sec' }, 'اقلام فاکتور'), linesBox,
       h('button', { class: 'btn dashed', type: 'button', onclick: addLine }, '＋ افزودن قلم'),
       field('تخفیف خرید (ریال)', discount, 'اختیاری؛ از جمع فاکتور و بدهی به تامین‌کننده کم می‌شود و روی قیمت تمام‌شده‌ی اقلام سرشکن می‌شود.'),

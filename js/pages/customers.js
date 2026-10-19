@@ -4,6 +4,7 @@ import { S, canEdit } from '../store.js';
 import { dtable, N, pill, kpi } from '../ui.js';
 import { collectCustomerForm, customerForm, collectionForm, setDueForm } from '../forms_misc.js';
 import { saleForm } from '../forms_trade.js';
+import { showStatement, customerSpec } from '../statement.js';
 import { head, btn, searchBox, match, detail, accName, dueCell, ledgerTable } from './common.js';
 import { saleDetail } from './trade.js';
 import { topCustomersCard } from './dashboard.js';
@@ -53,6 +54,6 @@ export function customerDetail(id) {
       { label: 'سررسید', render: s => (s.due_date ? dueCell(s.due_date) : 'تعیین نشده') },
       { label: '', render: s => !canEdit() ? '' : btn('تغییر سررسید', e => { e.stopPropagation(); m.close(); setDueForm('sale', s); }, 'ghost sm') }], open, { onRow: s => { m.close(); saleDetail(s.id); } })] : null,
       h('h3', { class: 'sec' }, 'گردش حساب'), ledgerTable(ev, dtable, { plus: 'فروش (بدهکار شد)', minus: 'دریافت / کسر' })],
-    actions: [b.outstanding > 0.5 ? btn('ثبت دریافت', () => { m.close(); collectCustomerForm(id); }, 'gold') : null, btn('فروش جدید به او', () => { m.close(); saleForm({ customer: id }); }, 'ghost'), btn('ویرایش مشتری', () => { m.close(); customerForm(c); }, 'ghost')]
+    actions: [btn('🧾 صورت‌حساب برای ارسال', () => showStatement(customerSpec(id)), 'ghost'), b.outstanding > 0.5 ? btn('ثبت دریافت', () => { m.close(); collectCustomerForm(id); }, 'gold') : null, btn('فروش جدید به او', () => { m.close(); saleForm({ customer: id }); }, 'ghost'), btn('ویرایش مشتری', () => { m.close(); customerForm(c); }, 'ghost')]
   });
 }

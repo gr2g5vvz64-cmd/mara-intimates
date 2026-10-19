@@ -1,6 +1,6 @@
-import { h, fmt, jstr, jmonthName, sum } from '../util.js';
-import { S, businessAccounts, pockets, accBalance, monthly } from '../store.js';
-import { dtable, N, pill, kpi } from '../ui.js';
+import { h, fmt, jstr, jmonthName, sum, lastMonths, fromJ, jMonthLen, jmonthKey, toast } from '../util.js';
+import { S, businessAccounts, pockets, accBalance, monthly, rpc, bus, errText } from '../store.js';
+import { dtable, N, pill, kpi, confirmBox, promptBox } from '../ui.js';
 import { transferForm, capitalForm, collectionForm, dayCloseForm } from '../forms_misc.js';
 import { dayCloseOpen, negativeAccounts } from '../insights.js';
 import { ex } from '../explain.js';
@@ -44,6 +44,32 @@ export function render() {
     dtable([{ label: 'تاریخ', main: true, render: c => jstr(c.date) }, { label: 'حساب', render: c => (S.A[c.account_id] || {}).name || '' }, { label: 'سیستم', cls: 'num', render: c => N(c.system_balance) }, { label: 'شمارش‌شده', cls: 'num', render: c => N(c.counted) },
       { label: 'اختلاف', cls: 'num', render: c => (Math.round(c.diff) === 0 ? pill('می‌خواند ✓', 'green') : pill((c.diff > 0 ? 'اضافه ' : 'کمبود ') + fmt(Math.abs(c.diff)), c.diff > 0 ? 'blue' : 'red')) }, { label: 'ثبت‌کننده', hm: true, render: c => c.created_by || '' }, { label: 'یادداشت', hm: true, render: c => c.note || '' }],
       S.dayCloses.slice().sort((a, b) => b.id - a.id).slice(0, 30), { empty: 'هنوز روزی بسته نشده؛ دکمه‌ی «بستن روز» بالای صفحه است.' }),
+    ...lockSection(),
     h('h3', { class: 'sec' }, 'ماه به ماه'),
     dtable([{ label: 'ماه', main: true, render: m => jmonthName(m.key) }, { label: 'تعداد فروش', cls: 'num', render: m => m.count }, { label: 'فروش', cls: 'num', render: m => N(m.sales) }, { label: 'هزینه‌ها', cls: 'num', render: m => N(m.expenses) }, { label: 'سود', cls: 'num', render: m => N(m.profit, m.profit < 0 ? 'neg' : 'pos') }], monthly().reverse(), { empty: 'هنوز داده‌ای نیست' }));
+}
+
+
+/* ---------- قفل پایان ماه: ماهِ بسته‌شده دیگر ثبت، ویرایش یا ابطال نمی‌پذیرد؛ بازکردنش فقط با مدیر و با دلیل ---------- */
+function lockSection() {
+  const admin = !!(S.me && S.me.role === 'admin');
+  const locks = Object.fromEntries((S.periodLocks || []).filter(l => l.active).map(l => [l.label, l]));
+  const keys = lastMonths(13).slice(0, -1).reverse();   // ماه‌های تمام‌شده (ماه جاری را نمی‌شود بست)
+  const span = k => { const [jy, jm] = k.split('-').map(Number); return [fromJ(jy, jm, 1), fromJ(jy, jm, jMonthLen(jy, jm))]; };
+  const doLock = async k => {
+    const [a, b] = span(k); const nameless = S.vSales.filter(x => !x.voided && !x.customer_id && x.date >= a && x.date <= b).length;
+    const msg = `ماه «${jmonthName(k)}» بسته شود؟ بعد از بستن، ثبت و ویرایش و ابطال در این ماه ممکن نیست مگر اینکه مدیر آن را دوباره باز کند.` + (nameless ? ` ⚠️ ${fmt(nameless)} فاکتور فروش این ماه هنوز بدون نام خریدار است؛ بهتر است اول نامشان را ثبت کنی.` : '');
+    if (!(await confirmBox(msg, 'ماه را ببند'))) return;
+    try { await rpc('lock_month', { label: k, title: jmonthName(k), d_from: a, d_to: b }, { queue: false }); toast('ماه بسته شد 🔒'); await bus.refresh(); } catch (e) { toast(errText(e), 'err'); }
+  };
+  const doUnlock = async k => {
+    const why = await promptBox('دلیل باز کردن ' + jmonthName(k), 'مثلاً اصلاح یک فاکتور'); if (!why) return;
+    try { await rpc('unlock_month', { label: k, reason: why }, { queue: false }); toast('ماه باز شد 🔓'); await bus.refresh(); } catch (e) { toast(errText(e), 'err'); }
+  };
+  return [h('h3', { class: 'sec' }, 'قفل پایان ماه'),
+    h('p', { class: 'hint' }, 'بعد از بستن یک ماه، عددهای آن ماه دیگر عوض نمی‌شود. فقط مدیر می‌تواند ماه را ببندد یا (با نوشتن دلیل) باز کند. تغییرها در تاریخچه و ربات مدیر می‌آید.'),
+    dtable([{ label: 'ماه', main: true, render: k => jmonthName(k) },
+      { label: 'وضعیت', render: k => (locks[k] ? pill('🔒 بسته', 'green') : pill('باز', 'amber')) },
+      { label: 'بسته‌شده توسط', hm: true, render: k => (locks[k] ? `${locks[k].locked_by || ''} · ${jstr(String(locks[k].locked_at).slice(0, 10))}` : '') },
+      { label: '', render: k => (!admin ? '' : locks[k] ? btn('باز کردن ماه', () => doUnlock(k), 'ghost sm') : btn('بستن ماه', () => doLock(k), 'gold sm')) }], keys, { empty: '' })];
 }

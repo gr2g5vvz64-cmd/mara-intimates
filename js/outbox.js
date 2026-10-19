@@ -16,7 +16,7 @@ export const onOutbox = f => { subs.add(f); return () => subs.delete(f); };
 export const LABELS = {
   create_sale: 'فروش', edit_sale: 'ویرایش فروش', edit_purchase: 'ویرایش فاکتور خرید', edit_return: 'ویرایش مرجوعی', edit_entry: 'ویرایش ثبت', create_purchase: 'فاکتور خرید', add_collection: 'دریافت از مشتری', collect_customer: 'دریافت از مشتری', add_supplier_payment: 'پرداخت به تامین‌کننده',
   add_expense: 'هزینه', add_transfer: 'انتقال بین حساب‌ها', move_stock: 'جابجایی کالا', create_return: 'مرجوعی از مشتری', create_supplier_return: 'برگشت به تامین‌کننده',
-  void_entry: 'ابطال', set_due_date: 'تغییر سررسید', save_item: 'کالا', save_supplier: 'تامین‌کننده', save_customer: 'مشتری'
+  void_entry: 'ابطال', set_due_date: 'تغییر سررسید', save_item: 'کالا', save_supplier: 'تامین‌کننده', save_customer: 'مشتری', set_sale_customer: 'ثبت نام خریدار', lock_month: 'بستن ماه', unlock_month: 'باز کردن ماه'
 };
 const RETRYABLE = new Set(['E_NETWORK', 'E_TIMEOUT', 'E_SERVER_DOWN', 'E_DB_DOWN', 'E_SERVER', 'E_DB', 'E_BAD_RESPONSE']);
 const AUTH = new Set(['E_AUTH_BAD', 'E_AUTH_EXPIRED', 'E_AUTH_REQUIRED']);

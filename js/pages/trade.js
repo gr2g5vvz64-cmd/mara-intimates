@@ -2,7 +2,8 @@ import { h, fmt, jstr, jmonthKey, jmonthName, sum } from '../util.js';
 import { S, canEdit } from '../store.js';
 import { dtable, N, pill, chips, kpi, tabsBar } from '../ui.js';
 import { saleForm, purchaseForm } from '../forms_trade.js';
-import { collectionForm, returnForm, supplierPaymentForm, voidEntry, moveStockForm, setDueForm } from '../forms_misc.js';
+import { collectionForm, returnForm, supplierPaymentForm, voidEntry, moveStockForm, setDueForm, setBuyerForm } from '../forms_misc.js';
+import { showStatement, invoiceSpec } from '../statement.js';
 import { head, btn, searchBox, match, sortNew, detail, stamp, accName, rowCls, dueCell, ledgerTable } from './common.js';
 
 const sel = (opts, cur, cb, label) => {
@@ -24,7 +25,7 @@ export function sales(query) {
     tbl.replaceChildren(dtable([
       { k: 'no', label: 'شماره', main: true, render: r => h('span', null, r.no, ' ', r.voided ? pill('باطل', 'red') : null) },
       { label: 'تاریخ', render: r => jstr(r.date) }, { k: 'seller', label: 'فروشنده' }, { k: 'channel', label: 'محل فروش', hm: true },
-      { label: 'خریدار', render: r => r.customer || pill('بدون خریدار', 'red') }, { label: 'کالاها', cls: 'wrap', render: r => r.items_text },
+      { label: 'خریدار', render: r => r.customer || (r.voided ? pill('بدون خریدار', 'red') : h('span', null, pill('بدون خریدار', 'red'), ' ', canEdit() ? btn('ثبت نام', e => { e.stopPropagation(); setBuyerForm(r); }, 'gold sm') : null)) }, { label: 'کالاها', cls: 'wrap', render: r => r.items_text },
       { label: 'جمع فروش', cls: 'num', render: r => N(r.total) }, { label: 'دریافتی', cls: 'num', hm: true, render: r => N(r.received + r.collected) },
       { label: 'نسیه‌ی باز', cls: 'num', render: r => (r.outstanding > 0 && !r.voided ? pill(fmt(r.outstanding), 'amber') : '') },
       { label: 'سررسید', render: r => (r.outstanding > 0 && !r.voided ? dueCell(r.due_date) : '') },
@@ -64,7 +65,7 @@ export function saleDetail(id) {
       { label: 'برگشتی', cls: 'num', render: l => l.returned_qty || '' }], lines),
     cols.length ? [h('h3', { class: 'sec' }, 'دریافت‌های بعدی'), dtable([{ label: 'تاریخ', render: c => jstr(c.date) }, { label: 'مبلغ', cls: 'num', render: c => N(c.amount) }, { label: 'حساب', render: c => accName(c.account_id) }, { label: 'وضعیت', render: c => c.voided ? pill('باطل', 'red') : '' }], cols)] : null,
     rets.length ? [h('h3', { class: 'sec' }, 'مرجوعی‌ها'), dtable([{ label: 'شماره', render: r => r.no }, { label: 'تاریخ', render: r => jstr(r.date) }, { label: 'تعداد', cls: 'num', render: r => r.qty }, { label: 'وضعیت', render: r => r.condition + (r.to_supplier ? ' · به تامین‌کننده' : '') }, { label: 'اثر بر سود', cls: 'num', render: r => N(r.profit_effect) }], rets)] : null],
-    actions: s.voided ? [] : [s.outstanding > 0 ? btn('ثبت دریافت', () => { m.close(); collectionForm(id); }, 'gold') : null, s.outstanding > 0 && canEdit() ? btn('تغییر سررسید', () => { m.close(); setDueForm('sale', s); }, 'ghost') : null, btn('مرجوعی', () => { m.close(); returnForm(id); }, 'ghost'), ...(canEdit() ? [btn('ویرایش', () => { m.close(); saleForm({ edit: id }); }, 'ghost'), btn('ابطال فروش', async () => { if (await voidEntry('sale', s, `فروش ${s.no}`)) m.close(); }, 'danger ghost')] : [])]
+    actions: s.voided ? [] : [s.customer_id ? btn('🧾 صورت‌حساب برای مشتری', () => showStatement(invoiceSpec(id)), 'ghost') : (canEdit() ? btn('ثبت نام خریدار', () => { m.close(); setBuyerForm(s); }, 'gold') : null), s.outstanding > 0 ? btn('ثبت دریافت', () => { m.close(); collectionForm(id); }, 'gold') : null, s.outstanding > 0 && canEdit() ? btn('تغییر سررسید', () => { m.close(); setDueForm('sale', s); }, 'ghost') : null, btn('مرجوعی', () => { m.close(); returnForm(id); }, 'ghost'), ...(canEdit() ? [btn('ویرایش', () => { m.close(); saleForm({ edit: id }); }, 'ghost'), btn('ابطال فروش', async () => { if (await voidEntry('sale', s, `فروش ${s.no}`)) m.close(); }, 'danger ghost')] : [])]
   });
 }
 
