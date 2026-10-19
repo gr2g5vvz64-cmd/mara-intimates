@@ -22,6 +22,14 @@ export function catFilter(value, onChange, rows, catOfRow = r => (S.I[r.id] || r
   if (cnt(NO_CAT)) opts.push({ v: NO_CAT, label: `${NO_CAT} (${fmt(cnt(NO_CAT))})` });
   return chips(opts, value, onChange, { cls: 'catf', label: 'دسته' });
 }
+/** فیلتر رنگ و سایز (فقط وقتی کالایی رنگ/سایز دارد دیده می‌شود): st = { color, size } */
+export function varFilter(st, onChange, rows) {
+  const cols = [...new Set(rows.map(i => i.color).filter(Boolean))], sizes = [...new Set(rows.map(i => i.size).filter(Boolean))];
+  const mk = (lab, arr, key) => (arr.length ? h('div', { class: 'frow' }, h('small', null, lab), ...arr.map(v => h('button', { type: 'button', class: 'fchip' + (st[key] === v ? ' on' : ''), 'aria-pressed': st[key] === v ? 'true' : 'false', onclick: () => { st[key] = st[key] === v ? '' : v; onChange(); } }, v))) : null);
+  const parts = [mk('رنگ', cols, 'color'), mk('سایز', sizes, 'size')].filter(Boolean);
+  return h('div', { class: 'ifilt vf' }, ...parts);
+}
+export const inVar = (st, it) => (!st.color || it.color === st.color) && (!st.size || it.size === st.size);
 export const inCat = (cat, it) => !cat || (cat === NO_CAT ? !it.category : it.category === cat);
 export const accName = id => (S.A[id] ? S.A[id].name : '');
 export function detail({ title, rows, extra = [], actions = [] }) {

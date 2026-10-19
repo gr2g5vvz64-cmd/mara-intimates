@@ -12,9 +12,9 @@ const NAME = 'تاپ توضیح‌دار', DESC = 'نخی، رنگ مشکی، ف
 try {
   // ۱) کالای جدید با توضیحات
   await go('#/items'); await page.locator('button', { hasText: '＋ کالای جدید' }).click(); await M.waitFor(); await sleep(300);
-  const labels = await M.locator('.fld > .lbl').allInnerTexts();
-  ok(labels.indexOf('توضیحات کالا') === labels.indexOf('نام کالا') + 1, 'فیلد «توضیحات کالا» دقیقاً بعد از «نام کالا» است: ' + labels.slice(0, 3).join(' | '));
-  await F('نام کالا').locator('input').fill(NAME); await F('توضیحات کالا').locator('input').fill(DESC);
+  const zt = await M.locator('.z2 > .zt').allInnerTexts();
+  ok(zt.findIndex(x => x.includes('توضیحات برای مشتری')) > zt.findIndex(x => x.includes('مشخصات کالا')), 'کادر «توضیحات برای مشتری» بعد از «مشخصات کالا» است: ' + zt.slice(0, 4).map(x => x.replace(/\s+/g, ' ')).join(' | '));
+  await F('نام کالا').locator('input').fill(NAME); await M.locator('textarea').fill(DESC);
   await M.locator('.chip', { hasText: 'تاپ' }).first().click(); await sleep(200);
   await M.locator('button', { hasText: 'افزودن کالا' }).click(); await sleep(1800);
   const t0 = await D(); const item = t0.items.find(i => i.name === NAME);
@@ -45,13 +45,12 @@ try {
   ok(await sc.locator('.idesc').isVisible() && (await sc.locator('.idesc').innerText()).includes(DESC), 'توضیحات کالا در فرم فروش هم دیده می‌شود');
   const costTxt = fa(await sc.locator('.c-cost .ro').innerText()); const price = fa(await sc.locator('.c-price input').inputValue());
   ok(costTxt === '80000' && price === '96000', `بهای تمام‌شده ۸۰٬۰۰۰ و فی فروش پیش‌فرض ۹۶٬۰۰۰ (${costTxt} / ${price})`);
-  await sc.locator('.stp.big .stp-i').fill('2'); await sleep(200);
+  await sc.locator('.stp.big .stp-i').fill('2'); await sleep(200); await sc.locator('button.add').click(); await sleep(300);
   ok((await M.locator('.fld > .lbl').allInnerTexts()).some(x => x.includes('تخفیف فروش')), 'فیلد «تخفیف فروش» در فرم هست');
   await F('تخفیف فروش').locator('input').fill('42000'); await sleep(300);
-  const st = fa((await M.locator('.sumbox').first().innerText())); ok(st.includes('192000') && st.includes('150000'), 'خلاصه: جمع ۱۹۲٬۰۰۰ − تخفیف ۴۲٬۰۰۰ = ۱۵۰٬۰۰۰');
-  const foot = fa(await page.locator('.ov .sum').last().innerText()); ok(foot.includes('150000'), 'جمع فروش پایین فرم ۱۵۰٬۰۰۰ شد');
+  const st = fa(await page.locator('.ov .sm2').last().innerText()); ok(st.includes('192000') && st.includes('42000') && st.includes('150000'), 'خلاصه‌ی پایین فرم: جمع ۱۹۲٬۰۰۰ − تخفیف ۴۲٬۰۰۰ = ۱۵۰٬۰۰۰ ' + st);
   await buyer(page, M);
-  await M.locator('button', { hasText: 'ثبت فروش' }).click(); await sleep(2000);
+  await M.locator('button', { hasText: 'صدور فاکتور' }).click(); await sleep(2000);
   const t2 = await D(); const sale = t2.v_sales.sort((a, b) => b.id - a.id)[0];
   ok(+sale.total === 150000 && +sale.discount === 42000, `فروش: مبلغ ${sale.total} · تخفیف ${sale.discount}`);
   ok(Math.round(sale.profit) === 150000 - 160000 + 0 || Math.round(sale.profit) === -10000, 'سود = ۱۵۰٬۰۰۰ − ۲×۸۰٬۰۰۰ = −۱۰٬۰۰۰: ' + sale.profit);

@@ -443,3 +443,109 @@ ul.plain{list-style:none;padding:0;margin:4px 0}
 .mt-lines{display:flex;flex-direction:column;gap:22px;padding:14px 0 4px}.mt-line{border-bottom:1px solid var(--line2,#c9b6c0);height:1px}
 .mt-fill{margin:10px 2px;font-size:13px}
 @media print{.mt .pb{break-before:page}.mt .card{break-inside:avoid}.mt h3.sec{break-after:avoid}}
+
+/* ===== فاکتور فروش با پنل افزودن کالا (۶.۷) ===== */
+.sheet.xwide{width:min(1320px,100%)}
+.sale2{display:grid;gap:10px;grid-template-columns:minmax(0,1fr);grid-template-areas:"hdr" "pan" "itm" "pay"}
+.sale2 .a-hdr{grid-area:hdr}.sale2 .a-pan{grid-area:pan}.sale2 .a-itm{grid-area:itm}.sale2 .a-pay{grid-area:pay}
+@media (min-width:1040px){
+  .sale2{grid-template-columns:minmax(380px,430px) minmax(0,1fr);grid-template-rows:auto auto 1fr;grid-template-areas:"pan hdr" "pan itm" "pan pay";align-items:start}
+  .sale2 .a-pan{position:sticky;top:0;align-self:start}
+}
+.z2{background:var(--card);border:2px solid var(--line2);border-radius:12px;overflow:hidden}
+.z2>.zt{display:flex;align-items:center;gap:8px;background:var(--tint);border-bottom:2px solid var(--line2);padding:5px 12px;font-weight:800;font-size:13.5px;color:var(--ink);min-height:36px}
+.z2>.zt i{font-style:normal;width:22px;height:22px;border-radius:50%;background:var(--gold);color:var(--onp);display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex:none}
+.z2>.zt small{margin-inline-start:auto;font-weight:400;color:var(--brown);font-size:12px}
+.z2>.zt.dark{background:var(--deep);color:var(--deepfg);border-bottom-color:var(--gold)}
+.z2>.zt.dark small{color:var(--deepfg2)}
+.z2>.zx{padding:10px 12px 12px}
+.z2 .fld{margin-bottom:8px}.z2 .fld:last-child{margin-bottom:0}
+.pay2{display:grid;grid-template-columns:1.25fr 1fr;gap:10px;align-items:start}
+.pay2c{display:flex;flex-direction:column;gap:10px}
+@media (max-width:720px){.pay2{grid-template-columns:1fr}}
+.bal.debt{color:var(--red);font-weight:800}
+.inp.ro.bal{display:flex;align-items:center;min-height:46px;background:var(--tint);color:var(--brown);font-weight:700}
+/* جدول اقلام */
+.ihead,.irow{display:grid;grid-template-columns:34px minmax(110px,2.2fr) minmax(76px,1fr) 70px 64px minmax(96px,1.2fr) minmax(92px,1.1fr) minmax(80px,1fr) 38px;gap:8px;align-items:center}
+.ihead{background:var(--tint);border:1.5px solid var(--line2);border-radius:8px 8px 0 0;padding:6px 8px;font-size:12.5px;font-weight:800;color:var(--brown)}
+.irow{padding:7px 8px;border:1.5px solid var(--line2);border-top:0;background:var(--card);font-size:13.5px}
+.irow.sub{background:color-mix(in srgb,var(--tint) 35%,var(--card))}
+.irow.bad{background:var(--red-bg)}
+.irow>*{min-width:0}
+.irow .ic em{display:none;font-style:normal;font-size:11.5px;color:var(--brown)}
+.irow .in small,.irow .nx{display:block;font-size:11px;color:var(--brown)}
+.irow .nx{color:var(--gold-d)}
+.irow .qi{height:38px;min-height:38px;text-align:center;padding:0 4px;font-weight:700}
+.irow .numf .inp{height:38px;min-height:38px;padding-inline-end:6px}
+.irow .rm{width:34px;height:34px;font-size:14px}
+.irow .chp{font-size:12px;background:var(--tint);border:1px solid var(--line2);border-radius:12px;padding:0 8px;display:inline-block}
+.irow .pos{color:var(--green)}.irow .neg{color:var(--red)}
+.inew{margin-top:6px;padding:9px;border:2px dashed var(--line2);border-radius:8px;color:var(--brown);font-size:13px;background:var(--bg)}
+.ifoot{margin-top:10px;display:grid;gap:6px}
+@media (max-width:720px){
+  .ihead{display:none}
+  .irow{grid-template-columns:repeat(3,minmax(0,1fr));border-top:1.5px solid var(--line2);border-radius:10px;margin-bottom:8px;gap:8px}
+  .irow .ix{display:none}
+  .irow .in{grid-column:1/3}.irow .rm{grid-column:3;grid-row:1;justify-self:end}
+  .irow .ic em{display:block}
+  .inew{display:none}
+}
+/* پنل افزودن کالا */
+.dpanel{margin:0;border:0;padding:0;background:none}
+.cmb.inl{position:relative}
+.ilist{margin-top:6px;max-height:230px;overflow:auto;border:2px solid var(--line2);border-radius:10px;background:var(--card)}
+.ilist .cmb-o{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;border:0;border-bottom:1px solid var(--line);background:var(--card);padding:8px 10px;font:inherit;color:var(--ink);text-align:start;cursor:pointer;min-height:48px}
+.ilist .cmb-o:last-child{border-bottom:0}
+.ilist .cmb-o.on{background:var(--tint);font-weight:800}
+.ilist .cmb-o.dim{opacity:.6}
+.ilist .cmb-o.create{color:var(--gold-d);font-weight:800;justify-content:flex-start}
+.ilist .cmb-l{display:block}.ilist .cmb-l small{display:block;font-size:11px;color:var(--brown);font-weight:400}
+.ilist .cn{font-size:12px;color:var(--brown);white-space:nowrap}.ilist .cn b{color:var(--ink)}
+.ilist .cmb-e{padding:10px;color:var(--brown);font-size:13px}
+.ifilt{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.frow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.frow small{color:var(--brown);min-width:34px}
+.fchip{min-height:32px;padding:0 11px;border-radius:16px;border:1.5px solid var(--line2);background:var(--card);font:inherit;font-size:12.5px;color:var(--ink);cursor:pointer}
+.fchip.on{background:var(--gold);border-color:var(--gold-d);color:var(--onp);font-weight:800}
+.sel{border:2.5px solid var(--gold);border-radius:12px;margin-top:10px;overflow:hidden;background:var(--card)}
+.sel[hidden]{display:none}
+.sel .sh{background:var(--tint);padding:7px 12px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.sel .sh small{color:var(--brown);font-size:12px}
+.sel>*:not(.sh){margin-inline:12px}
+.sel>.idesc{margin-top:8px}
+.sel>.sline{margin-top:8px;grid-template-columns:1fr 1fr 1.3fr}
+.sel>.sline .c-qty{grid-column:auto}
+.sel .ltot{margin-top:2px}
+.sel>.prev{margin-top:4px}
+.sel>.add{margin:8px 12px 12px;width:calc(100% - 24px)}
+.sel>.add:disabled{opacity:.5;cursor:not-allowed}
+/* نوار جمع‌بندی پایین */
+.sm2{flex:1;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.sm2 .b{background:var(--bg);border:1.5px solid var(--line2);border-radius:9px;padding:3px 8px;line-height:1.5}
+.sm2 .b small{display:block;font-size:11px;color:var(--brown)}
+.sm2 .b b{font-size:14px}.sm2 .b .pos{color:var(--green)}.sm2 .b .neg{color:var(--red)}
+.sheet-f:has(.sm2) .btn.lg{flex:none;min-width:190px}
+@media (max-width:720px){
+  .sheet-f:has(.sm2){flex-direction:column;align-items:stretch}
+  .sm2{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .sheet-f:has(.sm2) .btn.lg{min-width:0;width:100%}
+}
+/* ===== فرم کالای جدید: رنگ و سایز ===== */
+.itemf{display:flex;flex-direction:column;gap:10px}
+.chip.optc{flex-direction:row;gap:6px;min-height:38px}
+.chip.optc .dotc{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--ink);display:inline-block;flex:none;margin:0}
+.chip.add{border:1.5px dashed var(--line2);color:var(--gold-d);background:var(--bg)}
+.inp.ta{height:auto;min-height:72px;padding:8px 10px;line-height:1.7;resize:vertical}
+.vmx{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px;text-align:center}
+.vmx th{background:var(--tint);border:1.5px solid var(--line2);padding:3px 6px;font-size:12.5px}
+.vmx td{border:1.5px solid var(--line2);padding:0;background:var(--card)}
+.vmx td.x{background:var(--gray-bg);color:var(--brown)}
+.vb{width:100%;min-height:38px;border:0;background:transparent;font:inherit;cursor:pointer;color:var(--green);font-weight:800}
+.vmx td.x .vb{color:var(--brown)}
+.z2 .sline .fld{margin:0}
+/* مشاور خرید */
+.advbox{margin:2px 0 8px;padding:8px 12px;border-radius:10px;font-size:13px;line-height:1.8;border:1.5px solid var(--line2);background:var(--tint)}
+.advbox.buy,.advbox.urgent{background:var(--green-bg);color:var(--green);border-color:var(--green);font-weight:700}
+.advbox.avoid{background:var(--red-bg);color:var(--red);border-color:var(--red);font-weight:700}
+.advbox.hold{background:var(--amber-bg);color:var(--amber);border-color:var(--warn-bd)}
+.advbox[hidden]{display:none}
+.rs{display:block;font-size:12.5px;line-height:1.7}.rs small{display:block;color:var(--green);font-weight:700}

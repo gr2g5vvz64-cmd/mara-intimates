@@ -9,6 +9,7 @@ try {
   const b = pa.locator('button.qa', { hasText: 'تحلیل' }); ok(await b.count() === 1, 'مدیر دکمه‌ی «تحلیل» را می‌بیند');
   await b.click(); await sleep(pa, 2500);
   ok(pa.url().includes('#/analysis'), 'دکمه‌ی تحلیل به صفحه‌ی «تحلیل» می‌برد');
+  await pa.locator('.tabs').getByText('بررسی اشتباهات').first().click(); await sleep(pa, 2500);
   const t = await pa.locator('#view').innerText();
   ok(t.includes('بررسی اشتباهات') && /بررسی سالم/.test(t), 'صفحه‌ی تحلیل باز شد و بخش «بررسی سالم» دارد');
   // یک فروش زیر قیمت تمام‌شده بسازیم تا تحلیل آن را پیدا کند

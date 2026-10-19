@@ -6,10 +6,11 @@ import { head } from './common.js';
 import { saleDetail, purchaseDetail } from './trade.js';
 import { buildReport, reportText, PERIODS } from '../report.js';
 import { errText } from '../store.js';
+import { advisorTab } from './advisor.js';
 
 const LV = { error: ['red', '🔴 خطا'], warn: ['amber', '🟠 هشدار'], info: ['gray', '🔵 توضیح'] };
 const PAGE = { lot: '#/stock', item: '#/items', account: '#/finance', payment: '#/pay', collection: '#/customers', return: '#/returns' };
-let tab = 'audit', periodN = 7, cache = null;
+let tab = 'advisor', periodN = 7, cache = null;
 
 function goRef(r) {
   if (r.kind === 'sale') return saleDetail(r.id);
@@ -71,7 +72,8 @@ function perfTab() {
 export function render() {
   if (!S.me || S.me.role !== 'admin') return h('div', { class: 'card' }, 'این صفحه فقط برای مدیر است.');
   const host = h('div', null), body = h('div', null);
-  const draw = () => { body.replaceChildren(tab === 'audit' ? auditTab() : perfTab()); host.querySelector('.tabs') && host.querySelector('.tabs').replaceWith(bar()); };
-  const bar = () => tabsBar([{ id: 'audit', label: '🔍 بررسی اشتباهات' }, { id: 'perf', label: '📈 تحلیل عملکرد' }], tab, t => { tab = t; draw(); });
-  host.append(head('تحلیل', [], `${jlong(todayISO())} · فقط مدیر`), bar(), body); body.append(tab === 'audit' ? auditTab() : perfTab()); return host;
+  const pick = () => (tab === 'audit' ? auditTab() : tab === 'perf' ? perfTab() : advisorTab());
+  const draw = () => { body.replaceChildren(pick()); host.querySelector('.tabs') && host.querySelector('.tabs').replaceWith(bar()); };
+  const bar = () => tabsBar([{ id: 'advisor', label: '🧭 مشاور خرید' }, { id: 'perf', label: '📈 تحلیل عملکرد' }, { id: 'audit', label: '🔍 بررسی اشتباهات' }, { id: 'meeting', label: '🧑‍💼 گزارش جلسه‌ی دو هفته‌ای' }], tab, t => { if (t === 'meeting') { location.hash = '#/meeting'; return; } tab = t; draw(); });
+  host.append(head('تحلیل', [], `${jlong(todayISO())} · فقط مدیر`), bar(), body); body.append(pick()); return host;
 }

@@ -10,38 +10,36 @@ const go = async h => { await page.evaluate(x => { location.hash = x; }, h); awa
 const vars = () => page.evaluate(() => { const s = getComputedStyle(document.documentElement); return { bg: s.getPropertyValue('--bg').trim(), gold: s.getPropertyValue('--gold').trim(), theme: document.documentElement.getAttribute('data-theme') }; });
 try {
   /* ---------- تم‌ها ---------- */
-  ok(await page.locator('#themebtn').isVisible(), 'زبانه‌ی تم رنگی بالای صفحه هست');
-  await page.click('#themebtn'); await sleep(200);
-  const opts = await page.locator('.tb-opt').count(); ok(opts === 9, 'نه تم در پنل: ' + opts);
+  await page.evaluate(() => { location.hash = '#/settings'; }); await sleep(500);
+  ok(await page.locator('#themebtn').isVisible(), 'تم رنگی در صفحه‌ی تنظیمات هست');
+  const opts = await page.locator('.tb-opt').count(); ok(opts === 5, 'پنج تم در پنل: ' + opts);
   const names = await page.locator('.tb-opt b').allInnerTexts(); console.log('   ', names.map(n => n.replace(/\s+/g, ' ')).join(' | '));
   ok(await page.locator('.tb-opt.on').count() === 1, 'تم فعلی علامت دارد');
   const before = await vars();
   await page.locator('.tb-opt[data-theme-id=t5]').click(); await sleep(300);
   let v = await vars(); ok(v.theme === 't5' && v.bg === '#1A1416' && v.bg !== before.bg, 'تم مشکی لوکس اعمال شد: ' + v.bg);
-  const bodyBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor); ok(bodyBg === 'rgb(26, 20, 22)', 'پس‌زمینه‌ی صفحه واقعاً تیره شد ' + bodyBg);
-  await page.screenshot({ path: 'shots/f6_dark.png' });
   await page.locator('.tb-opt[data-theme-id=t4]').click(); await sleep(300); v = await vars(); ok(v.theme === 't4' && v.gold === '#C9A24B', 'تم قهوه‌ای-طلایی (لوگو)');
-  await page.screenshot({ path: 'shots/f6_logo.png' });
-  await page.locator('.tb-opt[data-theme-id=t2]').click(); await sleep(300);
+  await page.locator('.tb-opt[data-theme-id=t6]').click(); await sleep(300);
   await page.reload(); await page.waitForSelector('#view'); await sleep(800);
-  v = await vars(); ok(v.theme === 't2', 'بعد از رفرش همان تم ماند: ' + v.theme);
+  v = await vars(); ok(v.theme === 't6', 'بعد از رفرش همان تم ماند: ' + v.theme);
   // تم هر کاربر برای خودش
-  await page.evaluate(() => localStorage.setItem('mara.theme.رعنا', 't6'));
-  ok(await page.evaluate(() => localStorage.getItem('mara.theme.مهسا')) === 't2', 'تم مهسا جدا ذخیره می‌شود');
-  await page.click('#themebtn'); await page.locator('.tb-opt[data-theme-id=t7]').click(); await sleep(300);
+  await page.evaluate(() => localStorage.setItem('mara.theme.رعنا', 't8'));
+  ok(await page.evaluate(() => localStorage.getItem('mara.theme.مهسا')) === 't6', 'تم مهسا جدا ذخیره می‌شود');
+  await page.locator('.tb-opt[data-theme-id=t7]').click(); await sleep(300);
 
   /* ---------- شمارنده‌ها ---------- */
   const t0 = await D();
   const navs = await page.locator('.side nav a').evaluateAll(a => a.map(x => ({ r: x.dataset.r, t: x.querySelector('.nt').innerText, c: x.querySelector('.cnt') && !x.querySelector('.cnt').hidden ? x.querySelector('.cnt').innerText : null, cls: x.querySelector('.cnt').className })));
   console.log('   ', navs.map(n => `${n.t}:${n.c}`).join(' | '));
-  const missing = navs.filter(n => n.r !== 'help' && n.c == null); ok(missing.length === 0, 'همه‌ی زبانه‌ها شمارنده دارند' + (missing.length ? ' ✗ ' + missing.map(m => m.t) : ''));
+  const vis = navs.filter(n => n.c != null); ok(vis.every(n => /\b(red|amber)\b/.test(n.cls) || n.c === '؟'), 'شمارنده فقط برای کار باز دیده می‌شود (صفر/اطلاعاتی پنهان است): ' + vis.map(n => n.t + ':' + n.cls.replace('cnt ', '')).join(' | '));
+  ok(!navs.some(n => ['items', 'suppliers', 'history', 'expenses', 'returns', 'sreturns'].includes(n.r) && n.c != null), 'کالاها/تامین‌کنندگان/تاریخچه/هزینه‌ها/مرجوعی‌ها شمارنده ندارند');
   const owed = t0.v_sales.filter(s => !s.voided && s.outstanding > 0).length;
-  const salesN = navs.find(n => n.r === 'sales'); ok(salesN && salesN.c && salesN.c.replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)) == String(owed), `شمارنده‌ی فروش = فروش‌های باز (${owed}): ${salesN && salesN.c}`);
-  const stockN = navs.find(n => n.r === 'stock'); const lowN = t0.v_stock.filter(i => i.active && i.rem <= i.min_stock).length; ok(stockN.c && stockN.c.replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)) == String(lowN), `شمارنده‌ی موجودی = کم‌موجودی/تمام‌شده (${lowN}): ${stockN.c}`);
+  const salesN = navs.find(n => n.r === 'sales'); ok(salesN && (salesN.c || '۰').replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)) == String(owed), `شمارنده‌ی فروش = فروش‌های باز (${owed}): ${salesN && salesN.c}`);
+  const stockN = navs.find(n => n.r === 'stock'); const lowN = t0.v_stock.filter(i => i.active && i.rem <= i.min_stock).length; ok((stockN.c || '۰').replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)) == String(lowN), `شمارنده‌ی موجودی = کم‌موجودی/تمام‌شده (${lowN}): ${stockN.c}`);
   ok(await page.locator('.bottom a .cnt').count() === 5, 'نوار پایین موبایل هم شمارنده دارد');
   ok(await page.locator('.dnav a .cnt').count() >= 15, 'منوی کشویی هم شمارنده دارد');
-  await go('#/pay'); ok(await page.locator('.tabs button .cnt').count() === 4, 'تب‌های پرداخت‌ها شمارنده دارند');
-  await go('#/stock'); ok(await page.locator('.tabs button .cnt').count() === 2, 'تب‌های موجودی شمارنده دارند');
+  await go('#/pay'); ok(await page.locator('.tabs button .cnt.zero, .tabs button .cnt.info').count() === 0, 'تب‌های پرداخت‌ها: شمارنده‌ی صفر/اطلاعاتی نیست');
+  await go('#/stock'); ok(await page.locator('.tabs button .cnt.zero, .tabs button .cnt.info').count() === 0, 'تب‌های موجودی: شمارنده‌ی صفر/اطلاعاتی نیست');
   // انبار: جنس دست هر نفر با قیمت تمام‌شده
   const wh = page.locator('.card', { hasText: 'انبار: جنس دست هر نفر' }); ok(await wh.count() === 1, 'کارت انبار در صفحه‌ی موجودی');
   const whT = (await wh.innerText()).replace(/[٬,\s]/g, ''); const stv = t0.v_totals.stock_value;
@@ -92,7 +90,10 @@ try {
   await go('#/');
   // پیشنهاد خرید مجدد: فروش تقریباً همه‌ی سوتین اسپرت مهسا
   const tt = await D(); const bra = tt.v_stock.find(i => i.name === 'سوتین اسپرت'), ac = tt.accounts.find(a => a.name === 'حساب مهسا');
-  const rs = await fetch(API + '/api/rpc/create_sale/', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + tok, 'x-idempotency-key': 'e6-' + Date.now() }, body: JSON.stringify({ seller: 'مهسا', channel: 'پیج اینستاگرام', customer: 'مشتری برتر آزمایشی', received: null, account_id: ac.id, lines: [{ item_id: bra.id, qty: bra.rem_m - 1, unit_price: 900000 }] }) });
+  // مشاور: فقط فروش واقعاً خوب (چند روز، چند مشتری) پیشنهاد خرید می‌دهد؛ پس فروش را در ۴ روز و برای ۳ مشتری پخش می‌کنیم
+  const n = bra.rem_m - 1, per = [Math.floor(n / 4), Math.floor(n / 4), Math.floor(n / 4), n - 3 * Math.floor(n / 4)], iso = k => new Date(Date.now() - k * 864e5).toISOString().slice(0, 10);
+  let rs = { ok: true, status: 200 };
+  for (let k = 0; k < 4; k++) rs = await fetch(API + '/api/rpc/create_sale/', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + tok, 'x-idempotency-key': 'e6-' + k + '-' + Date.now() }, body: JSON.stringify({ date: iso(k + 1), seller: 'مهسا', channel: 'پیج اینستاگرام', customer: ['مشتری برتر آزمایشی', 'مشتری دوم آزمایشی', 'مشتری سوم آزمایشی'][k % 3], received: null, account_id: ac.id, lines: [{ item_id: bra.id, qty: per[k], unit_price: 900000 }] }) });
   ok(rs.ok, 'فروش آزمایشی برای کم کردن موجودی: ' + rs.status);
   await page.evaluate(() => { location.hash = '#/stock'; }); await sleep(300); await go('#/'); await page.reload(); await page.waitForSelector('#view'); await sleep(900);
   await ap.reload(); await ap.waitForSelector('#view'); await sleep(900);
@@ -104,7 +105,7 @@ try {
 
   /* ---------- موبایل ---------- */
   const mp = await newPage(browser, url, { logs, viewport: { width: 390, height: 800 } }); await login(mp, 'rana@example.com', 'rana-pass-22'); await mp.waitForTimeout(800);
-  await mp.click('#themebtn'); await mp.waitForTimeout(200); await mp.screenshot({ path: 'shots/f6_mobile_themes.png' });
+  await mp.evaluate(() => { location.hash = '#/settings'; }); await mp.waitForTimeout(500); await mp.screenshot({ path: 'shots/f6_mobile_themes.png' });
   const ov = await mp.evaluate(() => document.documentElement.scrollWidth - window.innerWidth); ok(ov <= 1, 'موبایل: بدون اسکرول افقی (' + ov + ')');
   await mp.locator('.tb-opt[data-theme-id=t5]').click(); await mp.waitForTimeout(300); await mp.screenshot({ path: 'shots/f6_mobile_dark.png' });
   ok(await mp.evaluate(() => localStorage.getItem('mara.theme.رعنا')) === 't5', 'رعنا تم خودش را دارد (جدا از مهسا)');

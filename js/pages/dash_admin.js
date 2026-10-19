@@ -130,7 +130,7 @@ export function adminDashboard() {
   const rangeBar = chips(RANGES.map(r => ({ v: r.v, label: r.label })), rangeN, v => { rangeN = v; draw(); }, { label: 'بازه' });
   const quick = (label, icon, cls, fn) => h('button', { type: 'button', class: 'qa ' + cls, onclick: fn }, h('span', { class: 'qi', 'aria-hidden': 'true' }, icon), label);
   host.append(h('div', { class: 'hello' }, h('div', null, h('h1', null, `سلام ${S.me.name}`), h('p', { class: 'sub' }, jlong(today) + ' · داشبورد مدیریت')), h('img', { class: 'brand-mark', src: 'icons/logo-mark.jpg', alt: 'MR', width: 42, height: 42 })),
-    h('div', { class: 'qas' }, quick('فروش جدید', '🛍', 'gold', () => saleForm()), quick('خرید جدید', '📦', 'dark', () => purchaseForm()), quick('تحلیل', '🔍', 'line', () => { location.hash = '#/analysis'; })),
+    h('div', { class: 'qas' }, quick('فروش جدید', '🛍', 'gold', () => saleForm()), quick('خرید جدید', '📦', 'dark', () => purchaseForm()), quick('مشاور و تحلیل', '🧭', 'line', () => { location.hash = '#/analysis'; }), quick('گزارش جلسه', '🧑‍💼', 'line', () => { location.hash = '#/meeting'; })),
     rangeBar, body);
   draw(); return host;
 }

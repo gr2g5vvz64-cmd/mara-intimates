@@ -6,7 +6,7 @@ try {
   // ---- مدیر: صفحه‌ی تحلیل ----
   const pa = await newPage(browser, url, { logs }); await login(pa, 'hamid@example.com', 'hamid-pass-333'); pa.setDefaultTimeout(9000); await sleep(pa, 900);
   ok(await pa.locator('.side nav a[data-r="analysis"]').count() >= 1 || await pa.locator('a[href="#/analysis"]').count() >= 1, 'مدیر «تحلیل» را در منو می‌بیند');
-  await pa.evaluate(() => { location.hash = '#/analysis'; }); await sleep(pa, 2500);
+  await pa.evaluate(() => { location.hash = '#/analysis'; }); await sleep(pa, 1500); await pa.locator('.tabs').getByText('بررسی اشتباهات').first().click(); await sleep(pa, 2500);
   let t = await pa.locator('#view').innerText();
   ok(/بررسی اشتباهات/.test(t) && /تحلیل عملکرد/.test(t), 'دو تب: بررسی اشتباهات و تحلیل عملکرد');
   ok(/بررسی سالم/.test(t) && /(خطا|هشدار|سالم)/.test(t), 'نتیجه‌ی بررسی سرور نمایش داده شد');

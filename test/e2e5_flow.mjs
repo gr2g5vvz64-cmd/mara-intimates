@@ -20,16 +20,16 @@ async function main() {
   let card = M.locator('.lcard').first();
   await card.locator('.cmb input').fill('سوتین'); await card.locator('.cmb-o').first().click();
   await card.locator('.stp.big .stp-i').fill('2'); await card.locator('.numinp').first().fill('3800000');
-  await M.locator('button.chip', { hasText: 'بخشی / نسیه' }).click();
-  await M.locator('.fld', { has: page.locator('.lbl', { hasText: 'چقدر گرفتی' }) }).locator('input').fill('1000000');
-  await M.locator('button', { hasText: 'ثبت فروش' }).click(); await sleep(500);
+  await M.locator('button.chip', { hasText: 'جزئی (نسیه)' }).click();
+  await M.locator('.fld', { has: page.locator('.lbl', { hasText: 'مبلغ دریافتی' }) }).locator('input').fill('1000000');
+  await M.locator('button', { hasText: 'صدور فاکتور' }).click(); await sleep(500);
   ok((await err()).includes('خریدار'), 'فروش بدون خریدار رد شد: ' + await err());
   const cust = M.locator('.fld', { has: page.locator('.lbl', { hasText: /^خریدار/ }) }).locator('.cmb input');
   await cust.fill('سارا'); await M.locator('.cmb-o.create').first().click(); await sleep(700);
   await M.locator('button.chip', { hasText: /^۵ روز$/ }).click(); await sleep(200);
   const hintTxt = await M.locator('.hint', { hasText: 'سررسید:' }).innerText(); ok(/سررسید/.test(hintTxt), 'نمایش سررسید در فرم: ' + hintTxt);
   await page.screenshot({ path: 'shots/f5_sale_credit.png' });
-  await M.locator('button', { hasText: 'ثبت فروش' }).click(); await modalGone();
+  await M.locator('button', { hasText: 'صدور فاکتور' }).click(); await modalGone();
   let t = await D(); const sara = t.v_sales.find(s => s.customer === 'سارا');
   ok(sara && sara.outstanding === 6600000 && sara.due_date === plus(5), `فروش نسیه: مانده ${sara && sara.outstanding} سررسید ${sara && sara.due_date} (انتظار ${plus(5)}) ${await err()}`);
   // ۲) صفحه مشتریان و دریافت قسطی

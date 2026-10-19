@@ -50,13 +50,17 @@ export function goalProgress(owner, month = jmonthKey(todayISO())) {
 
 /* ---------- پیشنهاد خرید مجدد ---------- */
 export function reorderSuggestions() {
-  const since = addDaysISO(todayISO(), -30), ok = new Set(activeSales().filter(s => s.date >= since).map(s => s.id)), sold = new Map();
-  for (const l of S.saleLines) if (ok.has(l.sale_id)) sold.set(l.item_id, (sold.get(l.item_id) || 0) + l.qty);
+  // فقط کالای واقعاً پرفروش: حداقل ۴ عدد در ۳۰ روز، در حداقل ۳ روز مختلف و برای حداقل ۲ مشتری (فروش یک‌دو عددی پیشنهاد خرید نیست)
+  const since = addDaysISO(todayISO(), -30), sales = activeSales().filter(s => s.date >= since), byId = new Map(sales.map(s => [s.id, s])), sold = new Map();
+  for (const l of S.saleLines) {
+    const s = byId.get(l.sale_id); if (!s) continue; const q = l.qty - (l.returned_qty || 0); if (q <= 0) continue;
+    const o = sold.get(l.item_id) || { q: 0, days: new Set(), cust: new Set() }; o.q += q; o.days.add(s.date); o.cust.add(s.customer_id || s.customer || s.id); sold.set(l.item_id, o);
+  }
   const out = [];
   for (const i of S.stock) {
-    if (!i.active) continue; const q = sold.get(i.id) || 0; if (q <= 0) continue;
-    const daily = q / 30, need = Math.max(i.min_stock || 0, Math.ceil(daily * 7));
-    if (i.rem <= need) out.push({ item: i, sold30: q, rem: i.rem, buy: Math.max(1, Math.ceil(daily * 21) - i.rem), days: daily > 0 ? Math.floor(i.rem / daily) : null });
+    if (!i.active) continue; const o = sold.get(i.id); if (!o || o.q < 4 || o.days.size < 3 || o.cust.size < 2) continue;
+    const q = o.q, daily = q / 30, cover = i.rem / daily;
+    if (i.rem === 0 || cover < 14 || i.rem <= (i.min_stock || 0)) out.push({ item: i, sold30: q, rem: i.rem, buy: Math.max(2, Math.min(q * 2, Math.ceil(daily * 21) - i.rem)), days: Math.floor(cover) });
   }
   return out.sort((a, b) => (a.days ?? 99) - (b.days ?? 99));
 }

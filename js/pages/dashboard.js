@@ -79,7 +79,7 @@ export function reorderCard() {
   const rows = reorderSuggestions();
   if (!rows.length) return null;
   return h('div', { class: 'card reorder' }, h('div', { class: 'ct' }, 'پیشنهاد خرید مجدد ', h('button', { type: 'button', class: 'mini', onclick: () => purchaseForm() }, 'خرید جدید')),
-    h('p', { class: 'hint' }, 'کالاهایی که در ۳۰ روز اخیر فروش رفته‌اند و موجودی‌شان برای حدود یک هفته فروش هم کافی نیست.'),
+    h('p', { class: 'hint' }, 'فقط کالاهای واقعاً پرفروش (حداقل ۴ عدد، ۳ روز مختلف، ۲ مشتری در ۳۰ روز) که موجودی‌شان رو به اتمام است. فروش یک‌دو عددی پیشنهاد خرید نمی‌شود.'),
     rows.slice(0, 6).map(r => h('div', { class: 'li' }, h('div', null, h('b', null, r.item.name), h('small', null, `موجودی ${fmt(r.rem)} · فروش ۳۰ روز ${fmt(r.sold30)}${r.days != null ? ' · کفاف ' + fmt(r.days) + ' روز' : ''}`)), h('span', { class: 'pill amber' }, 'بخر ' + fmt(r.buy)))));
 }
 

@@ -3,7 +3,7 @@ import { S, canEdit } from '../store.js';
 import { dtable, N, pill, tabsBar, kpi } from '../ui.js';
 import { moveStockForm, supplierReturnForm, editEntryForm, voidEntry } from '../forms_misc.js';
 import { saleForm, purchaseForm } from '../forms_trade.js';
-import { head, btn, searchBox, match, detail, catFilter, inCat } from './common.js';
+import { head, btn, searchBox, match, detail, catFilter, inCat, varFilter, inVar } from './common.js';
 import { catNames, catOf, NO_CAT } from '../store.js';
 
 const status = i => (i.rem === 0 ? pill('تمام شد', 'gray') : i.rem <= i.min_stock ? pill('کم‌موجودی', 'amber') : pill('موجود', 'green'));
@@ -59,14 +59,14 @@ function byCategoryCard() {
 }
 
 export function render(query) {
-  let tab = query.get('tab') === 'lots' ? 'lots' : 'items', q = '', hideZero = false, cat = '';
+  let tab = query.get('tab') === 'lots' ? 'lots' : 'items', q = '', hideZero = false, cat = ''; const vst = { color: '', size: '' };
   const root = h('div'); const body = h('div'), catHost = h('div');
   const T = S.stock.filter(i => i.active);
   const draw = () => {
     root.querySelector('.tabs') && root.querySelector('.tabs').replaceWith(tabsBar([{ id: 'items', label: 'به تفکیک کالا', badge: (n => ({ n, tone: n ? 'amber' : 'zero' }))(S.stock.filter(i => i.active && i.rem <= i.min_stock).length) }, { id: 'lots', label: 'دسته‌های خرید (FIFO)', badge: { n: S.lots.filter(l => !l.voided && l.rem > 0).length, tone: 'info' } }], tab, t => { tab = t; draw(); }));
     if (tab === 'items') {
-      catHost.replaceChildren(catFilter(cat, v => { cat = v; draw(); }, S.stock.filter(i => i.active)));
-      const rows = S.stock.filter(i => i.active && inCat(cat, i) && match(q, i.name, i.category) && (!hideZero || i.rem > 0)).sort((a, b) => (a.rem === 0) - (b.rem === 0) || a.name.localeCompare(b.name, 'fa'));
+      catHost.replaceChildren(catFilter(cat, v => { cat = v; draw(); }, S.stock.filter(i => i.active)), varFilter(vst, draw, S.stock.filter(i => i.active)));
+      const rows = S.stock.filter(i => i.active && inCat(cat, i) && inVar(vst, i) && match(q, i.name, i.category, i.color, i.size) && (!hideZero || i.rem > 0)).sort((a, b) => (a.rem === 0) - (b.rem === 0) || a.name.localeCompare(b.name, 'fa'));
       body.replaceChildren(dtable([
         { label: 'کالا', main: true, render: i => i.name }, { label: 'دسته', hm: true, render: i => i.category || '' }, { label: 'تعداد نزد مهسا', cls: 'num', render: i => i.rem_m }, { label: 'تعداد نزد رعنا', cls: 'num', render: i => i.rem_r },
         { label: 'جمع تعداد', cls: 'num', render: i => h('b', null, i.rem) }, { label: 'آخرین تمام‌شده', cls: 'num', hm: true, render: i => (i.last_cost ? N(i.last_cost) : '') }, { label: 'آخرین فی فروش', cls: 'num', hm: true, render: i => (i.last_price ? N(i.last_price) : '') },
