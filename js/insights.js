@@ -1,6 +1,6 @@
 // محاسبات «هدف‌دار / نمایشی / کنترلی»: شمارنده‌ها، سررسید ۳۰ روز، مشتریان برتر، هدف ماهانه، پیشنهاد خرید، بستن روز
 import { S, activeSales, businessAccounts, accBalance, catOf, catNames, NO_CAT } from './store.js';
-import { sum, groupBy, jmonthKey, todayISO, addDaysISO } from './util.js';
+import { sum, groupBy, jmonthKey, todayISO, addDaysISO, toJ, jMonthLen } from './util.js';
 import { pendingCount, blockedCount } from './outbox.js';
 
 /* ---------- سررسیدها ---------- */
@@ -28,9 +28,24 @@ export function topCustomers(n = 5) {
 
 /* ---------- هدف ماهانه ---------- */
 export const goalOf = (owner, month = jmonthKey(todayISO())) => { const g = S.goals.find(x => x.owner === owner && x.month === month); return g ? Number(g.amount) : 0; };
+/** هدف فعلی فقط برای «فروش به آشنایان» است؛ پیج اینستاگرام هدف جدا خواهد داشت (هنوز تعیین نشده) */
+export const GOAL_CHANNEL = 'آشنایان';
+/** درصد گذشته‌ی ماه شمسی (برای ماه جاری: امروز ÷ طول ماه؛ ماه‌های گذشته: ۱۰۰) */
+export function monthElapsed(month = jmonthKey(todayISO())) {
+  const [y, m, d] = toJ(todayISO()), len = jMonthLen(y, m);
+  return month === jmonthKey(todayISO()) ? { pct: Math.round(d / len * 100), day: d, len, left: len - d } : { pct: 100, day: len, len, left: 0 };
+}
+/** وضعیت نسبت به برنامه: پیشرفت هدف ÷ درصد گذشته‌ی ماه */
+export function paceOf(pct, elapsed) {
+  if (pct == null) return { key: 'none', label: '', ratio: null };
+  if (pct >= 100) return { key: 'done', label: 'هدف محقق شد', ratio: pct / Math.max(1, elapsed) };
+  const r = pct / Math.max(1, elapsed);
+  return r >= 1.15 ? { key: 'ahead', label: 'جلوتر از برنامه', ratio: r } : r >= 0.9 ? { key: 'on', label: 'در مسیر', ratio: r } : r >= 0.6 ? { key: 'slow', label: 'کمی عقب', ratio: r } : { key: 'behind', label: 'خیلی عقب', ratio: r };
+}
 export function goalProgress(owner, month = jmonthKey(todayISO())) {
-  const done = sum(activeSales().filter(s => s.seller === owner && jmonthKey(s.date) === month), s => s.total), goal = goalOf(owner, month);
-  return { owner, month, goal, done, pct: goal > 0 ? Math.min(999, Math.round(done / goal * 100)) : null };
+  const done = sum(activeSales().filter(s => s.seller === owner && s.channel === GOAL_CHANNEL && jmonthKey(s.date) === month), s => s.total), goal = goalOf(owner, month);
+  const pct = goal > 0 ? Math.min(999, Math.round(done / goal * 100)) : null, el = monthElapsed(month);
+  return { owner, month, goal, done, pct, elapsed: el.pct, left: el.left, pace: paceOf(pct, el.pct) };
 }
 
 /* ---------- پیشنهاد خرید مجدد ---------- */

@@ -452,7 +452,7 @@ export function goalForm() {
     const r = await run(btn, async () => { let last; for (const [owner, f] of items) last = await rpc('set_goal', { month: mk, owner, amount: f.get() }); return last; });
     if (r) finish(m, 'هدف ثبت شد ✔');
   };
-  const m = modal({ title: 'هدف فروش ' + jmonthName(mk), body: h('div', { class: 'form' }, P('مبلغی که هر نفر می‌خواهد این ماه بفروشد (ریال). هر وقت خواستی دوباره عوضش کن.'), field('هدف مهسا', fm), field('هدف رعنا', fr)), footer: [btn] });
+  const m = modal({ title: 'هدف فروش به آشنایان ' + jmonthName(mk), body: h('div', { class: 'form' }, P('مبلغی که هر نفر می‌خواهد این ماه به آشنایان بفروشد (ریال)؛ فقط فروش با محل «آشنایان» حساب می‌شود. هر وقت خواستی دوباره عوضش کن.'), field('هدف مهسا', fm), field('هدف رعنا', fr)), footer: [btn] });
 }
 
 

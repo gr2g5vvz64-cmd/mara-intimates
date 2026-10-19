@@ -67,12 +67,13 @@ function goalRow(who) {
   const g = goalProgress(who);
   return h('div', { class: 'goalrow' }, h('div', { class: 'gh' }, h('b', null, who), g.goal ? h('span', null, `${fmt(g.done)} از ${fmt(g.goal)} · ${fmt(g.pct)}٪`) : h('span', { class: 'hint' }, 'هدفی تعیین نشده')),
     g.goal ? h('div', { class: 'gbar', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.min(100, g.pct), 'aria-label': `پیشرفت هدف ${who}` }, h('i', { class: g.pct >= 100 ? 'done' : '', style: { width: Math.min(100, g.pct) + '%' } })) : null,
-    g.goal ? h('div', { class: 'gsub' }, g.pct >= 100 ? '🎉 به هدف رسید' : `${fmt(Math.max(0, g.goal - g.done))} ریال تا هدف مانده`) : null);
+    g.goal ? h('div', { class: 'gsub' }, g.pct >= 100 ? '🎉 به هدف رسید' : `${fmt(Math.max(0, g.goal - g.done))} ریال تا هدف مانده`, g.pace.label ? ` · ${g.pace.label} (${fmt(g.pct)}٪ هدف در ${fmt(g.elapsed)}٪ ماه)` : '') : null);
 }
 export function goalsCard(only) {
   const mk = jmonthKey(todayISO());
-  return h('div', { class: 'card' }, h('div', { class: 'ct' }, `هدف فروش ${jmonthName(mk)}`, h('button', { type: 'button', class: 'mini', onclick: () => goalForm() }, 'تعیین هدف')),
-    ...(only ? [goalRow(only)] : [goalRow('مهسا'), goalRow('رعنا')]));
+  return h('div', { class: 'card' }, h('div', { class: 'ct' }, `هدف فروش به آشنایان ${jmonthName(mk)}`, h('button', { type: 'button', class: 'mini', onclick: () => goalForm() }, 'تعیین هدف')),
+    ...(only ? [goalRow(only)] : [goalRow('مهسا'), goalRow('رعنا')]),
+    h('p', { class: 'hint' }, 'این هدف فقط فروش «آشنایان» را می‌شمارد. فروش پیج اینستاگرام هدف جدا دارد که هنوز تعیین نشده.'));
 }
 export function reorderCard() {
   const rows = reorderSuggestions();

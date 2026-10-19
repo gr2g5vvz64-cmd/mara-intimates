@@ -434,3 +434,12 @@ ul.plain{list-style:none;padding:0;margin:4px 0}
 .stm-wrap{max-height:62vh;overflow:auto;border:1px solid var(--line);border-radius:12px;background:#fff;margin-top:8px}.stm-img{display:block;width:100%;height:auto}
 .stm textarea.inp{width:100%;resize:vertical}
 @media print{.no-print,.sheet-f{display:none!important}.rep{font-size:13px}}
+
+/* گزارش جلسه */
+.mt-title{display:flex;align-items:center;gap:12px;margin:6px 0 10px}.mt-title h2{margin:0;font-size:20px}
+.mt-bar{position:relative}.mt-mark{position:absolute;top:-3px;bottom:-3px;width:3px;background:var(--ink);border-radius:2px}
+.mt-list{margin:4px 0 8px;padding-inline-start:20px}.mt-list li{margin:5px 0;line-height:1.8}
+.mt-h{font-weight:700;font-size:13px;margin-top:8px}.mt-h.good{color:var(--green)}.mt-h.weak{color:#9a5b00}
+.mt-lines{display:flex;flex-direction:column;gap:22px;padding:14px 0 4px}.mt-line{border-bottom:1px solid var(--line2,#c9b6c0);height:1px}
+.mt-fill{margin:10px 2px;font-size:13px}
+@media print{.mt .pb{break-before:page}.mt .card{break-inside:avoid}.mt h3.sec{break-after:avoid}}
