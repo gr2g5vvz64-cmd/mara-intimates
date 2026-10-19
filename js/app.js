@@ -48,7 +48,7 @@ const ROUTES = {
 };
 /* منوی کناری در پنج گروه (زیرمجموعه‌ها با کلیک روی عنوان باز و بسته می‌شوند) */
 const GROUPS = [
-  { id: 'dash', t: 'داشبورد', i: '▦', kids: ['', 'analysis', 'pnl', 'meeting', 'calc'] },
+  { id: 'dash', t: 'داشبورد', i: '▦', kids: ['', 'analysis', 'pnl', 'calc'] },
   { id: 'sales', t: 'فروش', i: '🛍', kids: ['sales', 'customers', 'returns'] },
   { id: 'buy', t: 'خرید', i: '📦', kids: ['purchases', 'suppliers', 'sreturns'] },
   { id: 'wh', t: 'انبار', i: '▤', kids: ['stock', 'items'] },

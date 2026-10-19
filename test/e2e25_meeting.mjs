@@ -4,7 +4,7 @@ const ok = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) fails++; };
 const sleep = (p, ms) => p.waitForTimeout(ms);
 try {
   const a = await newPage(browser, url, { logs, viewport: { width: 1280, height: 900 } }); await login(a, 'hamid@example.com', 'hamid-pass-333'); a.setDefaultTimeout(9000); await sleep(a, 900);
-  ok(await a.locator('.side a[data-r="meeting"]').count() === 1, 'مدیر: «گزارش جلسه» در منو');
+  ok(await a.locator('.side a[data-r="meeting"]').count() === 0, 'مدیر: «گزارش جلسه» دیگر در منوی کناری تکراری نیست (فقط تب تحلیل)');
   // هدف: مهسا خیلی بالا (عقب)، رعنا خیلی کم (محقق)
   const info = await a.evaluate(async () => {
     const st = await import('/js/store.js'), u = await import('/js/util.js'), ins = await import('/js/insights.js'); const mk = u.jmonthKey(u.todayISO());
