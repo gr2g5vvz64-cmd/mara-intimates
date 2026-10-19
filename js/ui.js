@@ -216,7 +216,8 @@ export const N = (n, cls = '') => h('span', { class: 'n ' + cls + (n < 0 ? ' neg
 export const pill = (text, kind = 'gray') => h('span', { class: 'pill ' + kind }, text);
 
 /** شمارنده‌ی کوچک جلوی نام زبانه: {n, tone}؛ tone = red | amber | info | zero */
-export function cntBadge(b) { const o = typeof b === 'object' ? b : { n: b, tone: b ? 'amber' : 'zero' }; return h('b', { class: 'cnt ' + o.tone, 'aria-label': fmt(o.n) + ' مورد' }, fmt(o.n)); }
+/* شمارنده فقط برای «کار باز» است (amber/red)؛ صفر و صرفاً اطلاعاتی (info) نمایش داده نمی‌شود */
+export function cntBadge(b) { const o = typeof b === 'object' ? b : { n: b, tone: b ? 'amber' : 'zero' }; if (!o.n || (o.tone !== 'red' && o.tone !== 'amber')) return null; return h('b', { class: 'cnt ' + o.tone, 'aria-label': fmt(o.n) + ' مورد' }, fmt(o.n)); }
 export function tabsBar(tabs, active, onSel) {
   const wrap = h('div', { class: 'tabs', role: 'tablist' });
   tabs.forEach(t => wrap.append(h('button', { type: 'button', role: 'tab', 'aria-selected': t.id === active ? 'true' : 'false', class: t.id === active ? 'on' : '', onclick: () => onSel(t.id) }, t.badge ? cntBadge(t.badge) : null, t.label)));

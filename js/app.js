@@ -91,6 +91,7 @@ function paintCounts() {
   let c; try { c = navCounts(); } catch (e) { console.error(e); reportError('E_UI_COUNT', e.message, 'ui.counts', e.stack); return; }
   navEls.forEach(a => {
     const k = a.dataset.r, o = c[k], b = a.querySelector('.cnt'); if (!b || !o) { if (b) b.hidden = true; return; }
+    if (!o.q && o.tone !== 'red' && o.tone !== 'amber') { b.hidden = true; return; } // فقط کار باز شمارنده دارد
     b.hidden = false; b.className = 'cnt ' + o.tone; b.textContent = o.q ? '؟' : fmt(o.n);
     b.setAttribute('aria-label', `${o.q ? 'نامشخص' : fmt(o.n)} ${TONE_FA[o.tone]}`);
   });
