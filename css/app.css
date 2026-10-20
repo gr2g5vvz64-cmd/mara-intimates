@@ -591,3 +591,10 @@ ul.plain{list-style:none;padding:0;margin:4px 0}
   .stk-s,.stk-c{display:flex;align-items:center;gap:6px}.stk-s small,.stk-c small{display:inline;font-size:12px;color:var(--brown)}
   .stk-s{justify-content:flex-start}.stk-c{justify-self:stretch}
 }
+/* انبارگردانی ماهانه */
+.tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:700;background:var(--bg2,#eee)}
+.tag.y{background:#fff3cd;color:#8a6100}.tag.r{background:#fde2e2;color:#a12626}.tag.g{background:#dff5e3;color:#1d7a35}.tag.k{background:#e8efe9;color:#2c6b3f}
+.prog{height:6px;background:#e5e5e5;border-radius:4px;margin:10px 0;overflow:hidden}.prog>i{display:block;height:100%;background:#2c8a4b;transition:width .2s}
+.ck{display:flex;gap:8px;align-items:flex-start;cursor:pointer;line-height:1.7}.ck input{margin-top:6px;width:18px;height:18px}
+.chp{display:block;font-size:12px;white-space:nowrap}.mcx{margin-top:10px}.mcx summary{cursor:pointer;color:var(--mut,#777)}
+.hint.warn{color:#a12626}

@@ -98,6 +98,13 @@ export function homeAlerts() {
 
 /* ---------- شمارنده‌ی هر زبانه: {n, tone} ؛ tone = red | amber | info | zero ---------- */
 const mk = (n, hot, info = false) => ({ n, tone: n === 0 ? 'zero' : hot ? 'red' : info ? 'info' : 'amber' });
+function openCountInfo() {
+  const open = (S.monthlyCounts || []).filter(c => c.status === 'open'); if (!open.length || !S.me) return { n: 0, red: false };
+  const parts = id => (S.monthlyParts || []).filter(p => p.count_id === id);
+  if (['مهسا', 'رعنا'].includes(S.me.name) && S.me.role !== 'viewer') { const mine = open.filter(c => { const p = parts(c.id).find(x => x.holder === S.me.name); return p && !p.completed_at; }); return { n: mine.length, red: mine.length > 0 }; }
+  if (S.me.role === 'admin') return { n: open.length, red: open.some(c => parts(c.id).filter(p => p.completed_at).length === 2) };
+  return { n: 0, red: false };
+}
 export function navCounts() {
   const act = activeSales(), t = todayISO();
   const owed = act.filter(s => s.outstanding > 0), debtors = S.vCus.filter(c => c.outstanding > 0.5);
@@ -120,6 +127,7 @@ export function navCounts() {
     customers: mk(debtors.length, or),
     invoices: mk(unpaid.length, od),
     finance: mk(fin, Math.abs((S.totals || {}).check_diff || 0) > 1 || negativeAccounts().length > 0),
+    monthcount: (() => { const o = openCountInfo(); return mk(o.n, o.red); })(),
     items: mk(S.items.filter(i => i.active).length, false, true),
     suppliers: mk(S.suppliers.filter(s => s.active !== false).length, false, true),
     history: mk(todayN, false, true),

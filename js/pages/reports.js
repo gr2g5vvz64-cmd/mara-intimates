@@ -96,7 +96,7 @@ export function settlePage() {
     const s = d.settlement, P = s.people;
     const cell = (label, fn, tone) => ({ label, fn, tone });
     const rows = [
-      ['فروش این ماه', x => N(x.sales_total)], ['تعداد فاکتور این ماه', x => fmt(x.sales_count)], ['سهم از سود خالص این ماه (۵۰٪)', x => N(x.profit_share, x.profit_share < 0 ? 'neg' : 'pos')],
+      ['فروش این ماه', x => N(x.sales_total)], ['تعداد فاکتور این ماه', x => fmt(x.sales_count)], ['کسر انبارگردانی از سود (کسری واقعی)', x => N(-(x.charge || 0), (x.charge || 0) > 0 ? 'neg' : '')], ['سهم از سود خالص این ماه (۵۰٪)', x => N(x.profit_share, x.profit_share < 0 ? 'neg' : 'pos')],
       ['سرمایه‌ی وارد‌شده تا امروز', x => N(x.capital)], ['پول نقد و بانک دست او', x => N(x.cash + x.bank)], ['جنس دست او (قیمت تمام‌شده)', x => N(x.stock_value)],
       ['جیب شخصی (مانده)', x => N(x.pocket)], ['سهم او از سود کل تا امروز', x => N(x.profit_share_total)], ['برداشت سود این ماه', x => N(x.payout_month)], ['برداشت سود تا امروز', x => N(x.payout_total)]
     ].map(([label, fn]) => ({ label, a: fn(P[0]), b: fn(P[1]) }));

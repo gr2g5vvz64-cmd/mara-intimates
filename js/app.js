@@ -16,6 +16,7 @@ import * as ana from './pages/analysis_page.js';
 import * as rep from './pages/reports.js';
 import * as meet from './pages/meeting.js';
 import * as stk from './pages/stocktake.js';
+import * as mcn from './pages/monthcount.js';
 import { onOutbox, initOutbox, pendingCount, blockedCount, pump, state as obState } from './outbox.js';
 import { saleForm, purchaseForm } from './forms_trade.js';
 import { navCounts } from './insights.js';
@@ -35,6 +36,7 @@ const ROUTES = {
   invoices: { t: 'بدهی به تامین‌کننده', i: '📄', f: () => trade.invoices() },
   finance: { t: 'مالی', i: '◎', f: () => fin.render() },
   stocktake: { t: 'انبارگردانی', i: '☑', f: () => stk.render() },
+  monthcount: { t: 'انبارگردانی ماهانه', i: '🗓', f: q => mcn.render(q) },
   items: { t: 'کالاها', i: '🏷', f: () => master.items() },
   suppliers: { t: 'تامین‌کنندگان', i: '🏭', f: () => master.suppliers() },
   history: { t: 'تاریخچه', i: '🕘', f: () => hist.render() },
@@ -53,7 +55,7 @@ const GROUPS = [
   { id: 'dash', t: 'داشبورد', i: '▦', kids: ['', 'analysis', 'pnl', 'calc'] },
   { id: 'sales', t: 'فروش', i: '🛍', kids: ['sales', 'customers', 'returns'] },
   { id: 'buy', t: 'خرید', i: '📦', kids: ['purchases', 'suppliers', 'sreturns'] },
-  { id: 'wh', t: 'انبار', i: '▤', kids: ['stock', 'stocktake', 'items'] },
+  { id: 'wh', t: 'انبار', i: '▤', kids: ['stock', 'stocktake', 'monthcount', 'items'] },
   { id: 'money', t: 'مالی', i: '◎', kids: ['finance', 'pay', 'invoices', 'settle'] },
   { id: 'set', t: 'تنظیمات', i: '⚙', kids: ['settings', 'history', 'help', 'savelog', 'diag'] }
 ];
