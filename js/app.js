@@ -220,7 +220,7 @@ function showLogin(msg, mode = 'pass') {
   const code = h('input', { class: 'inp', type: 'text', inputmode: 'numeric', autocomplete: 'one-time-code', dir: 'ltr', placeholder: 'کد ۶ رقمی بله', 'aria-label': 'کد', hidden: true });
   const err = h('div', { class: 'warnbox', hidden: !msg, role: 'alert' }, msg || '');
   const wake = h('div', { class: 'wake', hidden: true });
-  const b = h('button', { class: 'btn primary lg', type: 'submit' }, mode === 'pass' ? 'ورود' : 'ارسال کد به بله');
+  const b = h('button', { class: 'btn primary lg', type: 'submit' }, mode === 'pass' ? 'ورود' : 'ارسال کد (بله و تلگرام)');
   let otpSent = false;
   const alt = h('button', { type: 'button', class: 'alt', onclick: () => showLogin('', mode === 'pass' ? 'otp' : 'pass') }, mode === 'pass' ? 'ورود با کد بله (بدون رمز)' : 'ورود با رمز');
   if (mode === 'otp') pass.hidden = true;
