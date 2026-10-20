@@ -390,7 +390,7 @@ function sizePicker(catName, { multi, value, onChange }) {
   return Object.assign(box, { values: pk.values, first: pk.first });
 }
 export function itemForm(it) {
-  if (it && !canEdit()) { toast("ویرایش فقط برای حمیدرضا و مهسا باز است", "err"); return; }
+  if (it && !canEdit()) { toast("ویرایش فقط برای حمیدرضا، مهسا و رعنا باز است", "err"); return; }
   const baseOf = x => (x.base_name || x.name);
   const name = h('input', { class: 'inp', value: it ? baseOf(it) : '', placeholder: 'مثلاً سوتین دانتل' });
   const desc = h('textarea', { class: 'inp ta', rows: 3, maxlength: 300, placeholder: 'مثلاً جنس، مدل، ویژگی‌ها؛ مشتری در فاکتور می‌بیند چه خریده (اختیاری)' }); desc.value = it && it.description || '';
@@ -440,7 +440,7 @@ export function itemForm(it) {
   const delBtn = h('button', { class: 'btn danger ghost', type: 'button' }, 'حذف کالا');
   if (it) delBtn.onclick = async () => { if (!(await confirmBox(`«${it.name}» حذف شود؟ از لیست‌ها کنار می‌رود و سوابق مالی‌اش (فاکتورها و سود) می‌ماند. کالایی که موجودی دارد حذف نمی‌شود.`, 'حذف کن', true))) return; const r = await run(delBtn, () => rpc('save_item', { id: it.id, name: it.name, category: it.category, min_stock: it.min_stock, active: false })); if (r) finish(m, 'کالا حذف شد'); };
   const m = modal({ title: it ? 'ویرایش کالا' : 'کالای جدید', body: h('div', { class: 'form itemf' },
-    zone2('۱', 'مشخصات کالا', null, field('نام کالا *', name, used && !canEdit() ? 'این کالا در خرید/فروش استفاده شده؛ نامش را فقط حمیدرضا و مهسا می‌توانند عوض کنند.' : (it ? 'نام نهایی = نام کالا · رنگ · سایز' : null)), field('دسته', cat)),
+    zone2('۱', 'مشخصات کالا', null, field('نام کالا *', name, used && !canEdit() ? 'این کالا در خرید/فروش استفاده شده؛ نامش را فقط حمیدرضا، مهسا و رعنا می‌توانند عوض کنند.' : (it ? 'نام نهایی = نام کالا · رنگ · سایز' : null)), field('دسته', cat)),
     zone2('۲', it ? 'رنگ' : 'رنگ‌ها', 'برای فیلتر و گزارش', colors),
     h('section', { class: 'z2' }, h('div', { class: 'zt' }, h('i', null, '۳'), sizeTitle, sizeSub), h('div', { class: 'zx' }, sizeHost, cntHint, matrix)),
     zone2('۴', 'توضیحات برای مشتری', 'اختیاری', desc, h('div', { class: 'hint' }, 'در فاکتور و پیام مشتری، توضیحات همراه رنگ و سایز دیده می‌شود: «سوتین دانتل · مشکی · ۸۰».')),
@@ -449,7 +449,7 @@ export function itemForm(it) {
   buildSizes();
 }
 export function supplierForm(s) {
-  if (s && !canEdit()) { toast("ویرایش فقط برای حمیدرضا و مهسا باز است", "err"); return; }
+  if (s && !canEdit()) { toast("ویرایش فقط برای حمیدرضا، مهسا و رعنا باز است", "err"); return; }
   const name = h('input', { class: 'inp', value: s ? s.name : '' }), phone = h('input', { class: 'inp', value: s && s.phone || '', dir: 'ltr', inputmode: 'tel' });
   const addr = h('input', { class: 'inp', value: s && s.address || '' }), note = h('input', { class: 'inp', value: s && s.note || '' });
   const act = chips([{ v: true, label: 'فعال' }, { v: false, label: 'غیرفعال' }], s ? s.active : true, () => {}, { cls: 'two' });
@@ -458,12 +458,12 @@ export function supplierForm(s) {
   btn.onclick = async () => { const r = await run(btn, () => rpc('save_supplier', { id: s && s.id, name: name.value, phone: phone.value, address: addr.value, note: note.value, active: act.get() })); if (r) finish(m, 'ذخیره شد'); };
   const delBtn = h('button', { class: 'btn danger ghost', type: 'button' }, 'حذف تامین‌کننده');
   delBtn.onclick = async () => { if (!(await confirmBox(`«${s.name}» حذف شود؟ از لیست‌ها کنار می‌رود و فاکتورهایش می‌ماند. تا حساب باز دارید حذف نمی‌شود.`, 'حذف کن', true))) return; const r = await run(delBtn, () => rpc('save_supplier', { id: s.id, name: s.name, phone: s.phone, address: s.address, note: s.note, active: false })); if (r) finish(m, 'تامین‌کننده حذف شد'); };
-  const m = modal({ title: s ? 'ویرایش تامین‌کننده' : 'تامین‌کننده‌ی جدید', body: h('div', { class: 'form' }, field('نام', name, used && !canEdit() ? 'با این تامین‌کننده فاکتور ثبت شده؛ نامش را فقط حمیدرضا و مهسا می‌توانند عوض کنند.' : null), field('تلفن', phone), field('نشانی', addr), field('یادداشت', note), s ? field('وضعیت', act) : null), footer: [btn, ...(s ? [delBtn] : [])] });
+  const m = modal({ title: s ? 'ویرایش تامین‌کننده' : 'تامین‌کننده‌ی جدید', body: h('div', { class: 'form' }, field('نام', name, used && !canEdit() ? 'با این تامین‌کننده فاکتور ثبت شده؛ نامش را فقط حمیدرضا، مهسا و رعنا می‌توانند عوض کنند.' : null), field('تلفن', phone), field('نشانی', addr), field('یادداشت', note), s ? field('وضعیت', act) : null), footer: [btn, ...(s ? [delBtn] : [])] });
 }
 
 /* ----- مشتری ----- */
 export function customerForm(c, after) {
-  if (c && !canEdit()) { toast("ویرایش فقط برای حمیدرضا و مهسا باز است", "err"); return; }
+  if (c && !canEdit()) { toast("ویرایش فقط برای حمیدرضا، مهسا و رعنا باز است", "err"); return; }
   const name = h('input', { class: 'inp', value: c ? c.name : '', placeholder: 'نام مشتری' });
   const phone = h('input', { class: 'inp', value: c && c.phone || '', dir: 'ltr', inputmode: 'tel', placeholder: '09…' });
   const note = h('input', { class: 'inp', value: c && c.note || '', placeholder: 'یادداشت (مثلاً اینستاگرام: @sara)' });
@@ -473,7 +473,7 @@ export function customerForm(c, after) {
   btn.onclick = async () => { const r = await run(btn, () => rpc('save_customer', { id: c && c.id, name: name.value, phone: phone.value, note: note.value, active: act.get() })); if (r) { await finish(m, 'ذخیره شد'); after && after(r); } };
   const delBtn = h('button', { class: 'btn danger ghost', type: 'button' }, 'حذف مشتری');
   delBtn.onclick = async () => { if (!(await confirmBox(`«${c.name}» حذف شود؟ از لیست‌ها کنار می‌رود و فروش‌هایش می‌ماند. مشتری بدهکار حذف نمی‌شود.`, 'حذف کن', true))) return; const r = await run(delBtn, () => rpc('save_customer', { id: c.id, name: c.name, phone: c.phone, note: c.note, active: false })); if (r) { await finish(m, 'مشتری حذف شد'); after && after(r); } };
-  const m = modal({ title: c ? 'ویرایش مشتری' : 'مشتری جدید', body: h('div', { class: 'form' }, field('نام', name, used && !canEdit() ? 'برای این مشتری فروش ثبت شده؛ نامش را فقط حمیدرضا و مهسا می‌توانند عوض کنند.' : null), field('تلفن', phone), field('یادداشت', note), c ? field('وضعیت', act) : null), footer: [btn, ...(c ? [delBtn] : [])] });
+  const m = modal({ title: c ? 'ویرایش مشتری' : 'مشتری جدید', body: h('div', { class: 'form' }, field('نام', name, used && !canEdit() ? 'برای این مشتری فروش ثبت شده؛ نامش را فقط حمیدرضا، مهسا و رعنا می‌توانند عوض کنند.' : null), field('تلفن', phone), field('یادداشت', note), c ? field('وضعیت', act) : null), footer: [btn, ...(c ? [delBtn] : [])] });
 }
 
 /* ----- دریافت کلی از مشتری (کامل یا قسطی؛ روی قدیمی‌ترین بدهی‌ها می‌نشیند) ----- */
@@ -520,7 +520,7 @@ export function setDueForm(kind, row) {
 
 /* ----- ابطال ----- */
 export async function voidEntry(kind, row, label) {
-  if (!canVoid(row)) return toast('ابطال و ویرایش فقط برای حمیدرضا و مهسا باز است', 'err');
+  if (!canVoid(row)) return toast('ابطال و ویرایش فقط برای حمیدرضا، مهسا و رعنا باز است', 'err');
   const ok = await confirmBox(`«${label}» باطل شود؟ چیزی پاک نمی‌شود؛ فقط از حساب‌ها کنار می‌رود و در لیست خط‌خورده می‌ماند.`, 'باطل کن', true);
   if (!ok) return;
   const why = await promptBox('دلیل ابطال', 'مثلاً اشتباه در مبلغ');
@@ -566,9 +566,9 @@ export function goalForm() {
 }
 
 
-/* ----- ویرایش پرداخت / دریافت / هزینه / انتقال / جابجایی (ابطال نسخه‌ی قبلی + ثبت نسخه‌ی اصلاح‌شده؛ فقط حمیدرضا و مهسا) ----- */
+/* ----- ویرایش پرداخت / دریافت / هزینه / انتقال / جابجایی (ابطال نسخه‌ی قبلی + ثبت نسخه‌ی اصلاح‌شده؛ فقط حمیدرضا، مهسا و رعنا) ----- */
 export function editEntryForm(kind, row) {
-  if (!canEdit()) { toast('ویرایش فقط برای حمیدرضا و مهسا باز است', 'err'); return; }
+  if (!canEdit()) { toast('ویرایش فقط برای حمیدرضا، مهسا و رعنا باز است', 'err'); return; }
   let date = row.date;
   const dateCtl = dateField(date, v => { date = v; });
   const amt = numField({ value: row.amount || '' });

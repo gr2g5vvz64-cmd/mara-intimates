@@ -24,8 +24,8 @@ const zone = (n, title, sub, ...kids) => h('section', { class: 'z2' }, h('div', 
 
 export function saleForm(preset = {}) {
   const me = S.me && S.me.name !== 'حمیدرضا' ? S.me.name : 'مهسا';
-  const edit = preset.edit ? S.SALE[preset.edit] : null;          // ویرایش یک فروش موجود (فقط حمیدرضا و مهسا)
-  if (edit && !canEdit()) { toast('ویرایش فقط برای حمیدرضا و مهسا باز است', 'err'); return; }
+  const edit = preset.edit ? S.SALE[preset.edit] : null;          // ویرایش یک فروش موجود (فقط حمیدرضا، مهسا و رعنا)
+  if (edit && !canEdit()) { toast('ویرایش فقط برای حمیدرضا، مهسا و رعنا باز است', 'err'); return; }
   if (edit && (S.collections.some(c => c.sale_id === edit.id && !c.voided) || S.returns.some(r => !r.voided && r.sale_line_id && S.saleLines.some(l => l.id === r.sale_line_id && l.sale_id === edit.id)))) {
     toast('این فروش دریافت یا مرجوعی دارد؛ اول آن‌ها را باطل کن، بعد ویرایش کن.', 'err'); return;
   }
@@ -331,8 +331,8 @@ const confirm0 = msg => window.confirm(msg);
 
 /* ======================= خرید جدید (فاکتور خرید با پنل افزودن کالا) ======================= */
 export function purchaseForm(preset = {}) {
-  const edit = preset.edit ? S.INV[preset.edit] : null;           // ویرایش یک فاکتور خرید موجود (فقط حمیدرضا و مهسا)
-  if (edit && !canEdit()) { toast('ویرایش فقط برای حمیدرضا و مهسا باز است', 'err'); return; }
+  const edit = preset.edit ? S.INV[preset.edit] : null;           // ویرایش یک فاکتور خرید موجود (فقط حمیدرضا، مهسا و رعنا)
+  if (edit && !canEdit()) { toast('ویرایش فقط برای حمیدرضا، مهسا و رعنا باز است', 'err'); return; }
   let date = edit ? edit.date : todayISO();
   const rows = [], pays = [];
   const stat = { goods: h('b', { class: 'n' }, '0'), disc: h('b', { class: 'n' }, '0'), ship: h('b', { class: 'n' }, '0'), landed: h('b', { class: 'n' }, '0'), paid: h('b', { class: 'n' }, '0'), debt: h('b', { class: 'n' }, '0') };

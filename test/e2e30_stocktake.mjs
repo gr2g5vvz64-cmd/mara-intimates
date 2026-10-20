@@ -44,12 +44,12 @@ try {
   const rr = p2.locator('.stk-row'); let j = -1, s2 = 0; const m2 = await rr.count();
   for (let i = 0; i < m2; i++) { const s = parseInt((await rr.nth(i).locator('.stk-s b').innerText()).replace(/[^\d]/g, ''), 10); if (s >= 1) { j = i; s2 = s; break; } }
   ok(j >= 0, 'رعنا هم کالایی دارد');
-  await rr.nth(j).locator('.stk-in').fill(String(s2 + 1)); await sleep(200);
+  await rr.nth(j).locator('.stk-in').fill(String(s2 + 100000)); await sleep(200);
   await rr.nth(j).locator('.stk-rs .chip', { hasText: 'خطای ثبت' }).click(); await sleep(200);
   ok((await p2.locator('.stk-side button.primary').innerText()).includes('تأیید'), 'برای رعنا دکمه «ارسال برای تأیید» است');
   await p2.locator('.stk-side button.primary').click(); await sleep(1800);
   const t3 = await D(); const pend = t3.stocktakes.find(x => x.status === 'pending');
-  ok(pend && t3.expenses.filter(e => e.stocktake_id && !e.voided).length === 0, 'شمارش رعنا در انتظار تأیید ماند و چیزی تغییر نکرد');
+  ok(pend && t3.expenses.filter(e => e.stocktake_id && !e.voided).length === 0, 'اختلاف بزرگ رعنا در انتظار تأیید ماند و چیزی تغییر نکرد');
   await page.reload(); await sleep(1500); await go(page, '#/stocktake'); await page.locator('tr, .drow, .trow', { hasText: pend.no }).first().click(); await M.waitFor();
   await M.locator('button', { hasText: 'تأیید و ثبت' }).click(); await sleep(300);
   await page.locator('.ov').last().locator('button', { hasText: 'تأیید و ثبت' }).last().click(); await sleep(1800);

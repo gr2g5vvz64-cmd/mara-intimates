@@ -10,11 +10,11 @@ const t0 = await D();
 const cand = t0.v_sales.filter(s => !s.voided && !t0.collections.some(c => c.sale_id === s.id && !c.voided) && !t0.returns.some(r => !r.voided && t0.sale_lines.some(l => l.id === r.sale_line_id && l.sale_id === s.id)))[0];
 ok(!!cand, 'فروش قابل‌ویرایش در داده‌ی تست هست: ' + (cand && cand.no));
 try {
-  // رعنا: هیچ دکمه‌ی ویرایش/ابطال نمی‌بیند
+  // رعنا: حالا مثل مهسا ویرایش/ابطال دارد
   const pr = await newPage(browser, url, { logs }); await login(pr, 'rana@example.com', 'rana-pass-22'); pr.setDefaultTimeout(8000);
   await go(pr, '#/sales'); await pr.locator('tr, .li, .row').filter({ hasText: cand.no }).first().click(); await sleep(pr, 500);
   let t = await pr.locator('.ov').last().innerText();
-  ok(!t.includes('ویرایش') && !t.includes('ابطال'), 'رعنا در جزئیات فروش دکمه‌ی ویرایش/ابطال ندارد');
+  ok(t.includes('ویرایش') && t.includes('ابطال'), 'رعنا در جزئیات فروش دکمه‌ی ویرایش/ابطال دارد');
   ok(t.includes('مرجوعی'), 'رعنا همچنان ثبت‌کردن‌ها را می‌بیند');
   // مهسا: ویرایش فروش
   const pm = await newPage(browser, url, { logs }); await login(pm, 'mahsa@example.com', 'mahsa-pass-1'); pm.setDefaultTimeout(8000);
