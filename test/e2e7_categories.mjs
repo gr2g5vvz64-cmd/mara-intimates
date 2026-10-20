@@ -24,6 +24,7 @@ try {
   await M.locator('input.inp').first().fill('ست خواب ساتن');
   await M.locator('button', { hasText: '＋ دسته‌ی جدید' }).click(); await page.locator('.ov').last().locator('input').fill('لباس خواب'); await page.locator('.ov').last().locator('button', { hasText: /تأیید|ثبت|باشه|بله|افزودن|اوکی/ }).last().click(); await sleep(300);
   ok(await M.locator('.chips .chip.on', { hasText: 'لباس خواب' }).count() === 1, 'دسته‌ی جدید انتخاب شد');
+  { const zs = M.locator('.z2').nth(2); while (await zs.locator('.chip.optc.on').count()) { await zs.locator('.chip.optc.on').first().click(); await sleep(60); } }
   await M.locator('button', { hasText: 'افزودن کالا' }).click(); await sleep(1500);
   const t1 = await D(); ok(t1.categories.some(c => c.name === 'لباس خواب') && t1.items.find(i => i.name === 'ست خواب ساتن').category === 'لباس خواب', 'دسته و کالا در دیتابیس ثبت شد');
   // ساخت کالا وسط خرید: باید دسته بپرسد

@@ -16,6 +16,7 @@ try {
   ok(zt.findIndex(x => x.includes('توضیحات برای مشتری')) > zt.findIndex(x => x.includes('مشخصات کالا')), 'کادر «توضیحات برای مشتری» بعد از «مشخصات کالا» است: ' + zt.slice(0, 4).map(x => x.replace(/\s+/g, ' ')).join(' | '));
   await F('نام کالا').locator('input').fill(NAME); await M.locator('textarea').fill(DESC);
   await M.locator('.chip', { hasText: 'تاپ' }).first().click(); await sleep(200);
+  { const zs = M.locator('.z2').nth(2); while (await zs.locator('.chip.optc.on').count()) { await zs.locator('.chip.optc.on').first().click(); await sleep(60); } }
   await M.locator('button', { hasText: 'افزودن کالا' }).click(); await sleep(1800);
   const t0 = await D(); const item = t0.items.find(i => i.name === NAME);
   ok(item && item.description === DESC, 'توضیحات کالا در دیتابیس ذخیره شد');

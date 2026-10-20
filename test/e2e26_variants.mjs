@@ -15,10 +15,13 @@ try {
   await M.locator('input.inp').first().fill('سوتین دانتل مدل ۱');
   await M.locator('.chip', { hasText: /^سوتین$/ }).first().click();
   for (const c of ['مشکی', 'کرم']) await M.locator('.chip.optc', { hasText: c }).first().click();
-  for (const s of ['۸۰', '۸۵']) await M.locator('.chip', { hasText: new RegExp('^' + s + '$') }).first().click();
+  ok(await M.locator('.z2 .zt', { hasText: 'سایزهای سوتین' }).count() === 1, 'سایز بر اساس دسته: «سایزهای سوتین» (دور + کاپ)');
+  ok(await M.locator('.chip.optc', { hasText: /^C$/ }).count() === 1 && await M.locator('.chip.optc.on', { hasText: /^۷۵$/ }).count() === 1, 'سوتین: دور زیر سینه و کاپ با پیش‌فرض رایج (۷۰–۸۵ × B,C)');
+  for (const s of ['۷۰', '۷۵']) await M.locator('.chip.optc', { hasText: new RegExp('^' + s + '$') }).first().click();
+  await M.locator('.chip.optc', { hasText: /^C$/ }).first().click();
   await sleep(200);
   ok((await M.locator('.hint', { hasText: 'ترکیب ساخته می‌شود' }).innerText()).includes('۴') || /4/.test(await M.locator('.hint', { hasText: 'ترکیب ساخته می‌شود' }).innerText()), 'ماتریس: ۲ رنگ × ۲ سایز = ۴ ترکیب');
-  await M.locator('.vmx .vb[aria-label="کرم ۸۵"]').click(); await sleep(150);
+  await M.locator('.vmx .vb[aria-label="کرم ۸۵B"]').click(); await sleep(150);
   ok((await M.locator('.hint', { hasText: 'ترکیب ساخته می‌شود' }).innerText()).match(/[3۳] ترکیب/) !== null, 'حذف یک ترکیب → ۳ ترکیب');
   await M.locator('textarea').fill('دانتل فرانسوی، قاب‌دار');
   ok((await M.locator('.sheet-f .btn').first().innerText()).includes('۳') || /3/.test(await M.locator('.sheet-f .btn').first().innerText()), 'دکمه تعداد ترکیب را می‌گوید: ' + await M.locator('.sheet-f .btn').first().innerText());
@@ -26,7 +29,7 @@ try {
   const t = await D(); const made = t.items.filter(i => i.base_name === 'سوتین دانتل مدل ۱');
   ok(made.length === 3, 'سه کالا ساخته شد: ' + made.map(i => i.name).join(' | '));
   ok(made.every(i => i.description === 'دانتل فرانسوی، قاب‌دار' && i.category === 'سوتین'), 'توضیحات و دسته روی همه‌ی ترکیب‌ها هست');
-  ok(!made.some(i => i.color === 'کرم' && i.size === '۸۵') && made.some(i => i.color === 'مشکی' && i.size === '۸۵'), 'ترکیب حذف‌شده ساخته نشد');
+  ok(!made.some(i => i.color === 'کرم' && i.size === '۸۵B') && made.some(i => i.color === 'مشکی' && i.size === '۸۵B'), 'ترکیب حذف‌شده ساخته نشد');
   // لیست کالا: فیلتر رنگ و سایز
   await go('#/items'); await sleep(400);
   const fchips = page.locator('.vf .fchip'); ok(await fchips.count() >= 3, 'فیلتر رنگ و سایز در لیست کالا هست (' + await fchips.count() + ')');
@@ -37,7 +40,7 @@ try {
   await page.locator('tbody tr', { hasText: 'سوتین دانتل مدل ۱' }).first().click(); await M.waitFor();
   ok((await M.locator('input.inp').first().inputValue()) === 'سوتین دانتل مدل ۱', 'در ویرایش، نام پایه نشان داده می‌شود نه نام کامل');
   await M.locator('.chip.optc', { hasText: 'سفید' }).first().click(); await M.locator('.sheet-f .btn.primary').click(); await sleep(1500);
-  const t2 = await D(); ok(t2.items.some(i => i.name === 'سوتین دانتل مدل ۱ · سفید · ۸۰' || i.name === 'سوتین دانتل مدل ۱ · سفید · ۸۵'), 'ویرایش رنگ: نام ترکیبی تازه ساخته شد');
+  const t2 = await D(); ok(t2.items.some(i => i.name === 'سوتین دانتل مدل ۱ · سفید · ۸۰B' || i.name === 'سوتین دانتل مدل ۱ · سفید · ۸۵B'), 'ویرایش رنگ: نام ترکیبی تازه ساخته شد');
   const errs = logs.filter(l => !/Failed to load resource|fonts|net::ERR/.test(l)); ok(errs.length === 0, 'بدون خطای کنسول' + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));
 } catch (e) { console.log('FAIL exception', e.message); fails++; }
 await browser.close(); srv.close();

@@ -4,6 +4,7 @@ import { S, rpc, bus, loadAll, customers, pref, setPref, businessAccounts, accBa
 import { willGoNegative } from './insights.js';
 import { jmonthKey, jmonthName } from './util.js';
 import { modal, field, chips, accountPicker, numField, intField, dateField, dueField, combo, run, confirmBox, promptBox, dl, pill, N } from './ui.js';
+import { KINDS, BANDS, CUPS, BRA_COMMON, ALPHA_START, SOCK, alphaList, kindOf, hintOf, bandHint, groupOf, SUMMARY, FREE_NOTE } from './sizes.js';
 
 const P = (text) => h('p', { class: 'hint' }, text);
 const accOf = name => S.accounts.find(a => a.name === name);
@@ -283,15 +284,15 @@ export function moveStockForm(lotId) {
 
 /* ----- کالا و تامین‌کننده ----- */
 /** انتخاب دسته با دکمه‌های آماده (شورت، سوتین، جوراب، …) و «＋ دسته‌ی جدید»؛ دسته‌ی تازه همراه ذخیره‌ی کالا ساخته می‌شود */
-export function categoryPicker(value) {
+export function categoryPicker(value, onChange) {
   let cur = value || ''; const extra = [];
   const wrap = h('div');
   const draw = () => {
     const names = [...new Set([...catNames(), ...extra, ...(cur ? [cur] : [])])];
-    const ch = chips(names.map(n => ({ v: n, label: n })), cur, v => { cur = v; }, { label: 'دسته‌ی کالا' });
+    const ch = chips(names.map(n => ({ v: n, label: n })), cur, v => { cur = v; onChange && onChange(v); }, { label: 'دسته‌ی کالا' });
     const add = h('button', { type: 'button', class: 'btn dashed', onclick: async () => {
       const nm = await promptBox('نام دسته‌ی جدید (مثلاً لباس خواب)'); if (!nm || !nm.trim()) return;
-      cur = nm.trim(); if (!names.includes(cur)) extra.push(cur); draw();
+      cur = nm.trim(); if (!names.includes(cur)) extra.push(cur); draw(); onChange && onChange(cur);
     } }, '＋ دسته‌ی جدید');
     wrap.replaceChildren(ch, add);
   };
@@ -315,11 +316,12 @@ export function categoriesForm() {
   const draw = () => {
     const rows = S.categories.slice().sort((a, b) => a.sort - b.sort || a.id - b.id);
     const used = c => S.items.filter(i => i.category === c.name).length;
-    const add = h('button', { type: 'button', class: 'btn primary', onclick: async () => { const nm = await promptBox('نام دسته‌ی جدید'); if (nm && nm.trim()) call({ name: nm.trim() }, 'دسته اضافه شد'); } }, '＋ دسته‌ی جدید');
+    const add = h('button', { type: 'button', class: 'btn primary', onclick: async () => { const nm = await promptBox('نام دسته‌ی جدید'); if (nm && nm.trim()) call({ name: nm.trim(), size_kind: kindOf(nm.trim()) }, 'دسته اضافه شد (نوع سایز را در همین لیست می‌توانی عوض کنی)'); } }, '＋ دسته‌ی جدید');
     host.replaceChildren(P('دسته‌بندی برای دیدن سود هر دسته در داشبورد و فیلتر کردن موجودی است. تغییر نام، دسته‌ی همه‌ی کالاهای آن را هم عوض می‌کند. دسته حذف نمی‌شود؛ فقط غیرفعال می‌شود.'),
-      ...(rows.length ? rows.map(c => h('div', { class: 'li' }, h('div', null, h('b', null, c.name, ' ', c.active ? null : pill('غیرفعال', 'gray')), h('small', null, `${used(c)} کالا`)),
+      ...(rows.length ? rows.map(c => h('div', { class: 'li' }, h('div', null, h('b', null, c.name, ' ', c.active ? null : pill('غیرفعال', 'gray')), h('small', null, `${used(c)} کالا`), h('div', { class: 'chips kindrow', role: 'radiogroup', 'aria-label': 'نوع سایزبندی ' + c.name }, ...Object.entries(KINDS).map(([k, kv]) => h('button', { type: 'button', class: 'chip optc' + (kindOf(c.name) === k ? ' on' : ''), role: 'radio', 'aria-checked': kindOf(c.name) === k ? 'true' : 'false', onclick: () => { if (kindOf(c.name) !== k) call({ id: c.id, size_kind: k }, 'نوع سایزبندی عوض شد'); } }, kv.short)))),
         h('div', { class: 'acts' }, h('button', { type: 'button', class: 'mini', onclick: async () => { const nm = await promptBox(`نام جدید برای «${c.name}»`); if (nm && nm.trim() && nm.trim() !== c.name) call({ id: c.id, name: nm.trim() }, 'نام دسته عوض شد'); } }, 'تغییر نام'),
-          h('button', { type: 'button', class: 'mini', onclick: () => call({ id: c.id, active: !c.active }, c.active ? 'غیرفعال شد' : 'فعال شد') }, c.active ? 'غیرفعال' : 'فعال')))) : [h('div', { class: 'empty sm' }, 'هنوز دسته‌ای نیست')]), add);
+          h('button', { type: 'button', class: 'mini', onclick: () => call({ id: c.id, active: !c.active }, c.active ? 'غیرفعال شد' : 'فعال شد') }, c.active ? 'غیرفعال' : 'فعال')))) : [h('div', { class: 'empty sm' }, 'هنوز دسته‌ای نیست')]), add,
+      h('section', { class: 'z2', style: { marginTop: '12px' } }, h('div', { class: 'zt' }, h('i', null, '؟'), h('span', null, 'جمع‌بندی سایز هر دسته'), h('small', null, 'راهنمای تقریبی؛ با جدول تامین‌کننده تطبیق بده')), h('div', { class: 'zx' }, ...SUMMARY.map(([a, b]) => h('div', { class: 'hint' }, h('b', null, a + ': '), b)), h('div', { class: 'hint' }, FREE_NOTE))));
   };
   draw(); modal({ title: 'دسته‌های کالا', body: host });
 }
@@ -329,13 +331,13 @@ const COLOR_HEX = { 'مشکی': '#111111', 'سفید': '#FFFFFF', 'کرم': '#F3
 const DEF_COLORS = ['مشکی', 'کرم', 'سفید', 'صورتی', 'زرشکی', 'بژ', 'طوسی', 'سرمه‌ای'];
 const DEF_SIZES = ['۷۰', '۷۵', '۸۰', '۸۵', '۹۰', 'S', 'M', 'L', 'XL', 'فری'];
 const faDigits = s => String(s).replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]).trim();
-function optionList(prefKey, defaults, field) {
-  const custom = pref(prefKey, []), fromItems = S.items.map(i => i[field]).filter(Boolean);
+function optionList(prefKey, defaults, field, strict) {
+  const custom = pref(prefKey, []), fromItems = strict ? [] : S.items.map(i => i[field]).filter(Boolean);
   return [...new Set([...defaults, ...custom, ...fromItems])];
 }
 /** چیپ‌های چندانتخابی/تک‌انتخابی با دکمه‌ی «＋ افزودن» */
-function optionPicker({ label, prefKey, defaults, field, multi, value, swatch, onChange }) {
-  const sel = new Set(value ? [].concat(value).filter(Boolean) : []); let opts = optionList(prefKey, defaults, field);
+function optionPicker({ label, prefKey, defaults, field, multi, value, swatch, strict, onChange }) {
+  const sel = new Set(value ? [].concat(value).filter(Boolean) : []); let opts = optionList(prefKey, defaults, field, strict);
   sel.forEach(v => { if (!opts.includes(v)) opts.push(v); });
   const wrap = h('div', { class: 'chips opt' });
   const draw = () => {
@@ -352,19 +354,63 @@ function optionPicker({ label, prefKey, defaults, field, multi, value, swatch, o
 }
 const zone2 = (n, title, sub, ...kids) => h('section', { class: 'z2' }, h('div', { class: 'zt' }, h('i', null, n), h('span', null, title), sub ? h('small', null, sub) : null), h('div', { class: 'zx' }, ...kids));
 
+
+/** سوتین: دور زیر سینه + کاپ، با جدول لمسی برای ترکیب‌هایی که واقعاً می‌خری. در ویرایش یک کالا فقط یک دور و یک کاپ */
+function braPicker({ single, value, onChange }) {
+  const v0 = String(value || ''), m0 = v0.match(/^([۰-۹]+)\s*([A-Za-z])$/);
+  const bands = new Set(m0 ? [m0[1]] : (single ? [] : BRA_COMMON.bands)), cups = new Set(m0 ? [m0[2].toUpperCase()] : (single ? [] : BRA_COMMON.cups)), off = new Set();
+  const wrap = h('div'), hint = h('div', { class: 'hint' });
+  const row = (lab, arr, set) => h('div', null, h('span', { class: 'lb' }, lab), h('div', { class: 'chips opt' }, ...arr.map(o => h('button', { type: 'button', class: 'chip optc' + (set.has(o) ? ' on' : ''), role: 'checkbox', 'aria-checked': set.has(o) ? 'true' : 'false',
+    onclick: () => { if (single) { const was = set.has(o); set.clear(); if (!was) set.add(o); } else { set.has(o) ? set.delete(o) : set.add(o); } draw(); onChange && onChange(); } }, o))));
+  const list = () => (single ? [...bands].flatMap(b => [...cups].map(c => b + c)) : BANDS.filter(b => bands.has(b)).flatMap(b => CUPS.filter(c => cups.has(c) && !off.has(b + c)).map(c => b + c)));
+  function draw() {
+    const bs = BANDS.filter(b => bands.has(b)), cs = CUPS.filter(c => cups.has(c));
+    const kids = [row('دور زیر سینه', BANDS, bands), row('کاپ', CUPS, cups)];
+    if (!single && bs.length && cs.length) {
+      kids.push(h('div', { class: 'hint' }, 'جدول را لمس کن؛ فقط ترکیب‌هایی که واقعاً می‌خری ✓ بماند (مثلاً ۷۵B).'),
+        h('table', { class: 'vmx' }, h('tr', null, h('th'), ...cs.map(c => h('th', null, c))), ...bs.map(b => h('tr', null, h('th', null, b), ...cs.map(c => { const o = off.has(b + c); return h('td', { class: o ? 'x' : '' }, h('button', { type: 'button', class: 'vb', 'aria-label': 'سایز ' + b + c, 'aria-pressed': o ? 'false' : 'true', onclick: () => { o ? off.delete(b + c) : off.add(b + c); draw(); onChange && onChange(); } }, o ? '—' : '✓')); })))),
+        h('button', { type: 'button', class: 'chip add', onclick: () => { bands.clear(); cups.clear(); off.clear(); BRA_COMMON.bands.forEach(x => bands.add(x)); BRA_COMMON.cups.forEach(x => cups.add(x)); draw(); onChange && onChange(); } }, 'فقط سایزهای رایج بازار (۷۰ تا ۸۵ × B و C)'));
+    }
+    hint.textContent = bs.length ? bs.map(b => `${b} ≈ ${bandHint(b)}`).slice(0, 4).join(' · ') + (bs.length > 4 ? ' …' : '') : '';
+    wrap.replaceChildren(...kids, hint);
+  }
+  draw();
+  return Object.assign(wrap, { values: list, first: () => list()[0] || '' });
+}
+/** انتخاب‌گر سایز بر اساس دسته: سوتین ← دور+کاپ، جوراب، فری، و حرفی (با راهنمای سانتی‌متر) */
+function sizePicker(catName, { multi, value, onChange }) {
+  const kind = kindOf(catName);
+  if (kind === 'bra') return braPicker({ single: !multi, value, onChange });
+  const defaults = kind === 'sock' ? SOCK : kind === 'free' ? ['فری'] : alphaList(catName);
+  const start = kind === 'sock' ? ['فری'] : kind === 'free' ? ['فری'] : ALPHA_START;
+  const box = h('div'), hint = h('div', { class: 'szhint' });
+  const pk = optionPicker({ label: 'سایز', prefKey: 'sizes_' + kind, defaults, field: 'size', multi, value: value ? [value] : (multi ? start : []), strict: true, onChange: () => { drawHints(); onChange && onChange(); } });
+  const drawHints = () => { hint.replaceChildren(...pk.values().map(v => hintOf(catName, v) ? h('div', null, h('b', null, v + ': '), hintOf(catName, v)) : null).filter(Boolean)); };
+  box.append(pk, hint); drawHints();
+  return Object.assign(box, { values: pk.values, first: pk.first });
+}
 export function itemForm(it) {
   if (it && !canEdit()) { toast("ویرایش فقط برای حمیدرضا و مهسا باز است", "err"); return; }
   const baseOf = x => (x.base_name || x.name);
   const name = h('input', { class: 'inp', value: it ? baseOf(it) : '', placeholder: 'مثلاً سوتین دانتل' });
   const desc = h('textarea', { class: 'inp ta', rows: 3, maxlength: 300, placeholder: 'مثلاً جنس، مدل، ویژگی‌ها؛ مشتری در فاکتور می‌بیند چه خریده (اختیاری)' }); desc.value = it && it.description || '';
-  const cat = categoryPicker(it && it.category || '');
+  const cat = categoryPicker(it && it.category || '', () => buildSizes());
   const min = intField({ value: it ? it.min_stock : 3, min: 0 });
   const act = chips([{ v: true, label: 'فعال' }, { v: false, label: 'غیرفعال' }], it ? it.active : true, () => {}, { cls: 'two' });
   const used = it && S.lines.some(l => l.item_id === it.id);
-  const matrix = h('div'), cntHint = h('div', { class: 'hint' });
+  const matrix = h('div', { class: 'vmxw' }), cntHint = h('div', { class: 'hint' });
   const skip = new Set();                                             // ترکیب‌هایی که نداریم: «رنگ|سایز»
   const colors = optionPicker({ label: 'رنگ', prefKey: 'colors', defaults: DEF_COLORS, field: 'color', multi: !it, value: it && it.color, swatch: true, onChange: () => draw() });
-  const sizes = optionPicker({ label: 'سایز', prefKey: 'sizes', defaults: DEF_SIZES, field: 'size', multi: !it, value: it && it.size, onChange: () => draw() });
+  let sizes = { values: () => [], first: () => '' };
+  const sizeHost = h('div'), sizeTitle = h('span', null, it ? 'سایز' : 'سایزها'), sizeSub = h('small', null, '');
+  function buildSizes() {
+    const c = cat.get();
+    if (!c) { sizes = { values: () => [], first: () => '' }; sizeHost.replaceChildren(h('div', { class: 'hint' }, 'اول دسته‌ی کالا را انتخاب کن؛ سایزها از روی دسته می‌آید (سوتین: دور + کاپ، شورت: حرفی، …).')); sizeTitle.textContent = it ? 'سایز' : 'سایزها'; sizeSub.textContent = ''; skip.clear(); draw(); return; }
+    const k = kindOf(c);
+    sizeTitle.textContent = (it ? 'سایز ' : 'سایزهای ') + c; sizeSub.textContent = KINDS[k] ? KINDS[k].label : '';
+    sizes = sizePicker(c, { multi: !it, value: it && it.category === c ? it.size : '', onChange: () => draw() });
+    sizeHost.replaceChildren(sizes); skip.clear(); draw();
+  }
   const combos = () => {
     const cs = colors.values(), ss = sizes.values(), out = [];
     for (const c of (cs.length ? cs : [''])) for (const s of (ss.length ? ss : [''])) { if ((c || s) && !skip.has(c + '|' + s)) out.push({ color: c, size: s }); }
@@ -396,11 +442,11 @@ export function itemForm(it) {
   const m = modal({ title: it ? 'ویرایش کالا' : 'کالای جدید', body: h('div', { class: 'form itemf' },
     zone2('۱', 'مشخصات کالا', null, field('نام کالا *', name, used && !canEdit() ? 'این کالا در خرید/فروش استفاده شده؛ نامش را فقط حمیدرضا و مهسا می‌توانند عوض کنند.' : (it ? 'نام نهایی = نام کالا · رنگ · سایز' : null)), field('دسته', cat)),
     zone2('۲', it ? 'رنگ' : 'رنگ‌ها', 'برای فیلتر و گزارش', colors),
-    zone2('۳', it ? 'سایز' : 'سایزها', it ? 'برای فیلتر و گزارش' : 'چند مورد را می‌توان زد', sizes, cntHint, matrix),
+    h('section', { class: 'z2' }, h('div', { class: 'zt' }, h('i', null, '۳'), sizeTitle, sizeSub), h('div', { class: 'zx' }, sizeHost, cntHint, matrix)),
     zone2('۴', 'توضیحات برای مشتری', 'اختیاری', desc, h('div', { class: 'hint' }, 'در فاکتور و پیام مشتری، توضیحات همراه رنگ و سایز دیده می‌شود: «سوتین دانتل · مشکی · ۸۰».')),
     zone2('۵', 'هشدار کم‌موجودی', null, field('هشدار از … عدد (برای هر ترکیب)', min)),
     it ? zone2('۶', 'وضعیت', null, act) : null), footer: [btn, ...(it ? [delBtn] : [])] });
-  draw();
+  buildSizes();
 }
 export function supplierForm(s) {
   if (s && !canEdit()) { toast("ویرایش فقط برای حمیدرضا و مهسا باز است", "err"); return; }
