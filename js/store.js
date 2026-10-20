@@ -18,16 +18,33 @@ export class ApiErr extends Error {
 export const errText = e => (e && e.display ? e.display() : (e && e.message) || 'خطا');
 export const authBus = { onLost: () => {} };
 
-export async function api(path, { method = 'GET', body, timeout = 60000, raw = false, headers: extra = {} } = {}) {
+/* سرور رایگان Render بعد از بی‌کاری می‌خوابد و اولین درخواست «ERR_CONNECTION_RESET» می‌گیرد. خواندن‌ها (GET) تا ~۱٫۵ دقیقه خودکار دوباره تلاش می‌شوند و نوار «در حال بیدار شدن» نشان داده می‌شود؛ ثبت‌ها از صف امن (outbox) می‌گذرند. */
+let wakeEl = null;
+function wakeBanner(on, sec = 0) {
+  try {
+    if (!on) { if (wakeEl) { wakeEl.remove(); wakeEl = null; } return; }
+    if (!wakeEl) { wakeEl = document.createElement('div'); wakeEl.setAttribute('role', 'status'); wakeEl.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#7a4b00;color:#fff;text-align:center;padding:8px 12px;font:600 14px system-ui,sans-serif'; document.body.appendChild(wakeEl); }
+    wakeEl.textContent = `سرور در حال بیدار شدن است… (${sec} ثانیه) خودش دوباره تلاش می‌کند، صفحه را نبند.`;
+  } catch { /* نمایش اختیاری است */ }
+}
+const sleepMs = ms => new Promise(r => setTimeout(r, ms));
+
+export async function api(path, { method = 'GET', body, timeout = 60000, raw = false, headers: extra = {}, retries = 9 } = {}) {
   if (!apiConfigured()) throw new ApiErr({ code: 'E_CONFIG', message: 'آدرس سرور (API_URL) در js/config.js تنظیم نشده.', where: 'client.config' });
-  const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), timeout);
   const headers = { 'Content-Type': 'application/json', ...extra }; const t = getToken(); if (t) headers.Authorization = 'Bearer ' + t;
-  let res;
-  try { res = await fetch(apiBase() + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal: ctl.signal }); }
-  catch (e) {
-    throw new ApiErr({ code: ctl.signal.aborted ? 'E_TIMEOUT' : 'E_NETWORK', where: 'client.fetch ' + path,
-      message: ctl.signal.aborted ? 'سرور دیر جواب داد (شاید در حال بیدار شدن است؛ ۱ دقیقه بعد دوباره امتحان کن).' : 'به سرور وصل نشد. اینترنت را چک کن؛ اگر درست است، سرور Render خواب است یا آدرس API_URL غلط است.' });
-  } finally { clearTimeout(tm); }
+  const retryable = method === 'GET'; const tries = retryable ? retries : 1; const t0 = Date.now();
+  let res, lastAborted = false;
+  for (let i = 0; i < tries; i++) {
+    const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), retryable ? Math.min(timeout, 25000) : timeout);
+    try { res = await fetch(apiBase() + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal: ctl.signal }); lastAborted = false; }
+    catch (e) { lastAborted = ctl.signal.aborted; res = null; }
+    finally { clearTimeout(tm); }
+    if (res && !(retryable && [502, 503, 504].includes(res.status))) break;
+    if (i < tries - 1) { wakeBanner(true, Math.round((Date.now() - t0) / 1000)); await sleepMs(4000); }
+  }
+  wakeBanner(false);
+  if (!res) throw new ApiErr({ code: lastAborted ? 'E_TIMEOUT' : 'E_NETWORK', where: 'client.fetch ' + path,
+    message: lastAborted ? 'سرور دیر جواب داد (شاید در حال بیدار شدن است؛ ۱ دقیقه بعد دوباره امتحان کن).' : 'به سرور وصل نشد. اینترنت را چک کن؛ اگر درست است، سرور Render خواب است یا آدرس API_URL غلط است.' });
   if (raw && res.ok) return res;
   let j = null; try { j = await res.json(); } catch {}
   if (!j) throw new ApiErr({ code: 'E_BAD_RESPONSE', status: res.status, where: 'client.parse ' + path, message: `پاسخ نامعتبر از سرور (HTTP ${res.status}). آدرس API_URL درست است؟ آدرس /api/health/ را در مرورگر باز کن.` });
@@ -55,8 +72,8 @@ export const S = {
   A: {}, I: {}, SUP: {}, LOT: {}, SALE: {}, INV: {}, CUS: {}
 };
 
-export async function loadAll() {
-  const r = await api('/api/data/');
+export async function loadAll({ retries = 9 } = {}) {
+  const r = await api('/api/data/', { retries });
   const t = r.data.tables;
   Object.assign(S, {
     accounts: t.accounts, items: t.items, suppliers: t.suppliers, customersT: t.customers, invoices: t.purchase_invoices, lines: t.purchase_lines, payments: t.supplier_payments,

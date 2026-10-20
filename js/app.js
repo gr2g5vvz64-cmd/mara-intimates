@@ -122,7 +122,7 @@ let staleErr = null, staleTimer = null, staleN = 0;
 async function refresh() {
   document.body.classList.add('busy');
   try {
-    await loadAll(); route(); loadDiagCount();
+    await loadAll({ retries: 1 }); route(); loadDiagCount();
     if (staleErr) { staleErr = null; staleN = 0; clearTimeout(staleTimer); toast('اطلاعات دوباره از سرور رسید ✔'); renderBar(); }
   } catch (e) {
     staleErr = e; renderBar(); clearTimeout(staleTimer);
@@ -258,6 +258,11 @@ async function start() {
     showMsg('خطا در اتصال', errText(e), h('button', { class: 'btn primary', onclick: () => location.reload() }, 'تلاش دوباره'));
   }
 }
+/* تا برنامه باز است سرور را بیدار نگه می‌داریم و وقتی برگشتی به برنامه، فوراً بیدارش می‌کنیم */
+const ping = () => { try { fetch(apiBase() + '/api/ping/', { mode: 'no-cors', cache: 'no-store', keepalive: true }).catch(() => {}); } catch { /* بی‌اثر */ } };
+setInterval(() => { if (!document.hidden) ping(); }, 4 * 60 * 1000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) ping(); });
+ping();
 authBus.onLost = () => { if (S.loaded) { S.loaded = false; setToken(null); showLogin('نشست تمام شده؛ دوباره وارد شو.'); } };
 
 async function boot() {
