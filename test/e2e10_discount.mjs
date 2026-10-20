@@ -32,7 +32,7 @@ try {
   await F('تخفیف خرید').locator('input').fill('200000'); await sleep(250);
   const sumTxt = (await M.locator('.sm2').first().innerText()).replace(/\s+/g, ' '); console.log('   ', sumTxt);
   ok(/تخفیف/.test(sumTxt) && fa(sumTxt).includes('800000'), 'خلاصه‌ی فاکتور: جمع پس از تخفیف ۸۰۰٬۰۰۰');
-  ok(fa(await M.locator('.pgrid .irow').first().innerText()).includes('80000'), 'قیمت تمام‌شده‌ی هر عدد پس از تخفیف ۸۰٬۰۰۰');
+  ok(fa(await M.locator('.pgr2 .irow').first().innerText()).includes('80000'), 'قیمت تمام‌شده‌ی هر عدد پس از تخفیف ۸۰٬۰۰۰');
   await M.locator('.lcard', { hasText: 'پرداخت 1' }).locator('button.chip', { hasText: 'حساب مهسا' }).click(); await sleep(150);
   await M.locator('button', { hasText: 'ثبت فاکتور' }).click(); await sleep(2000);
   const t1 = await D(); const inv = t1.purchase_invoices.filter(i => i.supplier_id).sort((a, b) => b.id - a.id)[0];

@@ -17,8 +17,8 @@ try {
   ok(await M.locator('.dpanel').count() === 1 && await M.locator('.sm2 .b').count() === 6, 'پنل کناری و نوار شش‌گانه هست');
   await M.locator('.cmb input').first().fill('بازار تهران'); await M.locator('.cmb-o', { hasText: 'بازار تهران' }).first().click(); await sleep(200);
   await add('سوتین', 12, 900000); await add('جوراب', 30, 60000);
-  ok(await M.locator('.pgrid .irow').count() === 2, 'دو ردیف در فاکتور');
-  const r1 = M.locator('.pgrid .irow').first();
+  ok(await M.locator('.pgr2 .irow').count() === 2, 'دو ردیف در فاکتور');
+  const r1 = M.locator('.pgr2 .irow').first();
   ok(await r1.locator('input.qi').nth(1).inputValue() === '6' && await r1.locator('input.qi').nth(2).inputValue() === '6', 'تحویل پیش‌فرض نصف‌نصف');
   await r1.locator('input.qi').nth(1).fill('12'); await sleep(150);
   ok(await r1.locator('input.qi').nth(2).inputValue() === '0', 'با ۱۲ برای مهسا، رعنا خودکار ۰ شد');
@@ -43,7 +43,7 @@ try {
   // ویرایش
   await go('#/purchases'); await page.locator('tbody tr', { hasText: inv.no }).first().click(); await sleep(400);
   await M.locator('button', { hasText: 'ویرایش' }).first().click(); await sleep(900);
-  ok(await M.locator('.pgrid .irow').count() === 2 && fa(await M.locator('.sm2').innerText()).includes('4400000'), 'ویرایش: ردیف‌ها و بدهی پیش‌پر شد');
+  ok(await M.locator('.pgr2 .irow').count() === 2 && fa(await M.locator('.sm2').innerText()).includes('4400000'), 'ویرایش: ردیف‌ها و بدهی پیش‌پر شد');
   await page.keyboard.press('Escape'); await sleep(300);
   const errs = logs.filter(l => !/Failed to load resource|fonts|net::ERR/.test(l)); ok(errs.length === 0, 'بدون خطای کنسول' + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));
 } catch (e) { console.log('FAIL exception', e.message); fails++; }

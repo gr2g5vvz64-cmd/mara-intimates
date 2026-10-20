@@ -43,7 +43,7 @@ export function saleForm(preset = {}) {
   const warn = h('div', { class: 'warnbox', hidden: true });
   const discount = numField({ onInput: () => recalc() });
   const stat = { gross: h('b', { class: 'n' }, '0'), disc: h('b', { class: 'n' }, '0'), total: h('b', { class: 'n' }, '0'), recv: h('b', { class: 'n' }, '0'), left: h('b', { class: 'n' }, '0'), profit: h('b', { class: 'n' }, '0') };
-  const stripBox = (lab, el) => h('div', { class: 'b' }, h('small', null, lab), el);
+  const stripBox = (lab, el, key) => h('div', { class: 'b' + (key ? ' key' : '') }, h('small', null, lab), el);
 
   /* ---- ۱ · سربرگ ---- */
   const sellerChips = chips([{ v: 'مهسا', label: 'مهسا' }, { v: 'رعنا', label: 'رعنا' }], seller, v => { seller = v; rows.forEach(r => { r.manual = false; }); defaultAccounts(); drawHolder(); recalc(); }, { cls: 'two', label: 'فروشنده' });
@@ -51,7 +51,7 @@ export function saleForm(preset = {}) {
   const channel = chips(CHANNELS.map(c => ({ v: c, label: c })), edit ? edit.channel : pref('channel', CHANNELS[0]), () => {}, { label: 'کانال فروش' });
   const custOpts = () => customers().map(c => { const b = S.vCus.find(x => x.id === c.id); return { v: c.id, label: c.name, sub: (c.phone || '') + (b && b.outstanding > 0 ? ' · بدهکار ' + fmt(b.outstanding) : '') }; });
   const customer = combo({
-    placeholder: 'نام خریدار را تایپ کن یا انتخاب کن (الزامی)', createLabel: 'مشتری جدید', options: custOpts(),
+    placeholder: 'نام خریدار (الزامی)', createLabel: 'مشتری جدید', options: custOpts(),
     onCreate: async name => { try { const r = await rpc('save_customer', { name }, { queue: false }); await loadAll(); customer.setOptions(custOpts()); customer.set(r.id); toast('مشتری اضافه شد'); recalc(); return r.id; } catch (e) { toast(errText(e), 'err'); return null; } },
     onChange: () => recalc()
   });
@@ -309,7 +309,7 @@ export function saleForm(preset = {}) {
   const m = modal({
     title: edit ? `ویرایش فروش ${edit.no}` : 'فروش جدید', wide: true, onClose: () => undo.forEach(f => f()),
     body: h('div', { class: 'form sale2' }, h('div', { class: 'a-hdr' }, hdrZone), h('div', { class: 'a-pan' }, panZone), h('div', { class: 'a-itm' }, itemsZone), h('div', { class: 'a-pay' }, payZone)),
-    footer: [h('div', { class: 'sm2' }, stripBox('جمع ردیف‌ها', stat.gross), stripBox('تخفیف', stat.disc), stripBox('مبلغ قابل پرداخت', stat.total), stripBox('دریافتی', stat.recv), stripBox('مانده‌ی فاکتور', stat.left), stripBox('سود ناخالص (برآورد)', stat.profit)), submit]
+    footer: [h('div', { class: 'sm2' }, stripBox('جمع ردیف‌ها', stat.gross), stripBox('تخفیف', stat.disc), stripBox('مبلغ قابل پرداخت', stat.total, 1), stripBox('دریافتی', stat.recv), stripBox('مانده‌ی فاکتور', stat.left, 1), stripBox('سود ناخالص (برآورد)', stat.profit)), submit]
   });
   const sh = m.el.querySelector && m.el.querySelector('.sheet'); if (sh) sh.classList.add('xwide');
   defaultAccounts(); drawFilters(); drawList(); recalc();
@@ -336,14 +336,14 @@ export function purchaseForm(preset = {}) {
   let date = edit ? edit.date : todayISO();
   const rows = [], pays = [];
   const stat = { goods: h('b', { class: 'n' }, '0'), disc: h('b', { class: 'n' }, '0'), ship: h('b', { class: 'n' }, '0'), landed: h('b', { class: 'n' }, '0'), paid: h('b', { class: 'n' }, '0'), debt: h('b', { class: 'n' }, '0') };
-  const stripBox = (lab, el) => h('div', { class: 'b' }, h('small', null, lab), el);
+  const stripBox = (lab, el, key) => h('div', { class: 'b' + (key ? ' key' : '') }, h('small', null, lab), el);
   const warn = h('div', { class: 'warnbox', hidden: true });
 
   /* ---- ۱ · سربرگ ---- */
   const dateCtl = dateField(date, v => { date = v; due.refresh(); });
   const supOpts = () => S.suppliers.filter(s => s.active).map(s => ({ v: s.id, label: s.name, sub: s.phone || '' }));
   const supplier = combo({
-    placeholder: 'نام تامین‌کننده را تایپ کن یا انتخاب کن (الزامی)', createLabel: 'تامین‌کننده‌ی جدید', options: supOpts(), onChange: () => recalc(),
+    placeholder: 'نام تامین‌کننده (الزامی)', createLabel: 'تامین‌کننده‌ی جدید', options: supOpts(), onChange: () => recalc(),
     onCreate: async name => { try { const r = await rpc('save_supplier', { name }, { queue: false }); await loadAll(); supplier.setOptions(supOpts()); supplier.set(r.id); toast('تامین‌کننده اضافه شد'); recalc(); return r.id; } catch (e) { toast(errText(e), 'err'); return null; } }
   });
   const supInfo = h('div', { class: 'inp ro bal' }, '—');
@@ -381,7 +381,7 @@ export function purchaseForm(preset = {}) {
   }
 
   /* ---------------- ۲ · اقلام فاکتور ---------------- */
-  const gridBox = h('div', { class: 'igrid pgrid' });
+  const gridBox = h('div', { class: 'igrid pgr2' });
   const emptyRow = h('div', { class: 'inew' }, 'ردیف بعدی با «افزودن به فاکتور» از پنل کنار پر می‌شود… (تمام‌شده = قیمت + سهم حمل − سهم تخفیف)');
   const countEl = h('small', null, '');
   function mkRow(r) {
@@ -564,7 +564,7 @@ export function purchaseForm(preset = {}) {
   const m = modal({
     title: edit ? `ویرایش فاکتور ${edit.no}` : 'خرید جدید', wide: true,
     body: h('div', { class: 'form sale2' }, h('div', { class: 'a-hdr' }, hdrZone), h('div', { class: 'a-pan' }, panZone), h('div', { class: 'a-itm' }, itemsZone), h('div', { class: 'a-pay' }, payZone)),
-    footer: [h('div', { class: 'sm2' }, stripBox('جمع کالا', stat.goods), stripBox('تخفیف', stat.disc), stripBox('هزینه‌ی حمل', stat.ship), stripBox('قیمت تمام‌شده‌ی فاکتور', stat.landed), stripBox('پرداخت‌شده', stat.paid), stripBox('بدهی به تامین‌کننده', stat.debt)), submit]
+    footer: [h('div', { class: 'sm2' }, stripBox('جمع کالا', stat.goods), stripBox('تخفیف', stat.disc), stripBox('هزینه‌ی حمل', stat.ship), stripBox('قیمت تمام‌شده‌ی فاکتور', stat.landed, 1), stripBox('پرداخت‌شده', stat.paid), stripBox('بدهی به تامین‌کننده', stat.debt, 1)), submit]
   });
   const sh0 = m.el.querySelector && m.el.querySelector('.sheet'); if (sh0) sh0.classList.add('xwide');
   drawFilters(); drawList();
