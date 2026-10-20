@@ -50,7 +50,7 @@ export async function reportError(code, message, where, detail = '') {
 export const S = {
   me: null, loaded: false, bots: {},
   accounts: [], items: [], suppliers: [], customersT: [], invoices: [], lines: [], payments: [], sales: [], saleLines: [],
-  collections: [], returns: [], expenses: [], transfers: [], moves: [], goals: [], dayCloses: [], categories: [], settings: [], diagErrors: null,
+  collections: [], returns: [], expenses: [], transfers: [], moves: [], stocktakes: [], stocktakeLines: [], goals: [], dayCloses: [], categories: [], settings: [], diagErrors: null,
   lots: [], stock: [], vInvoices: [], vSup: [], vCus: [], due: [], bal: [], vSales: [], totals: {},
   A: {}, I: {}, SUP: {}, LOT: {}, SALE: {}, INV: {}, CUS: {}
 };
@@ -60,7 +60,7 @@ export async function loadAll() {
   const t = r.data.tables;
   Object.assign(S, {
     accounts: t.accounts, items: t.items, suppliers: t.suppliers, customersT: t.customers, invoices: t.purchase_invoices, lines: t.purchase_lines, payments: t.supplier_payments,
-    saleLines: t.sale_lines, collections: t.collections, returns: t.returns, expenses: t.expenses, transfers: t.transfers, moves: t.stock_moves,
+    saleLines: t.sale_lines, collections: t.collections, returns: t.returns, expenses: t.expenses, transfers: t.transfers, moves: t.stock_moves, stocktakes: t.stocktakes || [], stocktakeLines: t.stocktake_lines || [],
     lots: t.v_lots, stock: t.v_stock, vInvoices: t.v_invoices, vSup: t.v_supplier_balance, vCus: t.v_customer_balance, due: t.v_due, bal: t.v_account_balance,
     vSales: t.v_sales, goals: t.goals || [], dayCloses: t.day_closes || [], periodLocks: t.period_locks || [], categories: t.categories || [], settings: t.app_settings || [], totals: t.v_totals || {}, me: r.data.user, bots: r.data.bots || {}
   });

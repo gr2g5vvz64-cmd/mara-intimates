@@ -6,7 +6,7 @@ import { supplierPaymentForm, expenseForm, collectionForm, transferForm, returnF
 import { head, btn, searchBox, match, sortNew, detail, stamp, accName, rowCls } from './common.js';
 
 function entryDetail(kind, title, rows, row) {
-  const m = detail({ title, rows: [...rows, ['ثبت‌کننده', stamp(row)], row.voided ? ['باطل‌شده', row.void_reason || ''] : null], actions: row.voided || !canEdit() ? [] : [btn('ویرایش', () => { m.close(); if (kind === 'return') (row.kind === 'customer' ? returnForm(S.saleLines.find(l => l.id === row.sale_line_id).sale_id, row) : supplierReturnForm(row)); else editEntryForm(kind, row); }, 'ghost'), btn('ابطال', async () => { if (await voidEntry(kind, row, title)) m.close(); }, 'danger ghost')] });
+  const m = detail({ title, rows: [...rows, ['ثبت‌کننده', stamp(row)], row.voided ? ['باطل‌شده', row.void_reason || ''] : null], actions: row.voided || row.stocktake_id || !canEdit() ? [] : [btn('ویرایش', () => { m.close(); if (kind === 'return') (row.kind === 'customer' ? returnForm(S.saleLines.find(l => l.id === row.sale_line_id).sale_id, row) : supplierReturnForm(row)); else editEntryForm(kind, row); }, 'ghost'), btn('ابطال', async () => { if (await voidEntry(kind, row, title)) m.close(); }, 'danger ghost')] });
 }
 
 export function render(query, defTab = 'sup') {
