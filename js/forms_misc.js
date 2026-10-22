@@ -104,7 +104,8 @@ export function expenseForm() {
 /* ----- انتقال بین حساب‌ها / سرمایه / برداشت سود ----- */
 export function transferForm(preset = {}) {
   let date = todayISO(), kind = preset.kind || 'transfer';
-  const kindChips = chips([{ v: 'transfer', label: 'انتقال / سرمایه' }, { v: 'profit_payout', label: 'برداشت سود' }], kind, v => { kind = v; hintK(); }, { cls: 'two' });
+  const adm = !!(S.me && S.me.role === 'admin'); if (!adm) kind = 'transfer';   // برداشت سود و سرمایه فقط مدیر
+  const kindChips = adm ? chips([{ v: 'transfer', label: 'انتقال / سرمایه' }, { v: 'profit_payout', label: 'برداشت سود' }], kind, v => { kind = v; hintK(); }, { cls: 'two' }) : h('div', { class: 'hint' }, 'برداشت سود و سرمایه فقط توسط حمیدرضا انجام می‌شود.');
   const from = accountPicker(S.accounts, preset.from || null, () => {}, { pockets: true, balances: accBalance });
   const to = accountPicker(S.accounts, preset.to || null, () => {}, { pockets: true, balances: accBalance });
   const amt = numField({ value: preset.amount || '' });

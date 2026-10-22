@@ -55,11 +55,11 @@ const GROUPS = [
   { id: 'dash', t: 'داشبورد', i: '▦', kids: ['', 'analysis', 'pnl', 'calc'] },
   { id: 'sales', t: 'فروش', i: '🛍', kids: ['sales', 'customers', 'returns'] },
   { id: 'buy', t: 'خرید', i: '📦', kids: ['purchases', 'suppliers', 'sreturns'] },
-  { id: 'wh', t: 'انبار', i: '▤', kids: ['stock', 'stocktake', 'monthcount', 'items'] },
+  { id: 'wh', t: 'انبار', i: '▤', kids: ['stock', 'monthcount', 'items'] },
   { id: 'money', t: 'مالی', i: '◎', kids: ['finance', 'pay', 'invoices', 'settle'] },
   { id: 'set', t: 'تنظیمات', i: '⚙', kids: ['settings', 'history', 'help', 'savelog', 'diag'] }
 ];
-const NAVLBL = { sales: 'فاکتور فروش', purchases: 'فاکتور خرید', finance: 'خلاصه‌ی مالی', pay: 'پرداخت و هزینه', calc: 'محاسبات درصد', pnl: 'سود و زیان ماهانه', meeting: 'گزارش جلسه‌ی دو هفته‌ای', settle: 'حساب‌وکتاب ماهانه' };
+const NAVLBL = { monthcount: 'انبارگردانی', sales: 'فاکتور فروش', purchases: 'فاکتور خرید', finance: 'خلاصه‌ی مالی', pay: 'پرداخت و هزینه', calc: 'محاسبات درصد', pnl: 'سود و زیان ماهانه', meeting: 'گزارش جلسه‌ی دو هفته‌ای', settle: 'حساب‌وکتاب ماهانه' };
 const BLBL = { '': 'خانه', sales: 'فروش', purchases: 'خرید', stock: 'موجودی', finance: 'مالی' };
 const navLabel = (k, cls) => (cls === 'bl' && BLBL[k]) || (k === '' && isAdmin() ? 'داشبورد مدیریت' : NAVLBL[k] || ROUTES[k].t);
 const isAdmin = () => !!(S.me && S.me.role === 'admin');
@@ -87,10 +87,11 @@ function route() {
   if (path === 'settle' && (!S.me || S.me.role === 'viewer')) { path = ''; history.replaceState(null, '', '#/'); }
   const r = ROUTES[path] || ROUTES[''];
   const key = ROUTES[path] ? path : '';
+  const nk = key === 'stocktake' ? 'monthcount' : key;   // «گزارش انبارگردانی» زیر همان آیتم «انبارگردانی» منو است
   document.title = `${r.t} · MARA INTIMATES`;
-  navEls.forEach(a => a.classList.toggle('on', a.dataset.r === key));
-  navEls.forEach(a => (a.dataset.r === key ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
-  const gid = groupOf(key); if (gid) setGroup(gid, true, false); grpEls.forEach(x => x.btn.classList.toggle('hon', x.g.id === gid));
+  navEls.forEach(a => a.classList.toggle('on', a.dataset.r === nk));
+  navEls.forEach(a => (a.dataset.r === nk ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
+  const gid = groupOf(nk); if (gid) setGroup(gid, true, false); grpEls.forEach(x => x.btn.classList.toggle('hon', x.g.id === gid));
   try { view.replaceChildren(r.f(q)); } catch (e) { console.error(e); reportError('E_UI_RENDER', e.message, 'ui.page.' + key, e.stack); view.replaceChildren(h('div', { class: 'card' }, h('h2', null, 'خطا در نمایش صفحه'), h('p', null, e.message), h('p', { class: 'hint' }, `کد: E_UI_RENDER · صفحه: ${key || 'خانه'} (به‌صورت خودکار برای مدیر ثبت شد)`))); }
   window.scrollTo(0, 0); paintCounts();
 }
@@ -101,7 +102,7 @@ function paintCounts() {
   let c; try { c = navCounts(); } catch (e) { console.error(e); reportError('E_UI_COUNT', e.message, 'ui.counts', e.stack); return; }
   navEls.forEach(a => {
     const k = a.dataset.r, o = c[k], b = a.querySelector('.cnt'); if (!b || !o) { if (b) b.hidden = true; return; }
-    if (!o.q && o.tone !== 'red' && o.tone !== 'amber') { b.hidden = true; return; } // فقط کار باز شمارنده دارد
+    if (!o.q && !(o.show && o.n > 0) && o.tone !== 'red' && o.tone !== 'amber') { b.hidden = true; return; } // فقط کار باز شمارنده دارد
     b.hidden = false; b.className = 'cnt ' + o.tone; b.textContent = o.q ? '؟' : fmt(o.n);
     b.setAttribute('aria-label', `${o.q ? 'نامشخص' : fmt(o.n)} ${TONE_FA[o.tone]}`);
   });

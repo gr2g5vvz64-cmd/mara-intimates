@@ -25,7 +25,7 @@ export function items() {
   const draw = () => {
     catHost.replaceChildren(catFilter(cat, v => { cat = v; draw(); }, S.stock.filter(i => showOff || i.active)));
     varHost.replaceChildren(varFilter(vst, draw, S.stock.filter(i => showOff || i.active)));
-    const rows = S.stock.filter(i => (showOff || i.active) && inCat(cat, i) && inVar(vst, i) && match(q, i.code, i.name, i.category, i.color, i.size)).sort((a, b) => a.name.localeCompare(b.name, 'fa'));
+    const rows = S.stock.filter(i => (showOff || i.active) && inCat(cat, i) && inVar(vst, i) && match(q, i.code, i.name, i.category, i.color, i.size)).sort((a, b) => String(a.code || '').localeCompare(String(b.code || '')) || a.id - b.id);   // به ترتیب کد کالا (۰۰۰۱ تا آخر)
     tbl.replaceChildren(dtable([
       { label: 'کد', hm: false, render: i => h('b', { dir: 'ltr', class: 'icode' }, i.code || '') }, { label: 'کالا', main: true, render: i => h('span', null, i.name, ' ', i.active ? null : pill('غیرفعال', 'gray'), i.description ? h('small', { class: 'idesc-s' }, i.description) : null) }, { label: 'دسته', render: i => i.category || '' }, { label: 'موجودی', cls: 'num', render: i => i.rem },
       { label: 'هشدار از', cls: 'num', hm: true, render: i => i.min_stock }, { label: 'آخرین تمام‌شده', cls: 'num', hm: true, render: i => (i.last_cost ? N(i.last_cost) : '') }, { label: 'آخرین فی فروش', cls: 'num', hm: true, render: i => (i.last_price ? N(i.last_price) : '') }

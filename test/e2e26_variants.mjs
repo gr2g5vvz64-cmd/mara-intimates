@@ -31,9 +31,10 @@ try {
   ok(new Set(made.map(i => i.code)).size === 3 && made.every(i => /^MR-\d{4}$/.test(i.code || '')), 'هر ترکیب کد یکتا گرفت: ' + made.map(i => i.code).join(','));
   ok(made.every(i => i.description === 'دانتل فرانسوی، قاب‌دار' && i.category === 'سوتین'), 'توضیحات و دسته روی همه‌ی ترکیب‌ها هست');
   ok(!made.some(i => i.color === 'کرم' && i.size === '۸۵B') && made.some(i => i.color === 'مشکی' && i.size === '۸۵B'), 'ترکیب حذف‌شده ساخته نشد');
-  await go('#/stock'); await sleep(500); { const body = await page.locator('body').innerText(); ok(made.every(i => body.includes(i.code)), 'جدول موجودی همه‌ی کدهای ساخته‌شده (حتی بدون گردش) را با کد نشان می‌دهد'); ok(body.includes('همه‌ی کدهای ساخته‌شده'), 'شمارنده‌ی کل کدها دیده می‌شود'); }
+  await go('#/stock'); await sleep(500); { const body = await page.locator('body').innerText(); ok(!made.some(i => body.includes(i.code)), 'صفحه‌ی موجودی فقط کالاهای دارای موجودی را نشان می‌دهد (کدهای بدون موجودی نیامد)'); ok(body.includes('کالا موجود است'), 'شمارنده‌ی کالاهای موجود دیده می‌شود'); }
   // لیست کالا: فیلتر رنگ و سایز
   await go('#/items'); await sleep(400);
+  { const codes = (await page.locator('tbody tr b.icode').allInnerTexts()); ok(codes.length > 3 && codes.every((c, i) => i === 0 || codes[i - 1] <= c), 'کالاها به ترتیب کد مرتب‌اند: ' + codes.slice(0, 5).join(',')); }
   const fchips = page.locator('.vf .fchip'); ok(await fchips.count() >= 3, 'فیلتر رنگ و سایز در لیست کالا هست (' + await fchips.count() + ')');
   { const body = await page.locator('tbody').innerText(); ok(made.every(i => body.includes(i.code)), 'کد کالا در لیست کالاها دیده می‌شود'); }
   await page.locator('input[type=search], .bar input').first().fill(made[0].code); await sleep(350);

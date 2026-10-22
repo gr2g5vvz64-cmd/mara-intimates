@@ -4,6 +4,7 @@ import { S, rpc, bus, simulateFifo, canEdit, errText } from '../store.js';
 import { N, pill, chips, dateField, field, modal, run, kpi, dtable, confirmBox, promptBox } from '../ui.js';
 import { head, btn, searchBox, match, sortNew, stamp, detail, rowCls } from './common.js';
 import { voidEntry } from '../forms_misc.js';
+import { invTabs } from './invtabs.js';
 
 export const REASONS = ['گم‌شده', 'خراب', 'خطای ثبت', 'نمونه/هدیه', 'برگشتی'];
 const isAdmin = () => !!(S.me && S.me.role === 'admin');
@@ -28,7 +29,8 @@ export function render() {
   let mode = 'list';
   const show = () => {
     root.replaceChildren(
-      head('انبارگردانی', isViewer() ? [] : [btn('＋ شروع شمارش', () => { mode = 'count'; show(); })],
+      invTabs('stocktake'),
+      head('گزارش انبارگردانی', isViewer() ? [] : [btn('＋ شروع شمارش', () => { mode = 'count'; show(); })],
         'جنس واقعی هر نفر را بشمار و با سیستم بسنج. کسری از قدیمی‌ترین دسته (FIFO) کم می‌شود و در سود می‌آید؛ هیچ‌چیز پاک نمی‌شود و هر انبارگردانی قابل ابطال است.'),
       mode === 'count' ? countForm(() => { mode = 'list'; show(); }) : list(() => show()));
   };

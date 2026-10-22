@@ -54,9 +54,9 @@ export function dueChart() {
   });
   svg.append(sv('line', { x1: 6, x2: W - 6, y1: H - pb, y2: H - pb, stroke: tok('--line') }));
   const totP = sum(b, x => x.payable), totR = sum(b, x => x.receivable);
-  return h('div', { class: 'card' }, h('div', { class: 'ct' }, 'سررسیدهای ۳۰ روز آینده'),
+  return h('div', { class: 'card' }, h('div', { class: 'ct' }, 'سررسیدهای ۳۰ روز آینده', tip('ستون «گذشته» یعنی سررسیدهای گذشته که هنوز تسویه نشده‌اند.')),
     h('div', { class: 'legend' }, h('i', { class: 'sw red' }), `بدهی ما: ${fmt(totP)}`, h('i', { class: 'sw green' }), `طلب ما: ${fmt(totR)} ریال`), svg,
-    h('p', { class: 'hint' }, 'ستون «گذشته» یعنی سررسیدهای گذشته که هنوز تسویه نشده‌اند.'));
+    null);
 }
 export function topCustomersCard() {
   const rows = topCustomers(5);
@@ -69,6 +69,8 @@ function goalRow(who) {
     g.goal ? h('div', { class: 'gbar', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.min(100, g.pct), 'aria-label': `پیشرفت هدف ${who}` }, h('i', { class: g.pct >= 100 ? 'done' : '', style: { width: Math.min(100, g.pct) + '%' } })) : null,
     g.goal ? h('div', { class: 'gsub' }, g.pct >= 100 ? '🎉 به هدف رسید' : `${fmt(Math.max(0, g.goal - g.done))} ریال تا هدف مانده`, g.pace.label ? ` · ${g.pace.label} (${fmt(g.pct)}٪ هدف در ${fmt(g.elapsed)}٪ ماه)` : '') : null);
 }
+/* راهنما/فرمول پشت آیکون «؟»؛ با لمس یا نگه‌داشتن موس دیده می‌شود */
+export const tip = text => { const b = h('button', { type: 'button', class: 'qtip', 'aria-label': 'راهنما', title: text }, '؟'); const box = h('span', { class: 'qtip-box', hidden: true }, text); b.onclick = e => { e.stopPropagation(); box.hidden = !box.hidden; }; return h('span', { class: 'qtipw' }, b, box); };
 export function goalsCard(only) {
   const mk = jmonthKey(todayISO());
   return h('div', { class: 'card' }, h('div', { class: 'ct' }, `هدف فروش به آشنایان ${jmonthName(mk)}`, h('button', { type: 'button', class: 'mini', onclick: () => goalForm() }, 'تعیین هدف')),
@@ -78,8 +80,7 @@ export function goalsCard(only) {
 export function reorderCard() {
   const rows = reorderSuggestions();
   if (!rows.length) return null;
-  return h('div', { class: 'card reorder' }, h('div', { class: 'ct' }, 'پیشنهاد خرید مجدد ', h('button', { type: 'button', class: 'mini', onclick: () => purchaseForm() }, 'خرید جدید')),
-    h('p', { class: 'hint' }, 'فقط کالاهای واقعاً پرفروش (حداقل ۴ عدد، ۳ روز مختلف، ۲ مشتری در ۳۰ روز) که موجودی‌شان رو به اتمام است. فروش یک‌دو عددی پیشنهاد خرید نمی‌شود.'),
+  return h('div', { class: 'card reorder' }, h('div', { class: 'ct' }, 'پیشنهاد خرید مجدد ', tip('فقط کالاهای واقعاً پرفروش (حداقل ۴ عدد، ۳ روز مختلف، ۲ مشتری در ۳۰ روز) که موجودی‌شان رو به اتمام است. فروش یک‌دو عددی پیشنهاد خرید نمی‌شود.'), h('button', { type: 'button', class: 'mini', onclick: () => purchaseForm() }, 'خرید جدید')),
     rows.slice(0, 6).map(r => h('div', { class: 'li' }, h('div', null, h('b', null, r.item.name), h('small', null, `موجودی ${fmt(r.rem)} · فروش ۳۰ روز ${fmt(r.sold30)}${r.days != null ? ' · کفاف ' + fmt(r.days) + ' روز' : ''}`)), h('span', { class: 'pill amber' }, 'بخر ' + fmt(r.buy)))));
 }
 
@@ -89,14 +90,14 @@ export function categoryProfitCard() {
   const host = h('div', { class: 'card' });
   const draw = () => {
     const rows = categoryStats(catRange).filter(r => r.revenue || r.profit || r.qty), best = rows[0];
-    host.replaceChildren(h('div', { class: 'ct' }, 'سود به تفکیک دسته‌ی کالا ', h('a', { href: '#/items', class: 'more' }, 'دسته‌ها ←')),
+    host.replaceChildren(h('div', { class: 'ct' }, 'سود به تفکیک دسته‌ی کالا ', tip('درصد سود = سود ÷ فروش همان دسته (بعد از کم کردن مرجوعی‌ها).'),  h('a', { href: '#/items', class: 'more' }, 'دسته‌ها ←')),
       chips([{ v: 'month', label: 'این ماه' }, { v: '30', label: '۳۰ روز اخیر' }, { v: 'all', label: 'کل' }], catRange, v => { catRange = v; draw(); }, { label: 'بازه' }),
       ...(rows.length ? [h('p', { class: 'hint' }, best && best.profit > 0 ? `بهترین دسته در این بازه: «${best.cat}» با ${fmt(best.profit)} ریال سود.` : 'هنوز فروشی در این بازه نیست.'),
         hbars('سود هر دسته (ریال)', rows.map(r => ({ l: r.cat, v: r.profit })), 'var(--green)'),
         h('div', { class: 'tw sm' }, h('table', { class: 't' }, h('thead', null, h('tr', null, ['دسته', 'فروش', 'سود', 'درصد سود', 'تعداد'].map(x => h('th', null, x)))),
           h('tbody', null, rows.map(r => h('tr', null, h('td', { 'data-l': 'دسته', class: 'main' }, r.cat), h('td', { 'data-l': 'فروش', class: 'num' }, N(r.revenue)), h('td', { 'data-l': 'سود', class: 'num' }, N(r.profit)),
             h('td', { 'data-l': 'درصد سود', class: 'num' }, r.margin == null ? '—' : fmt(Math.round(r.margin * 10) / 10) + '٪'), h('td', { 'data-l': 'تعداد', class: 'num' }, fmt(r.qty)))))))] : [h('div', { class: 'empty sm' }, 'هنوز فروشی در این بازه نیست.')]),
-      h('p', { class: 'hint' }, 'درصد سود = سود ÷ فروش همان دسته (بعد از کم کردن مرجوعی‌ها).'));
+      null);
   };
   draw(); return host;
 }

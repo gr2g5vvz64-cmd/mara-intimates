@@ -23,7 +23,7 @@ const partner = async (email, pass, delta) => {
 const page = await newPage(browser, url, { logs }); await login(page, 'hamid@example.com', 'hamid-pass-333'); page.setDefaultTimeout(8000);
 try {
   await go(page, '#/monthcount');
-  ok((await page.locator('body').innerText()).includes('انبارگردانی ماهانه'), 'مدیر: صفحه باز شد');
+  ok((await page.locator('body').innerText()).includes('شروع انبارگردانی'), 'مدیر: صفحه باز شد');
   page.on('dialog', d => d.accept());
   await page.click('text=＋ شروع و ارسال پیام این ماه'); await sleepP(page, 500);
   const cb = page.locator('.ov').last().locator('button.primary, button', { hasText: /شروع و ارسال/ }).last(); if (await cb.count()) await cb.click(); await sleepP(page, 2000);

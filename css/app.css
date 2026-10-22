@@ -603,3 +603,8 @@ ul.plain{list-style:none;padding:0;margin:4px 0}
 .dupi{display:flex;flex-direction:column;gap:4px}.dupi small{color:var(--mut,#888)}
 @media(max-width:700px){.dupc .duprow{grid-template-columns:1fr}}
 .vmx td.ex .vb{color:var(--mut,#888);font-size:11px;background:#eee;border-radius:6px;padding:2px 6px;display:inline-block}.vmx td.ex{opacity:.7}
+.qtipw{position:relative;display:inline-block;margin-inline-start:6px;vertical-align:middle}
+.qtip{width:20px;height:20px;border-radius:50%;border:1px solid var(--line,#ccc);background:transparent;color:var(--mut,#888);font-size:12px;line-height:1;cursor:help;padding:0}
+.qtip-box{display:block;position:absolute;z-index:20;inset-inline-start:0;top:26px;min-width:220px;max-width:min(320px,80vw);padding:10px 12px;border-radius:10px;background:var(--card,#fff);border:1px solid var(--line,#ddd);box-shadow:0 6px 20px rgba(0,0,0,.18);font-size:12px;font-weight:400;line-height:1.8;color:var(--ink,#222)}
+.qtip-box[hidden]{display:none}
+.more-row{text-align:center;margin:12px 0}

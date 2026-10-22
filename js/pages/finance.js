@@ -17,7 +17,7 @@ export function render() {
   const ok = Math.abs(T.check_diff || 0) <= 1;
   const R = (k, v, c = '', key = '') => h('div', { class: 'srow ' + c }, h('span', null, k), key ? ex(N(v), key) : N(v));
   return h('div', null,
-    head('مالی و سرمایه', [btn('بستن روز', () => dayCloseForm()), btn('انتقال / برداشت سود', () => transferForm({ kind: 'transfer' })), btn('انتقال سرمایه', () => capitalForm(), 'ghost'), ...(S.me.role === 'admin' ? [btn('🔍 تحلیل', () => { location.hash = '#/analysis'; }, 'ghost')] : []), btn('دریافت نسیه', () => collectionForm(), 'ghost')], 'سود بین مهسا و رعنا برابر (نصف–نصف) تقسیم می‌شود. روی هر عدد بزنی (مدیر) محاسبه‌اش را می‌بینی.'),
+    head('مالی و سرمایه', [btn('بستن روز', () => dayCloseForm()), btn(S.me.role === 'admin' ? 'انتقال / برداشت سود' : 'انتقال بین حساب‌ها', () => transferForm({ kind: 'transfer' })), btn('انتقال سرمایه', () => capitalForm(), 'ghost'), ...(S.me.role === 'admin' ? [btn('🔍 تحلیل', () => { location.hash = '#/analysis'; }, 'ghost')] : []), btn('دریافت نسیه', () => collectionForm(), 'ghost')], 'سود بین مهسا و رعنا برابر (نصف–نصف) تقسیم می‌شود. روی هر عدد بزنی (مدیر) محاسبه‌اش را می‌بینی.'),
     dayCloseOpen() ? h('div', { class: 'alert warn' }, 'امروز هنوز بسته نشده؛ موجودی نقد و بانک را بشمار و «بستن روز» را بزن.') : null,
     negativeAccounts().length ? h('div', { class: 'alert red' }, 'مانده‌ی این حساب‌ها منفی است: ' + negativeAccounts().map(a => a.name).join('، ') + ' — احتمالاً ثبتی با حساب اشتباه یا دریافتی ثبت‌نشده داریم.') : null,
     eqAmt > 1000 ? h('div', { class: 'alert warn' }, `سرمایه‌ی وارد‌شده برابر نیست: ${hiName} ${fmt(Math.max(capM, capR))} ریال و ${loName} ${fmt(Math.min(capM, capR))} ریال. برای برابر شدن، ${loName} باید ${fmt(Math.round(eqAmt / 10))} تومان (${fmt(Math.round(eqAmt))} ریال) به حساب شخصی ${hiName} واریز کند و بعد «انتقال سرمایه» ثبت شود.`) : null,
@@ -37,7 +37,7 @@ export function render() {
     dtable([
       { label: 'نفر', main: true, render: r => r.name }, { label: 'سرمایه‌ی گذاشته‌شده', cls: 'num', render: r => N(r.cap) }, { label: 'سهم از سرمایه', cls: 'num', render: r => h('span', { class: 'n' }, capT > 0 ? (r.share * 100).toFixed(1) + '%' : '') },
       { label: 'سهم از سود (برابر ۵۰٪)', cls: 'num', render: r => ex(N(r.suggest), 'share', r) }, { label: 'برداشت‌شده تا حالا', cls: 'num', render: r => ex(N(r.payout), 'share', r) }, { label: 'باقی‌مانده برای برداشت', cls: 'num', render: r => ex(N(r.left), 'share', r) },
-      { label: '', render: r => btn('ثبت برداشت', () => transferForm({ kind: 'profit_payout', to: r.pocketId && r.pocketId.id }), 'ghost sm') }
+      { label: '', render: r => (S.me && S.me.role === 'admin' ? btn('ثبت برداشت', () => transferForm({ kind: 'profit_payout', to: r.pocketId && r.pocketId.id }), 'ghost sm') : '') }
     ], rows, { empty: '' }),
     h('p', { class: 'hint' }, 'سرمایه = پولی که هر نفر از جیب شخصی‌اش در کسب‌وکار گذاشته، منهای آنچه پس گرفته. سود همیشه برابر تقسیم می‌شود: سهم هر نفر ' + fmt(profit / 2) + ' ریال. اگر یکی بیشتر سرمایه گذاشته باشد، نفر دیگر با واریز نصفِ تفاوت به حساب شخصی او سرمایه را برابر می‌کند.'),
     h('h3', { class: 'sec' }, 'بستن روزها (شمارش واقعی در برابر سیستم)'),
@@ -51,10 +51,12 @@ export function render() {
 
 
 /* ---------- قفل پایان ماه: ماهِ بسته‌شده دیگر ثبت، ویرایش یا ابطال نمی‌پذیرد؛ بازکردنش فقط با مدیر و با دلیل ---------- */
+let showAllLocks = false;
 function lockSection() {
   const admin = !!(S.me && S.me.role === 'admin');
   const locks = Object.fromEntries((S.periodLocks || []).filter(l => l.active).map(l => [l.label, l]));
-  const keys = lastMonths(13).slice(0, -1).reverse();   // ماه‌های تمام‌شده (ماه جاری را نمی‌شود بست)
+  const keys = lastMonths(13).slice(0, -1).reverse();   // ماه‌های تمام‌شده از مهر ۱۴۰۵ (ماه جاری را نمی‌شود بست)
+  const shown = showAllLocks ? keys : keys.slice(0, 3);
   const span = k => { const [jy, jm] = k.split('-').map(Number); return [fromJ(jy, jm, 1), fromJ(jy, jm, jMonthLen(jy, jm))]; };
   const doLock = async k => {
     const [a, b] = span(k); const nameless = S.vSales.filter(x => !x.voided && !x.customer_id && x.date >= a && x.date <= b).length;
@@ -71,5 +73,6 @@ function lockSection() {
     dtable([{ label: 'ماه', main: true, render: k => jmonthName(k) },
       { label: 'وضعیت', render: k => (locks[k] ? pill('🔒 بسته', 'green') : pill('باز', 'amber')) },
       { label: 'بسته‌شده توسط', hm: true, render: k => (locks[k] ? `${locks[k].locked_by || ''} · ${jstr(String(locks[k].locked_at).slice(0, 10))}` : '') },
-      { label: '', render: k => (!admin ? '' : locks[k] ? btn('باز کردن ماه', () => doUnlock(k), 'ghost sm') : btn('بستن ماه', () => doLock(k), 'gold sm')) }], keys, { empty: '' })];
+      { label: '', render: k => (!admin ? '' : locks[k] ? btn('باز کردن ماه', () => doUnlock(k), 'ghost sm') : btn('بستن ماه', () => doLock(k), 'gold sm')) }], shown, { empty: 'هنوز ماه تمام‌شده‌ای نیست؛ بعد از پایان هر ماه اینجا می‌بندیش.' }),
+    keys.length > 3 ? btn(showAllLocks ? 'نمایش کمتر' : `نمایش ماه‌های قبل (${keys.length - 3})`, async () => { showAllLocks = !showAllLocks; await bus.refresh(); }, 'ghost sm') : null];
 }

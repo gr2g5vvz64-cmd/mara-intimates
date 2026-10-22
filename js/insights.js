@@ -119,7 +119,7 @@ export function navCounts() {
     '': mk(homeAlerts().length, od || or),
     sales: mk(owed.length, or),
     purchases: mk(unpaid.length, od),
-    stock: mk(lowOut.length, false),
+    stock: { ...mk(S.stock.filter(i => i.active && i.rem > 0).length, false, true), show: true },   // فقط کالاهایی که موجودی دارند
     pay: mk(supOwed.length, od),
     expenses: mk(S.expenses.filter(e => !e.voided && jmonthKey(e.date) === mKey).length, false, true),
     returns: mk(S.returns.filter(x => !x.voided && x.kind === 'customer' && x.date >= mk30).length, false, true),

@@ -31,11 +31,11 @@ try {
   const t0 = await D();
   const navs = await page.locator('.side nav a').evaluateAll(a => a.map(x => ({ r: x.dataset.r, t: x.querySelector('.nt').innerText, c: x.querySelector('.cnt') && !x.querySelector('.cnt').hidden ? x.querySelector('.cnt').innerText : null, cls: x.querySelector('.cnt').className })));
   console.log('   ', navs.map(n => `${n.t}:${n.c}`).join(' | '));
-  const vis = navs.filter(n => n.c != null); ok(vis.every(n => /\b(red|amber)\b/.test(n.cls) || n.c === '؟'), 'شمارنده فقط برای کار باز دیده می‌شود (صفر/اطلاعاتی پنهان است): ' + vis.map(n => n.t + ':' + n.cls.replace('cnt ', '')).join(' | '));
+  const vis = navs.filter(n => n.c != null && n.r !== 'stock');   // «موجودی» تعداد کالاهای موجود را نشان می‌دهد ok(vis.every(n => /\b(red|amber)\b/.test(n.cls) || n.c === '؟'), 'شمارنده فقط برای کار باز دیده می‌شود (صفر/اطلاعاتی پنهان است): ' + vis.map(n => n.t + ':' + n.cls.replace('cnt ', '')).join(' | '));
   ok(!navs.some(n => ['items', 'suppliers', 'history', 'expenses', 'returns', 'sreturns'].includes(n.r) && n.c != null), 'کالاها/تامین‌کنندگان/تاریخچه/هزینه‌ها/مرجوعی‌ها شمارنده ندارند');
   const owed = t0.v_sales.filter(s => !s.voided && s.outstanding > 0).length;
   const salesN = navs.find(n => n.r === 'sales'); ok(salesN && (salesN.c || '۰').replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)) == String(owed), `شمارنده‌ی فروش = فروش‌های باز (${owed}): ${salesN && salesN.c}`);
-  const stockN = navs.find(n => n.r === 'stock'); const lowN = t0.v_stock.filter(i => i.active && i.rem <= i.min_stock).length; ok((stockN.c || '۰').replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)) == String(lowN), `شمارنده‌ی موجودی = کم‌موجودی/تمام‌شده (${lowN}): ${stockN.c}`);
+  const stockN = navs.find(n => n.r === 'stock'); const lowN = t0.v_stock.filter(i => i.active && i.rem > 0).length; ok((stockN.c || '۰').replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)) == String(lowN), `شمارنده‌ی موجودی = تعداد ردیف کالاهای دارای موجودی (${lowN}): ${stockN.c}`);
   ok(await page.locator('.bottom a .cnt').count() === 5, 'نوار پایین موبایل هم شمارنده دارد');
   ok(await page.locator('.dnav a .cnt').count() >= 15, 'منوی کشویی هم شمارنده دارد');
   await go('#/pay'); ok(await page.locator('.tabs button .cnt.zero, .tabs button .cnt.info').count() === 0, 'تب‌های پرداخت‌ها: شمارنده‌ی صفر/اطلاعاتی نیست');
@@ -77,15 +77,15 @@ try {
   ok(await page.locator('.goalrow').count() === 1, 'کارت هدف شریک: فقط هدف خودش');
   await page.locator('button', { hasText: 'تعیین هدف' }).first().click(); await M.waitFor();
   await M.locator('.numinp').nth(0).fill('50000000'); await M.locator('.numinp').nth(1).fill('30000000');
-  await M.locator('button', { hasText: 'ثبت هدف' }).click(); await M.waitFor({ state: 'detached', timeout: 15000 }); await sleep(500);
-  const t2 = await D(); ok(t2.goals.length === 2 && t2.goals.some(g => g.owner === 'مهسا' && Number(g.amount) === 50000000), 'دو هدف ماهانه در دیتابیس');
+  await M.locator('button', { hasText: 'ثبت هدف' }).click(); await M.waitFor({ state: 'detached', timeout: 15000 }); let t2 = await D(); for (let i = 0; i < 10 && t2.goals.length !== 2; i++) { await sleep(500); t2 = await D(); }
+  ok(t2.goals.length === 2 && t2.goals.some(g => g.owner === 'مهسا' && Number(g.amount) === 50000000), 'دو هدف ماهانه در دیتابیس');
   await sleep(300); ok(await page.locator('.gbar').count() === 1, 'نوار پیشرفت هدف نمایش داده شد');
   await page.screenshot({ path: 'shots/f6_goals.png', fullPage: true });
 
   /* ---------- نمودار سررسید، مشتریان برتر، پیشنهاد خرید ---------- */
   const ap = await newPage(browser, url, { logs }); await login(ap, 'hamid@example.com', 'hamid-pass-333'); await sleep(900);
   ok(await ap.locator('svg.dchart').count() === 1, 'نمودار سررسیدهای ۳۰ روز (داشبورد مدیر)');
-  ok(await ap.locator('.goalrow').count() === 2, 'داشبورد مدیر: هدف هر دو شریک');
+  { const tt = await ap.locator('.dbody').innerText(); ok(tt.includes('هدف فروش به آشنایان') && tt.includes('مهسا') && tt.includes('رعنا') && tt.includes('تحقق'), 'داشبورد مدیر: هدف هر دو شریک (جدول واحد فروشنده‌ها)'); }
   await go('#/customers'); ok(await page.locator('.rank').count() === 1, 'مشتریان برتر در صفحه‌ی مشتریان هم هست');
   await go('#/');
   // پیشنهاد خرید مجدد: فروش تقریباً همه‌ی سوتین اسپرت مهسا

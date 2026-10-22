@@ -8,7 +8,7 @@ try {
   let t = await pa.locator('.dash').innerText();
   ok(await pa.locator('.dash svg.chart').count() >= 2, 'مدیر نمودار می‌بیند: ' + await pa.locator('.dash svg.chart').count());
   ok(['امروز', '۷ روز', '۳۰ روز', '۳ ماه', 'یک سال'].every(x => t.includes(x)), 'چیپ‌های بازه هست');
-  ok(t.includes('خریدار جدید') && t.includes('تامین‌کننده‌ی جدید'), 'کارت آدم‌ها (خریدار/تامین‌کننده)');
+  ok(/خریدار (جدید|این بازه|فعال)/.test(t) && /تامین‌کننده‌ی (جدید|این بازه)|از چند نفر خریدیم/.test(t), 'کارت آدم‌ها (خریدار/تامین‌کننده)');
   ok(t.includes('نسبت به بازه‌ی قبل') || t.includes('بازه‌ی قبل'), 'مقایسه با بازه‌ی قبل');
   await pa.locator('.chips button, .chip', { hasText: '۷ روز' }).first().click(); await sleep(pa, 500);
   ok((await pa.locator('.dash').innerText()).includes('۷ روز'), 'تغییر بازه کار می‌کند');

@@ -4,6 +4,7 @@ import { S, rpc, api, bus, errText } from '../store.js';
 import { N, pill, chips, field, run, kpi, dtable, confirmBox } from '../ui.js';
 import { head, btn, stamp } from './common.js';
 import { diffValue } from './stocktake.js';
+import { invTabs } from './invtabs.js';
 
 const isAdmin = () => !!(S.me && S.me.role === 'admin');
 const isPartner = () => !!(S.me && ['مهسا', 'رعنا'].includes(S.me.name) && S.me.role !== 'viewer');
@@ -29,7 +30,7 @@ export function render(query) {
   let sel = Number(query && query.get('c')) || (counts[0] && counts[0].id) || 0;
   const show = () => {
     reload(); const cnt = counts.find(c => c.id === sel);
-    root.replaceChildren(...[head('انبارگردانی ماهانه', isAdmin() ? [btn('＋ شروع و ارسال پیام این ماه', startNow)] : [], 'اول هر ماه شمسی به مهسا و رعنا پیام می‌رسد تا اموال خودشان را بشمارند؛ نتیجه برای مدیر گزارش می‌شود.'),
+    root.replaceChildren(...[invTabs('monthcount'), head('شروع انبارگردانی ماهانه', isAdmin() ? [btn('＋ شروع و ارسال پیام این ماه', startNow)] : [], 'اول هر ماه شمسی به مهسا و رعنا پیام می‌رسد تا اموال خودشان را بشمارند؛ نتیجه برای مدیر گزارش می‌شود.'),
       counts.length ? chips(counts.map(c => ({ v: c.id, label: c.title + (c.status === 'open' ? ' · باز' : ' · بسته') })), sel, v => { sel = v; show(); }, { cls: 'catf', label: 'ماه' }) : null,
       !cnt ? h('div', { class: 'card' }, h('p', null, 'هنوز انبارگردانی ماهانه‌ای شروع نشده.'), isAdmin() ? h('p', { class: 'hint' }, 'اول هر ماه شمسی خودکار ساخته می‌شود (با کرون «nightly» یا «monthly_count»). برای شروع دستی «＋ شروع و ارسال پیام این ماه» را بزن.') : null)
         : (isPartner() ? partnerView(cnt, show) : adminView(cnt, show))].filter(Boolean));

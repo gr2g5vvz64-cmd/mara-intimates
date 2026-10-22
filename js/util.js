@@ -80,10 +80,12 @@ export function daysUntil(iso) {
   const [y, m, d] = parts(iso), [ty, tm, td] = parts(todayISO());
   return Math.round((Date.UTC(y, m - 1, d) - Date.UTC(ty, tm - 1, td)) / 86400000);
 }
+export const START_MONTH = '1405-07';   // شروع کار: مهر ۱۴۰۵؛ ماه‌های قبل از آن در هیچ‌جا نمی‌آید
 export function lastMonths(n) {
   const [jy, jm] = toJ(todayISO()); const out = [];
   for (let i = n - 1; i >= 0; i--) { let m = jm - i, y = jy; while (m < 1) { m += 12; y--; } out.push(`${y}-${p2(m)}`); }
-  return out;
+  const ok = out.filter(k => k >= START_MONTH);
+  return ok.length ? ok : out.slice(-1);
 }
 
 /* ---------- DOM ---------- */
