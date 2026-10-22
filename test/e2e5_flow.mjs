@@ -79,7 +79,7 @@ async function main() {
   // ۷) تاریخچه
   await go('history'); await sleep(1200);
   const htxt = await page.locator('#view').innerText(); ok(/سارا/.test(htxt) && /مهسا/.test(htxt) && /دریافت/.test(htxt), 'تاریخچه شامل کار مهسا و مشتری سارا است');
-  const hrows = await page.locator('tbody tr').count(); ok(hrows > 10, 'تعداد ردیف تاریخچه: ' + hrows); await page.screenshot({ path: 'shots/f5_history.png' });
+  const hrows = await page.locator('tbody tr').count(); ok(hrows === 10, 'تعداد ردیف تاریخچه: ' + hrows); await page.screenshot({ path: 'shots/f5_history.png' });
   // ۸) اکسل
   await go('help'); const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 30000 }), page.click('text=دانلود اکسل همه‌ی اطلاعات')]);
   const f = '/tmp/mara_dl.xlsx'; await dl.saveAs(f); ok(fs.statSync(f).size > 8000, 'اکسل دانلود شد ' + fs.statSync(f).size + ' بایت');
