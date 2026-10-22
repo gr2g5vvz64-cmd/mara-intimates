@@ -149,6 +149,7 @@ function renderBar() {
 onOutbox((type, d) => {
   if (type === 'queued') { toast('ذخیره نشد! این ثبت در صف ذخیره ماند و خودکار دوباره تلاش می‌شود. تا پیام «ذخیره شد» نیامده صفحه را نبند.' + (d.stored ? '' : ' (مرورگر اجازه‌ی نگهداری نمی‌دهد؛ اگر صفحه بسته شود از بین می‌رود.)'), 'warn'); }
   if (type === 'saved') { toast(`✔ ذخیره شد: ${d.item.label}${d.result && d.result.no ? ' · ' + d.result.no : ''}${d.replayed ? ' (قبلاً رسیده بود)' : ''}`, 'ok', 5000); refresh(); }
+  if (type === 'dupitem') toast(`این کالا از قبل در سیستم هست و دوباره ساخته نشد. ${d.item.error}`, 'ok', 9000);
   if (type === 'blocked') toast(`ذخیره نشد: ${d.item.label}. ${d.item.error}`, 'err', 12000);
   renderBar();
 });

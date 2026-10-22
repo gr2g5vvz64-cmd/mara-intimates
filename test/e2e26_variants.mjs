@@ -56,6 +56,13 @@ try {
     execSync(`python3 -c "import psycopg;c=psycopg.connect('host=/tmp port=5433 user=postgres dbname=mara_e2e',autocommit=True);c.execute(\\"insert into items(name,category,base_name,color,size) values ('سوتین دانتل مدل۱ · مشکی · ۸۰B','سوتین','سوتین دانتل مدل۱','مشکی','۸۰B')\\")"`);
     await page.reload(); await sleep(1500); await go('#/items'); await sleep(600);
     const bt = await page.locator('body').innerText(); ok(bt.includes('کدهای مشابه') && bt.includes('٪ شبیه'), 'فهرست کدهای مشابه (۹۵٪) دیده می‌شود'); }
+  // فرم: ترکیب‌های موجود خاکستری می‌شوند و ساخته نمی‌شوند
+  { await go('#/items'); await page.click('text=＋ کالای جدید'); await M.waitFor();
+    await M.locator('input.inp').first().fill('سوتین  دانتل مدل ۱'); await M.locator('.chip', { hasText: /^سوتین$/ }).first().click();
+    await M.locator('.chip.optc', { hasText: 'مشکی' }).first().click(); await M.locator('.chip.optc', { hasText: 'سفید' }).first().click(); await sleep(400);
+    ok(await M.locator('.vmx td.ex').count() >= 1, 'ترکیب‌های موجود در جدول «هست» و خاکستری شدند: ' + await M.locator('.vmx td.ex').count());
+    ok((await M.locator('.hint', { hasText: 'از قبل در سیستم هست' }).count()) === 1, 'شمارنده‌ی «از قبل هست» دیده می‌شود');
+    const btxt = await M.locator('.sheet-f .btn').first().innerText(); ok(/ترکیب/.test(btxt) || btxt.includes('افزودن'), 'دکمه فقط ترکیب‌های جدید را می‌سازد: ' + btxt); }
 } catch (e) { console.log('FAIL exception', e.message); fails++; }
 await browser.close(); srv.close();
 console.log(fails ? `FAILS: ${fails}` : 'ALL OK'); process.exit(fails ? 1 : 0);

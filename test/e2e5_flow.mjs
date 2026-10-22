@@ -88,8 +88,8 @@ async function main() {
   await page.locator('tbody tr').first().click(); await sleep(300);
   await M.locator('button', { hasText: 'ابطال' }).click(); await sleep(200);
   await page.locator('.ov').last().locator('button', { hasText: 'باطل کن' }).click(); await sleep(200);
-  await page.locator('.ov').last().locator('input').fill('تست'); await page.locator('.ov').last().locator('button', { hasText: 'تأیید' }).click(); await sleep(900);
-  t = await D(); ok(t.collections.some(c => c.voided), 'ابطال دریافت کار کرد ' + await err());
+  await page.locator('.ov').last().locator('input').fill('تست'); await page.locator('.ov').last().locator('button', { hasText: 'تأیید' }).click(); for (let i = 0; i < 12; i++) { await sleep(500); t = await D(); if (t.collections.some(c => c.voided)) break; }
+  ok(t.collections.some(c => c.voided), 'ابطال دریافت کار کرد ' + await err());
   const tt = t.v_totals; ok(Math.abs(tt.check_diff) < 1, 'ترازنامه‌ی کنترلی صفر: ' + tt.check_diff);
   // ۱۰) خطا: ثبت نامعتبر پیام خوانا + کد می‌دهد
   await go('expenses'); await page.click('text=＋ هزینه‌ی جدید'); await M.locator('button', { hasText: 'ثبت هزینه' }).click(); await sleep(400); ok((await err()).length > 3, 'خطای اعتبارسنجی نمایش داده شد: ' + await err());

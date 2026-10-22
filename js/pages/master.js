@@ -2,18 +2,11 @@ import { h, fmt, jstr } from '../util.js';
 import { S } from '../store.js';
 import { dtable, N, pill } from '../ui.js';
 import { itemForm, supplierForm, categoriesForm } from '../forms_misc.js';
+import { normItem, levSim } from '../dup.js';
 import { head, btn, searchBox, match, catFilter, inCat, varFilter, inVar } from './common.js';
 
 
 /* کالای مشابه: همان قاعده‌ی سرور (رنگ و سایز یکی، نام پایه ≥ ۹۵٪ شبیه) */
-const AR = { 'ي': 'ی', 'ك': 'ک', 'ۀ': 'ه' }, DG = '٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹';
-export const normItem = t => String(t || '').toLowerCase().replace(/[يكۀ]/g, c => AR[c]).replace(/[٠-٩۰-۹]/g, c => String(DG.indexOf(c) % 10)).replace(/[\s‌‏‎·\-_.,،/\\()]+/g, '');
-export function levSim(a, b) {
-  if (!a.length && !b.length) return 1; if (!a.length || !b.length) return 0;
-  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
-  for (let i = 1; i <= a.length; i++) { const cur = [i]; for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = cur; }
-  return 1 - prev[b.length] / Math.max(a.length, b.length);
-}
 export function dupPairs() {
   const A = S.stock.filter(i => i.active).map(i => ({ i, b: normItem(i.base_name || i.name), c: normItem(i.color), z: normItem(i.size) })), out = [];
   for (let x = 0; x < A.length; x++) for (let y = x + 1; y < A.length; y++) if (A[x].c === A[y].c && A[x].z === A[y].z) { const sim = levSim(A[x].b, A[y].b); if (sim >= 0.95) out.push({ a: A[x].i, b: A[y].i, sim }); }

@@ -602,3 +602,4 @@ ul.plain{list-style:none;padding:0;margin:4px 0}
 .dupc .duprow{display:grid;grid-template-columns:auto 1fr 1fr;gap:10px;align-items:start;padding:10px 0;border-top:1px dashed var(--line,#ddd)}
 .dupi{display:flex;flex-direction:column;gap:4px}.dupi small{color:var(--mut,#888)}
 @media(max-width:700px){.dupc .duprow{grid-template-columns:1fr}}
+.vmx td.ex .vb{color:var(--mut,#888);font-size:11px;background:#eee;border-radius:6px;padding:2px 6px;display:inline-block}.vmx td.ex{opacity:.7}

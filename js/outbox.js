@@ -81,6 +81,9 @@ async function attempt(it) {
     it.code = e.code; it.error = errText(e); it.rid = e.request_id || '';
     if (isRetryable(e)) { it.next = Date.now() + delay(it.attempts); emit('retry', { item: it }); }
     else if (AUTH.has(e.code)) { it.next = Date.now() + 5000; emit('auth', { item: it }); }
+    else if (it.fn === 'save_item' && /قبلاً ثبت شده|مشابه/.test(it.error || '')) {
+      items = items.filter(x => x.id !== it.id); addLog({ id: it.id, status: 'discarded', label: it.label, note: 'این کالا از قبل بود؛ ثبت تکراری لازم نیست. ' + it.error }); emit('dupitem', { item: it });
+    }
     else { it.status = 'blocked'; addLog({ id: it.id, status: 'blocked', label: it.label, code: e.code, note: it.error, rid: it.rid, attempts: it.attempts }); emit('blocked', { item: it }); }
   }
   persist();

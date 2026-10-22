@@ -2,6 +2,7 @@
 import { h, fmt, todayISO, toast, sum, jstr, addDaysISO } from './util.js';
 import { S, rpc, bus, loadAll, customers, pref, setPref, businessAccounts, accBalance, EXPCATS, holdKey, canVoid, canEdit, errText, catNames } from './store.js';
 import { willGoNegative } from './insights.js';
+import { findDup } from './dup.js';
 import { jmonthKey, jmonthName } from './util.js';
 import { modal, field, chips, accountPicker, numField, intField, dateField, dueField, combo, run, confirmBox, promptBox, dl, pill, N } from './ui.js';
 import { KINDS, BANDS, CUPS, BRA_COMMON, ALPHA_START, SOCK, alphaList, kindOf, hintOf, bandHint, groupOf, SUMMARY, FREE_NOTE } from './sizes.js';
@@ -413,19 +414,23 @@ export function itemForm(it) {
   }
   const combos = () => {
     const cs = colors.values(), ss = sizes.values(), out = [];
-    for (const c of (cs.length ? cs : [''])) for (const s of (ss.length ? ss : [''])) { if ((c || s) && !skip.has(c + '|' + s)) out.push({ color: c, size: s }); }
+    for (const c of (cs.length ? cs : [''])) for (const s of (ss.length ? ss : [''])) { if ((c || s) && !skip.has(c + '|' + s) && !existing(c, s)) out.push({ color: c, size: s }); }
     return out;
   };
+  /* ترکیبی که از قبل (یکی یا ≥۹۵٪ شبیه) در سیستم هست؛ ساخته نمی‌شود */
+  const existing = (c, s) => (it || !name.value.trim() ? null : findDup(name.value.trim(), c, s));
+  name.addEventListener('input', () => draw());
   function draw() {
     if (it) { matrix.replaceChildren(); cntHint.textContent = ''; return; }
     const cs = colors.values(), ss = sizes.values(), n = combos().length;
-    cntHint.textContent = n ? `${cs.length || 1} رنگ × ${ss.length || 1} سایز = ${n} ترکیب ساخته می‌شود. موجودی هر ترکیب جدا در «خرید» ثبت می‌شود.` : 'اگر رنگ یا سایزی نمی‌زنی، کالا بدون رنگ/سایز ساخته می‌شود.';
+    const exN = [...cs.length ? cs : [''] ].flatMap(c => (ss.length ? ss : ['']).map(s => (c || s) && !skip.has(c + '|' + s) && existing(c, s) ? 1 : 0)).reduce((a, b) => a + b, 0);
+    cntHint.textContent = exN ? `${exN} ترکیب از قبل در سیستم هست و ساخته نمی‌شود (در جدول خاکستری است). ${n ? n + ' ترکیب جدید ساخته می‌شود.' : 'ترکیب جدیدی نمانده.'}` : n ? `${cs.length || 1} رنگ × ${ss.length || 1} سایز = ${n} ترکیب ساخته می‌شود. موجودی هر ترکیب جدا در «خرید» ثبت می‌شود.` : 'اگر رنگ یا سایزی نمی‌زنی، کالا بدون رنگ/سایز ساخته می‌شود.';
     if (cs.length && ss.length) {
       matrix.replaceChildren(h('table', { class: 'vmx' }, h('tr', null, h('th'), ...ss.map(s => h('th', null, s))),
-        ...cs.map(c => h('tr', null, h('th', null, c), ...ss.map(s => { const off = skip.has(c + '|' + s); return h('td', { class: off ? 'x' : '' }, h('button', { type: 'button', class: 'vb', 'aria-label': `${c} ${s}`, 'aria-pressed': off ? 'false' : 'true', onclick: () => { off ? skip.delete(c + '|' + s) : skip.add(c + '|' + s); draw(); } }, off ? '—' : '✓')); })))),
+        ...cs.map(c => h('tr', null, h('th', null, c), ...ss.map(s => { const off = skip.has(c + '|' + s); const ex = !off && existing(c, s); if (ex) return h('td', { class: 'x ex', title: `از قبل هست: ${ex.name} (${ex.code || ''})` }, h('span', { class: 'vb' }, 'هست')); return h('td', { class: off ? 'x' : '' }, h('button', { type: 'button', class: 'vb', 'aria-label': `${c} ${s}`, 'aria-pressed': off ? 'false' : 'true', onclick: () => { off ? skip.delete(c + '|' + s) : skip.add(c + '|' + s); draw(); } }, off ? '—' : '✓')); })))),
         h('div', { class: 'hint' }, 'ترکیبی که نداری (مثلاً کرم ۸۵) را با یک ضربه حذف کن.'));
     } else matrix.replaceChildren();
-    btn.textContent = n > 1 ? `افزودن کالا (${n} ترکیب)` : 'افزودن کالا';
+    btn.textContent = n > 1 ? `افزودن کالا (${n} ترکیب)` : 'افزودن کالا'; btn.disabled = !!(cs.length && ss.length && n === 0) || (exN > 0 && n === 0);
   }
   const btn = h('button', { class: 'btn primary lg', type: 'button' }, it ? 'ذخیره' : 'افزودن کالا');
   btn.onclick = async () => {
@@ -434,7 +439,7 @@ export function itemForm(it) {
     const base = { description: desc.value, category: cat.get(), min_stock: min.get() };
     let p;
     if (it) { const c = colors.first(), s = sizes.first(); p = { ...base, id: it.id, name: [name.value.trim(), c, s].filter(Boolean).join(' · '), base_name: c || s ? name.value.trim() : '', color: c, size: s, active: act.get() }; }
-    else { const vs = combos(); p = { ...base, name: name.value.trim(), variants: vs.length ? vs.map(v => ({ color: v.color, size: v.size })) : undefined }; }
+    else { const vs = combos(); if (!vs.length && (colors.values().length || sizes.values().length)) return toast('همه‌ی این ترکیب‌ها از قبل در سیستم هست؛ چیزی برای ساخت نمانده', 'err'); p = { ...base, name: name.value.trim(), variants: vs.length ? vs.map(v => ({ color: v.color, size: v.size })) : undefined }; }
     const r = await run(btn, () => rpc('save_item', p)); if (r) finish(m, it ? 'ذخیره شد' : (r.ids && r.ids.length > 1 ? `${r.ids.length} کالا ساخته شد` : 'ذخیره شد'));
   };
   const delBtn = h('button', { class: 'btn danger ghost', type: 'button' }, 'حذف کالا');
