@@ -59,20 +59,22 @@ function byCategoryCard() {
 }
 
 export function render(query) {
-  let tab = query.get('tab') === 'lots' ? 'lots' : 'items', q = '', hideZero = false, cat = ''; const vst = { color: '', size: '' };
+  let tab = query.get('tab') === 'lots' ? 'lots' : 'items', q = '', hideZero = false, showOff = false, cat = ''; const vst = { color: '', size: '' };
   const root = h('div'); const body = h('div'), catHost = h('div');
   const T = S.stock.filter(i => i.active);
   const draw = () => {
     root.querySelector('.tabs') && root.querySelector('.tabs').replaceWith(tabsBar([{ id: 'items', label: 'به تفکیک کالا', badge: (n => ({ n, tone: n ? 'amber' : 'zero' }))(S.stock.filter(i => i.active && i.rem <= i.min_stock).length) }, { id: 'lots', label: 'دسته‌های خرید (FIFO)', badge: { n: S.lots.filter(l => !l.voided && l.rem > 0).length, tone: 'info' } }], tab, t => { tab = t; draw(); }));
     if (tab === 'items') {
-      catHost.replaceChildren(catFilter(cat, v => { cat = v; draw(); }, S.stock.filter(i => i.active)), varFilter(vst, draw, S.stock.filter(i => i.active)));
-      const rows = S.stock.filter(i => i.active && inCat(cat, i) && inVar(vst, i) && match(q, i.code, i.name, i.category, i.color, i.size) && (!hideZero || i.rem > 0)).sort((a, b) => (a.rem === 0) - (b.rem === 0) || a.name.localeCompare(b.name, 'fa'));
-      body.replaceChildren(dtable([
-        { label: 'کالا', main: true, render: i => i.name }, { label: 'دسته', hm: true, render: i => i.category || '' }, { label: 'تعداد نزد مهسا', cls: 'num', render: i => i.rem_m }, { label: 'تعداد نزد رعنا', cls: 'num', render: i => i.rem_r },
+      const pool = S.stock.filter(i => showOff || i.active);
+      catHost.replaceChildren(catFilter(cat, v => { cat = v; draw(); }, pool), varFilter(vst, draw, pool));
+      const rows = S.stock.filter(i => (showOff || i.active) && inCat(cat, i) && inVar(vst, i) && match(q, i.code, i.name, i.category, i.color, i.size) && (!hideZero || i.rem > 0)).sort((a, b) => (a.rem === 0) - (b.rem === 0) || a.name.localeCompare(b.name, 'fa'));
+      const nAll = pool.length, nMove = pool.filter(i => i.rem > 0 || i.last_cost || i.last_price).length;
+      body.replaceChildren(h('div', { class: 'hint' }, `همه‌ی کدهای ساخته‌شده: ${fmt(nAll)} کد · دارای گردش یا موجودی: ${fmt(nMove)} · بدون گردش: ${fmt(nAll - nMove)}`), dtable([
+        { label: 'کد', render: i => h('b', { dir: 'ltr', class: 'icode' }, i.code || '') }, { label: 'کالا', main: true, render: i => h('span', null, i.name, ' ', i.active ? null : pill('غیرفعال', 'gray')) }, { label: 'دسته', hm: true, render: i => i.category || '' }, { label: 'تعداد نزد مهسا', cls: 'num', render: i => i.rem_m }, { label: 'تعداد نزد رعنا', cls: 'num', render: i => i.rem_r },
         { label: 'جمع تعداد', cls: 'num', render: i => h('b', null, i.rem) }, { label: 'آخرین تمام‌شده', cls: 'num', hm: true, render: i => (i.last_cost ? N(i.last_cost) : '') }, { label: 'آخرین فی فروش', cls: 'num', hm: true, render: i => (i.last_price ? N(i.last_price) : '') },
         { label: 'ارزش نزد مهسا', cls: 'num', render: i => N(valOf(liveLots().filter(l => l.item_id === i.id), 'rem_m')) }, { label: 'ارزش نزد رعنا', cls: 'num', render: i => N(valOf(liveLots().filter(l => l.item_id === i.id), 'rem_r')) },
         { label: 'ارزش موجودی', cls: 'num', render: i => N(i.value) }, { label: 'وضعیت', render: status }
-      ], rows, { onRow: i => itemDetail(i.id), empty: 'کالایی ثبت نشده است', foot: rows.length ? ['جمع', '', '', '', h('b', null, rows.reduce((a, i) => a + i.rem, 0)), '', '', N(valOf(liveLots(), 'rem_m')), N(valOf(liveLots(), 'rem_r')), N(rows.reduce((a, i) => a + i.value, 0)), ''] : null }));
+      ], rows, { onRow: i => itemDetail(i.id), empty: 'کالایی ثبت نشده است', foot: rows.length ? ['جمع', '', '', '', '', h('b', null, rows.reduce((a, i) => a + i.rem, 0)), '', '', N(valOf(liveLots(), 'rem_m')), N(valOf(liveLots(), 'rem_r')), N(rows.reduce((a, i) => a + i.value, 0)), ''] : null }));
     } else {
       catHost.replaceChildren();
       const rows = S.lots.filter(l => !l.voided && l.rem > 0 && inCat(cat, S.I[l.item_id] || {}) && match(q, l.item, l.lot_no, l.supplier, l.invoice_no)).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id));
@@ -93,7 +95,7 @@ export function render(query) {
   root.append(head('موجودی', [btn('برگشت به تامین‌کننده', () => supplierReturnForm(), 'ghost'), btn('＋ خرید', () => purchaseForm(), 'primary')], 'فروش از قدیمی‌ترین دسته شروع می‌شود (FIFO) و با قیمت تمام‌شده‌ی همان دسته حساب می‌شود.'),
     flowCard(), warehouseCard(), byCategoryCard(),
     h('div', { class: 'kpis' }, kpi('ارزش کل موجودی', N(tot), { sub: 'به قیمت تمام‌شده' }), kpi('تعداد کل', h('span', { class: 'n' }, fmt(S.stock.reduce((a, i) => a + i.rem, 0)))), kpi('کم‌موجودی', h('span', { class: 'n' }, T.filter(i => i.rem > 0 && i.rem <= i.min_stock).length), { tone: 'warn' })),
-    h('div', { class: 'bar' }, searchBox(v => { q = v; draw(); }, 'جستجو در نام کالا یا دسته…'), h('label', { class: 'chk' }, h('input', { type: 'checkbox', onchange: e => { hideZero = e.target.checked; draw(); } }), 'پنهان کردن تمام‌شده‌ها')),
+    h('div', { class: 'bar' }, searchBox(v => { q = v; draw(); }, 'جستجو در نام کالا یا دسته…'), h('label', { class: 'chk' }, h('input', { type: 'checkbox', onchange: e => { hideZero = e.target.checked; draw(); } }), 'پنهان کردن تمام‌شده‌ها'), h('label', { class: 'chk' }, h('input', { type: 'checkbox', onchange: e => { showOff = e.target.checked; draw(); } }), 'نمایش کدهای غیرفعال')),
     h('div', { class: 'tabs' }), catHost, body);
   draw();
   return root;
