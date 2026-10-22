@@ -48,6 +48,14 @@ try {
   await M.locator('.chip.optc', { hasText: 'سفید' }).first().click(); await M.locator('.sheet-f .btn.primary').click(); await sleep(1500);
   const t2 = await D(); ok(t2.items.some(i => i.name === 'سوتین دانتل مدل ۱ · سفید · ۸۰B' || i.name === 'سوتین دانتل مدل ۱ · سفید · ۸۵B'), 'ویرایش رنگ: نام ترکیبی تازه ساخته شد');
   const errs = logs.filter(l => !/Failed to load resource|fonts|net::ERR/.test(l)); ok(errs.length === 0, 'بدون خطای کنسول' + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));
+  // کالای مشابه: سرور نمی‌سازد؛ مشابه‌های قدیمی در فهرست ⚠️ می‌آید
+  { const tk = (await (await fetch(API + '/api/auth/login/', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ identifier: 'mahsa@example.com', password: 'mahsa-pass-1' }) })).json()).data.token;
+    const r = await post(tk, '/api/rpc/save_item/', { name: 'سوتین  دانتل مدل ۱', category: 'سوتین', variants: [{ color: 'مشکی', size: '۸۰B' }] });
+    ok(JSON.stringify(r).includes('مشابه'), 'ساخت کالای مشابه رد شد: ' + JSON.stringify(r).slice(0, 120));
+    const { execSync } = await import('node:child_process');
+    execSync(`python3 -c "import psycopg;c=psycopg.connect('host=/tmp port=5433 user=postgres dbname=mara_e2e',autocommit=True);c.execute(\\"insert into items(name,category,base_name,color,size) values ('سوتین دانتل مدل۱ · مشکی · ۸۰B','سوتین','سوتین دانتل مدل۱','مشکی','۸۰B')\\")"`);
+    await page.reload(); await sleep(1500); await go('#/items'); await sleep(600);
+    const bt = await page.locator('body').innerText(); ok(bt.includes('کدهای مشابه') && bt.includes('٪ شبیه'), 'فهرست کدهای مشابه (۹۵٪) دیده می‌شود'); }
 } catch (e) { console.log('FAIL exception', e.message); fails++; }
 await browser.close(); srv.close();
 console.log(fails ? `FAILS: ${fails}` : 'ALL OK'); process.exit(fails ? 1 : 0);
