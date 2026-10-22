@@ -440,7 +440,7 @@ export function itemForm(it) {
   const delBtn = h('button', { class: 'btn danger ghost', type: 'button' }, 'حذف کالا');
   if (it) delBtn.onclick = async () => { if (!(await confirmBox(`«${it.name}» حذف شود؟ از لیست‌ها کنار می‌رود و سوابق مالی‌اش (فاکتورها و سود) می‌ماند. کالایی که موجودی دارد حذف نمی‌شود.`, 'حذف کن', true))) return; const r = await run(delBtn, () => rpc('save_item', { id: it.id, name: it.name, category: it.category, min_stock: it.min_stock, active: false })); if (r) finish(m, 'کالا حذف شد'); };
   const m = modal({ title: it ? 'ویرایش کالا' : 'کالای جدید', body: h('div', { class: 'form itemf' },
-    zone2('۱', 'مشخصات کالا', null, field('نام کالا *', name, used && !canEdit() ? 'این کالا در خرید/فروش استفاده شده؛ نامش را فقط حمیدرضا، مهسا و رعنا می‌توانند عوض کنند.' : (it ? 'نام نهایی = نام کالا · رنگ · سایز' : null)), field('دسته', cat)),
+    zone2('۱', 'مشخصات کالا', null, field('نام کالا *', name, used && !canEdit() ? 'این کالا در خرید/فروش استفاده شده؛ نامش را فقط حمیدرضا، مهسا و رعنا می‌توانند عوض کنند.' : (it ? 'کد کالا: ' + (it.code || '—') + ' · نام نهایی = نام کالا · رنگ · سایز' : 'کد هر ترکیب خودکار ساخته می‌شود (MR-0001 …)')), field('دسته', cat)),
     zone2('۲', it ? 'رنگ' : 'رنگ‌ها', 'برای فیلتر و گزارش', colors),
     h('section', { class: 'z2' }, h('div', { class: 'zt' }, h('i', null, '۳'), sizeTitle, sizeSub), h('div', { class: 'zx' }, sizeHost, cntHint, matrix)),
     zone2('۴', 'توضیحات برای مشتری', 'اختیاری', desc, h('div', { class: 'hint' }, 'در فاکتور و پیام مشتری، توضیحات همراه رنگ و سایز دیده می‌شود: «سوتین دانتل · مشکی · ۸۰».')),

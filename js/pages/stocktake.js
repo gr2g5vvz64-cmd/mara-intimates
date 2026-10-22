@@ -74,7 +74,7 @@ function countForm(done) {
   const counted = new Map(), reason = new Map();   // item_id → عدد / دلیل
   const catsAll = [...new Set(S.stock.filter(i => i.active).map(i => i.category || 'بدون دسته'))];
   const sys = i => i[holdKey(holder)];
-  const scoped = () => S.stock.filter(i => i.active && (!cat || (i.category || 'بدون دسته') === cat) && match(q, i.name, i.category, i.color, i.size))
+  const scoped = () => S.stock.filter(i => i.active && (!cat || (i.category || 'بدون دسته') === cat) && match(q, i.code, i.name, i.category, i.color, i.size))
     .sort((a, b) => (sys(b) > 0) - (sys(a) > 0) || a.name.localeCompare(b.name, 'fa'));
   const calc = () => {
     let sh = 0, shV = 0, su = 0, suV = 0, n = 0, bad = 0;

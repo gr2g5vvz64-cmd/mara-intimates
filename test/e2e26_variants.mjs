@@ -28,11 +28,16 @@ try {
   await M.locator('.sheet-f .btn').first().click(); await sleep(1800);
   const t = await D(); const made = t.items.filter(i => i.base_name === 'سوتین دانتل مدل ۱');
   ok(made.length === 3, 'سه کالا ساخته شد: ' + made.map(i => i.name).join(' | '));
+  ok(new Set(made.map(i => i.code)).size === 3 && made.every(i => /^MR-\d{4}$/.test(i.code || '')), 'هر ترکیب کد یکتا گرفت: ' + made.map(i => i.code).join(','));
   ok(made.every(i => i.description === 'دانتل فرانسوی، قاب‌دار' && i.category === 'سوتین'), 'توضیحات و دسته روی همه‌ی ترکیب‌ها هست');
   ok(!made.some(i => i.color === 'کرم' && i.size === '۸۵B') && made.some(i => i.color === 'مشکی' && i.size === '۸۵B'), 'ترکیب حذف‌شده ساخته نشد');
   // لیست کالا: فیلتر رنگ و سایز
   await go('#/items'); await sleep(400);
   const fchips = page.locator('.vf .fchip'); ok(await fchips.count() >= 3, 'فیلتر رنگ و سایز در لیست کالا هست (' + await fchips.count() + ')');
+  { const body = await page.locator('tbody').innerText(); ok(made.every(i => body.includes(i.code)), 'کد کالا در لیست کالاها دیده می‌شود'); }
+  await page.locator('input[type=search], .bar input').first().fill(made[0].code); await sleep(350);
+  ok((await page.locator('tbody tr').allInnerTexts()).filter(x => x.includes('سوتین دانتل مدل ۱')).length === 1, 'جستجو با کد فقط همان ترکیب را می‌آورد');
+  await page.locator('input[type=search], .bar input').first().fill(''); await sleep(350);
   await page.locator('.vf .fchip', { hasText: 'کرم' }).click(); await sleep(250);
   const rows = (await page.locator('tbody tr').allInnerTexts()).filter(x => x.includes('سوتین دانتل مدل ۱'));
   ok(rows.length === 1 && rows[0].includes('کرم'), 'با فیلتر «کرم» فقط ترکیب‌های کرم می‌ماند: ' + rows.length);

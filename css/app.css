@@ -598,3 +598,4 @@ ul.plain{list-style:none;padding:0;margin:4px 0}
 .ck{display:flex;gap:8px;align-items:flex-start;cursor:pointer;line-height:1.7}.ck input{margin-top:6px;width:18px;height:18px}
 .chp{display:block;font-size:12px;white-space:nowrap}.mcx{margin-top:10px}.mcx summary{cursor:pointer;color:var(--mut,#777)}
 .hint.warn{color:#a12626}
+.icode{font-family:monospace;color:var(--mut,#777);font-size:12px;white-space:nowrap}
