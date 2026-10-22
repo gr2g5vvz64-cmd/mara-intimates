@@ -42,7 +42,9 @@ export function hbars(title, rows, color = 'var(--gold)', unit = '') {
 
 /* نمودار سررسیدهای ۳۰ روز آینده: بدهی ما به تامین‌کننده و طلب ما از مشتری */
 export function dueChart() {
-  const b = dueBuckets(), max = Math.max(1, ...b.map(x => Math.max(x.payable, x.receivable)));
+  const b = dueBuckets();
+  if (!b.some(x => x.payable || x.receivable)) return null; // همه‌چیز نقد: نموداری لازم نیست
+  const max = Math.max(1, ...b.map(x => Math.max(x.payable, x.receivable)));
   const W = 560, H = 190, pb = 28, pt = 12, gap = (W - 12) / b.length, bw = Math.max(3, gap / 2 - 1.5);
   const svg = sv('svg', { viewBox: `0 0 ${W} ${H}`, class: 'chart dchart', role: 'img', 'aria-label': 'نمودار سررسیدهای ۳۰ روز آینده' });
   svg.append(sv('title', {}, 'سررسیدهای ۳۰ روز آینده'));

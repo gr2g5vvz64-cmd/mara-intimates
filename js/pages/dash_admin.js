@@ -117,8 +117,8 @@ export function adminDashboard() {
     const SS = ['مهسا', 'رعنا'].map(p => sellerStats(P.from, P.to, p));
     const sellerCard = h('div', { class: 'card' }, h('div', { class: 'ct' }, '🧑‍💼 فروشنده‌ها و هدف فروش به آشنایان ', h('small', null, `(${label})`), tip('مشتری = تعداد نفرهای متفاوت (هر نفر یک بار شمرده می‌شود). «جدید» یعنی اولین خریدش از کل فروشگاه در همین بازه است. هدف و تحقق فقط فروش «آشنایان» همین ماه را می‌شمارد؛ فروش پیج اینستاگرام هدف جدا دارد.'),
       h('button', { type: 'button', class: 'mini', onclick: () => goalForm() }, 'تعیین هدف')),
-      dtable([{ label: 'فروشنده', main: true, render: x => x.seller }, { label: 'فروش', cls: 'num', render: x => N(x.total) }, { label: 'فاکتور', cls: 'num', render: x => fmt(x.count) + (x.anon ? ` (${fmt(x.anon)} بدون نام)` : '') },
-        { label: 'مشتری', cls: 'num', render: x => `${fmt(x.customers)}${x.fresh ? ` (${fmt(x.fresh)} جدید)` : ''}` },
+      dtable([{ label: 'فروشنده', main: true, render: x => x.seller }, { label: 'فروش', cls: 'num', render: x => N(x.total) }, { label: 'فاکتور', cls: 'num', render: x => h('span', null, fmt(x.count), x.anon ? h('small', { class: 'muted' }, ` · ${fmt(x.anon)} بدون نام`) : null) },
+        { label: 'مشتری', cls: 'num', render: x => fmt(x.customers) }, { label: 'مشتری جدید', cls: 'num', render: x => (x.fresh ? pill(fmt(x.fresh), 'green') : '—') },
         { label: 'هدف ماه', cls: 'num', hm: true, render: x => { const g = goalProgress(x.seller); return g.goal ? N(g.goal) : '—'; } },
         { label: 'تحقق', cls: 'num', render: x => { const g = goalProgress(x.seller); return g.goal ? h('span', null, pill(fmt(g.pct) + '٪', g.pct >= 100 ? 'green' : g.pct >= g.elapsed ? 'blue' : 'amber'), g.pace && g.pace.label ? h('small', null, ' ' + g.pace.label) : null) : '—'; } }], SS, { empty: '' }));
     const mid = h('div', { class: 'grid2' }, categoryProfitCard(), h('div', null, sellerCard, hbars('فروش به تفکیک محل', chan)));
