@@ -52,7 +52,6 @@ export function render() {
       h('h3', { class: 'sec' }, '۳ · مقایسه‌ی مهسا و رعنا'),
       dtable([{ label: 'شاخص', main: true, render: x => x.label }, { label: 'مهسا', cls: 'num', render: x => x.fm(x.a) }, { label: 'رعنا', cls: 'num', render: x => x.fm(x.b) }], cmp),
 
-      h('div', { class: 'pb' }),
       h('h3', { class: 'sec' }, '۴ · کجا خوب بودیم و کجا ضعیف'),
       h('div', { class: 'grid2' }, ...r.people.map(x => h('div', { class: 'card' }, h('div', { class: 'ct' }, x.p),
         h('div', { class: 'mt-h good' }, 'خوب بود'), list(x.good, 'good', 'مورد برجسته‌ای نبود.'),
