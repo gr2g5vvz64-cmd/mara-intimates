@@ -59,11 +59,12 @@ export function returns(kind = 'customer') {
     tbl.replaceChildren(dtable([
       { label: 'شماره', main: true, render: r => h('span', null, r.no, ' ', r.voided ? pill('باطل', 'red') : null) }, { label: 'تاریخ', render: r => jstr(r.date) },
       { label: 'نوع', render: r => (r.kind === 'customer' ? pill('از مشتری', 'blue') : pill('به تامین‌کننده', 'gray')) }, { label: 'کالا', render: r => S.I[r.item_id].name }, { label: 'تعداد', cls: 'num', render: r => r.qty },
-      { label: 'وضعیت', hm: true, render: r => (r.kind === 'customer' ? r.condition + (r.to_supplier ? ' · به تامین‌کننده' : '') : '') },
+      { label: 'وضعیت', hm: true, render: r => (r.kind === 'customer' ? r.condition + (r.to_supplier ? ' · به تامین‌کننده' : '') : '') }, { label: 'علت', hm: true, render: r => r.reason || '' },
       { label: 'پول برگشتی', cls: 'num', render: r => (r.refund_amount + r.debt_cancel ? N(r.refund_amount + r.debt_cancel) : '') }, { label: 'اعتبار تامین‌کننده', cls: 'num', hm: true, render: r => (r.supplier_credit ? N(r.supplier_credit) : '') },
       { label: 'سود / ضرر', cls: 'num', render: r => N(r.profit_effect, r.profit_effect < 0 ? 'neg' : 'pos') }, { label: 'ثبت‌کننده', hm: true, render: r => r.created_by }
     ], rows, { rowCls, empty: 'مرجوعی ثبت نشده', onRow: r => entryDetail('return', 'مرجوعی ' + r.no, [['تاریخ', jstr(r.date)], ['کالا', S.I[r.item_id].name + ' × ' + r.qty], ['دسته', S.LOT[r.lot_id].lot_no], r.sale_line_id ? ['فروش', S.SALE[S.saleLines.find(l => l.id === r.sale_line_id).sale_id].no] : null,
       r.kind === 'customer' ? ['وضعیت', r.condition + (r.to_supplier ? ' · به تامین‌کننده پس داده شد' : ' · پیش خودمان')] : null,
+      r.reason ? ['علت برگشت', r.reason] : null,
       r.refund_amount ? ['پول برگشتی', h('span', null, N(r.refund_amount), ' از ', accName(r.refund_account_id))] : null, r.debt_cancel ? ['کسر از بدهی مشتری', N(r.debt_cancel)] : null, r.supplier_credit ? ['اعتبار نزد تامین‌کننده', N(r.supplier_credit)] : null,
       ['اثر بر سود', N(r.profit_effect, r.profit_effect < 0 ? 'neg' : 'pos')], r.note ? ['توضیح', r.note] : null], r) }));
   };

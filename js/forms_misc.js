@@ -185,7 +185,7 @@ export function capitalForm() {
 
 /* ----- مرجوعی از مشتری ----- */
 export function returnForm(saleId, edit) {
-  let date = edit ? edit.date : todayISO(), cond = edit ? edit.condition : 'سالم', toSup = edit ? !!edit.to_supplier : false, holder = edit ? edit.holder : null;
+  let date = edit ? edit.date : todayISO(), cond = edit ? edit.condition : 'سالم', toSup = edit ? !!edit.to_supplier : false, holder = edit ? edit.holder : null, reason = edit ? (edit.reason || '') : '';
   const avail = l => l.qty - l.returned_qty + (edit && l.id === edit.sale_line_id ? edit.qty : 0);   // در ویرایش، تعداد همین مرجوعی هم قابل انتخاب است
   const sales = S.vSales.filter(s => !s.voided);
   const sale = combo({ placeholder: 'کدام فروش؟ شماره، کالا یا مشتری…', options: sales.slice().reverse().map(s => ({ v: s.id, label: `${s.no} · ${jstr(s.date)}`, sub: s.items_text + (s.customer ? ' · ' + s.customer : ''), keywords: s.items_text + ' ' + (s.customer || '') })), value: saleId || null, onChange: () => drawLines() });
@@ -198,6 +198,7 @@ export function returnForm(saleId, edit) {
   const lastA = pref('payAcc', null); acc.set(lastA && S.A[lastA] ? lastA : (businessAccounts()[1] || businessAccounts()[0]).id);
   const accBox = h('div', null, field('پول از کدام حساب برگشت؟', acc));
   const condC = chips([{ v: 'سالم', label: 'سالم' }, { v: 'معیوب', label: 'معیوب' }], cond, v => { cond = v; preview(); }, { cls: 'two' });
+  const reasonC = chips([{ v: '', label: 'نامشخص' }, { v: 'سایز نشد', label: 'سایز نشد' }, { v: 'ایراد داشت', label: 'ایراد داشت' }, { v: 'پشیمان شد', label: 'پشیمان شد' }, { v: 'رنگ/مدل فرق داشت', label: 'رنگ/مدل فرق داشت' }, { v: 'اشتباه ارسال', label: 'اشتباه ارسال' }], reason, v => { reason = v; });
   const supC = chips([{ v: false, label: 'نه، پیش خودمان می‌ماند' }, { v: true, label: 'بله، به تامین‌کننده پس دادیم' }], toSup, v => { toSup = v; preview(); }, { cls: 'two' });
   const holdC = chips([{ v: 'مهسا', label: 'مهسا' }, { v: 'رعنا', label: 'رعنا' }], null, v => { holder = v; preview(); }, { cls: 'two' });
   const holdLbl = h('label', { class: 'lbl' }, '');
@@ -235,18 +236,18 @@ export function returnForm(saleId, edit) {
   btn.onclick = async () => {
     const l = cur(); if (!l) return toast('کالای برگشتی را انتخاب کن', 'err');
     if (refund.get() > 0 && !acc.get()) return toast('حساب بازگشت پول را انتخاب کن', 'err');
-    const r = await run(btn, () => rpc(edit ? 'edit_return' : 'create_return', { ...(edit ? { id: edit.id } : {}), date, sale_line_id: l.id, holder: holder || l.holder, qty: qty.get(), condition: cond, to_supplier: toSup, refund_amount: refund.get(), refund_account_id: refund.get() > 0 ? acc.get() : null, debt_cancel: debt.get(), note: note.value }));
+    const r = await run(btn, () => rpc(edit ? 'edit_return' : 'create_return', { ...(edit ? { id: edit.id } : {}), date, sale_line_id: l.id, holder: holder || l.holder, qty: qty.get(), condition: cond, reason, to_supplier: toSup, refund_amount: refund.get(), refund_account_id: refund.get() > 0 ? acc.get() : null, debt_cancel: debt.get(), note: note.value }));
     if (r) { setPref('payAcc', acc.get()); finish(m, `مرجوعی ${r.no} ${edit ? 'ویرایش شد' : 'ثبت شد'}`); }
   };
   const m = modal({ title: edit ? `ویرایش مرجوعی ${edit.no}` : 'مرجوعی از مشتری', wide: true, body: h('div', { class: 'form' },
     field('تاریخ', dateField(date, v => { date = v; })), field('کدام فروش؟', sale), field('کدام کالا؟', lineSel), field('چند عدد برگشت؟', qty),
-    field('وضعیت کالا', condC, 'سالم = به موجودی برمی‌گردد. معیوب = ضرر ثبت می‌شود.'), field('به تامین‌کننده پس داده شد؟', supC, 'اگر بله، بهای خرید کالا از بدهی همان تامین‌کننده کم می‌شود.'),
+    field('وضعیت کالا', condC, 'سالم = به موجودی برمی‌گردد. معیوب = ضرر ثبت می‌شود.'), field('علت برگشت', reasonC, 'برای شناخت مشکل (مثلاً سایز نشد) تا بعداً بدانیم چه چیزی را درست کنیم.'), field('به تامین‌کننده پس داده شد؟', supC, 'اگر بله، بهای خرید کالا از بدهی همان تامین‌کننده کم می‌شود.'),
     holdBox, field('چقدر به مشتری پس دادیم؟', refund), accBox, debtBox, prev, field('دلیل', note)), footer: [btn] });
   drawLines();
   if (edit) {                                   // پیش‌پر کردن با اطلاعات مرجوعی قبلی
     const sl0 = S.saleLines.find(l => l.id === edit.sale_line_id);
     if (sl0) { sale.set(sl0.sale_id); drawLines(); lineSel.value = String(edit.sale_line_id); setupLine(); }
-    qty.set(edit.qty); condC.set(edit.condition); supC.set(!!edit.to_supplier); holder = edit.holder;
+    qty.set(edit.qty); condC.set(edit.condition); reasonC.set(edit.reason || ''); supC.set(!!edit.to_supplier); holder = edit.holder;
     refund.set(edit.refund_amount || ''); debt.set(edit.debt_cancel || '');
     if (edit.refund_account_id && S.A[edit.refund_account_id]) acc.set(edit.refund_account_id);
     note.value = edit.note || ''; preview();

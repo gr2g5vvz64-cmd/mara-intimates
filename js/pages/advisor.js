@@ -30,6 +30,7 @@ export function advisorTab() {
     body.replaceChildren(...[
       h('div', { class: 'kpis' }, kpi('بخرید', h('span', { class: 'n' }, fmt(buy.length)), { sub: buy.length ? `${fmt(r.buy_units)} عدد در کل` : 'فعلاً چیزی نیست', tone: buy.length ? 'pos' : '' }),
         kpi('خرید نکنید', h('span', { class: 'n' }, fmt(avoid.length)), { tone: avoid.length ? 'warn' : '' }), kpi('پرفروش با سود کم', h('span', { class: 'n' }, fmt(hold.length))), kpi('فروش کم', h('span', { class: 'n' }, fmt(weak.length)), { sub: 'پیشنهاد خرید ندارند' })),
+      r.age_days && r.age_days < 45 ? h('div', { class: 'alert amber', style: 'margin:8px 0' }, `⚠️ فقط ${fmt(r.age_days)} روز از اولین فروش گذشته؛ همه‌ی پیشنهادها «اطمینان کم» و فقط راهنما هستند، نه حکم.`) : null,
       h('div', { class: 'alert ok', style: 'margin:8px 0' }, `قاعده: «پرفروش» یعنی در ${r.days} روز اخیر حداقل ${r.thresholds.min_qty} عدد، در حداقل ${r.thresholds.min_days} روز مختلف و برای حداقل ${r.thresholds.min_cust} مشتری فروخته شده. فروش یک یا دو عددی (یا چند عدد فقط به یک نفر) هیچ‌وقت پیشنهاد خرید نمی‌شود.`),
       h('h3', { class: 'sec' }, '🛒 بخرید (پرفروش و رو به اتمام)'), buyTable,
       hold.length ? h('div', null, h('h3', { class: 'sec' }, '⚠️ پرفروش ولی سود کم'), simple(hold)) : null,

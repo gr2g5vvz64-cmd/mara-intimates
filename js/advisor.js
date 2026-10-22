@@ -16,19 +16,19 @@ export async function adviceFor(itemId) {
 }
 export const VERDICT = {
   urgent: ['red', '🔴 تمام شده؛ بخرید'], buy: ['green', '🛒 بخرید'], hold: ['amber', '⚠️ سود کم'], ok: ['blue', '✅ موجودی کافی'],
-  weak: ['gray', 'فروش کم'], avoid: ['red', '⛔ خرید نکن']
+  weak: ['gray', 'فروش کم'], avoid: ['red', '⛔ فعلاً نخر']
 };
 export function adviceText(o) {
   if (!o) return '';
   if (o.verdict === 'urgent' || o.verdict === 'buy') return `🛒 مشاور: خوب فروش می‌رود؛ پیشنهاد خرید ${o.buy_qty} عدد. ${o.reason}`;
-  if (o.verdict === 'avoid') return `⛔ مشاور: خرید نکن. ${o.reason}`;
+  if (o.verdict === 'avoid') return `⛔ مشاور: فعلاً نخر. ${o.reason}`;
   if (o.verdict === 'hold') return `⚠️ مشاور: ${o.reason}`;
   if (o.verdict === 'weak') return `ℹ️ مشاور: ${o.reason}`;
   return `✅ مشاور: ${o.reason}`;
 }
 export function adviceDigest(r) {
   const it = r.items, g = k => it.filter(o => o.verdict === k);
-  const L = [`مشاور خرید MARA — ${r.days} روز اخیر (تا ${r.today})`, `قاعده: پرفروش = حداقل ${r.thresholds.min_qty} عدد، در حداقل ${r.thresholds.min_days} روز مختلف، برای حداقل ${r.thresholds.min_cust} مشتری.`];
+  const L = [`مشاور خرید MARA — ${r.days} روز اخیر (تا ${r.today})${r.age_days ? ` · ${r.age_days} روز از اولین فروش گذشته${r.age_days < 45 ? ' (داده کم؛ همه‌ی پیشنهادها «اطمینان کم» و فقط راهنما)' : ''}` : ''}`, `قاعده: پرفروش = حداقل ${r.thresholds.min_qty} عدد، در حداقل ${r.thresholds.min_days} روز مختلف، برای حداقل ${r.thresholds.min_cust} مشتری.`];
   const sec = (t, arr, f) => { if (arr.length) { L.push('', t); arr.forEach(o => L.push('• ' + f(o))); } };
   sec('بخرید:', [...g('urgent'), ...g('buy')], o => `${o.name}: موجودی ${o.rem}، فروش ${o.sold}، مشتری ${o.customers}، هفته‌ای ${o.per_week} ← ${o.buy_qty} عدد`);
   sec('پرفروش با سود کم:', g('hold'), o => `${o.name}: سود ${o.margin}٪`);

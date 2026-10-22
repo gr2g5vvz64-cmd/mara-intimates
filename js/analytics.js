@@ -131,3 +131,23 @@ export function receivableAge() {
   for (const s of activeSales()) if (s.outstanding > 0.5) { const age = Math.round((t - Date.parse(s.date + 'T00:00:00Z')) / 864e5); o[age >= 8 ? 'c' : age >= 4 ? 'b' : 'a'] += s.outstanding; }
   return o;
 }
+
+/** اولین روز فعالیت (اولین فروش یا خرید) و تعداد روزهای فعالیت تا امروز: برای محافظت از نتیجه‌گیری با داده‌ی کم */
+export function dataStart() {
+  const ds = [...activeSales().map(s => s.date), ...(S.vInvoices || []).filter(i => !i.voided).map(i => i.date)].filter(Boolean).sort();
+  return ds[0] || todayISO();
+}
+export function bizDays() { return Math.max(1, Math.round((Date.parse(todayISO() + 'T00:00:00Z') - Date.parse(dataStart() + 'T00:00:00Z')) / 864e5) + 1); }
+/** بدهی کل به تامین‌کنندگان، اعتبار نزد تامین‌کنندگان (مثلاً از برگشت کالا) و خالص */
+export function payableBreakdown() {
+  const v = S.vSup || [], gross = sum(v.filter(x => x.balance > 0.5), x => x.balance), credit = sum(v.filter(x => x.balance < -0.5), x => -x.balance);
+  return { gross, credit, net: gross - credit };
+}
+/** موجودی انبار معادل چند ماه فروش است (بر پایه‌ی بهای تمام‌شده‌ی ۳۰ روز اخیر، بدون مرجوعی) */
+export function stockMonths() {
+  const to = todayISO(), from = addDaysISO(to, -29), ok = new Set(activeSales().filter(s => s.date >= from && s.date <= to).map(s => s.id));
+  let cogs = 0; for (const l of S.saleLines) if (ok.has(l.sale_id)) cogs += Math.max(0, l.qty - (l.returned_qty || 0)) * l.unit_cost;
+  const val = (S.totals || {}).stock_value || 0, days = Math.min(30, bizDays());
+  const monthly = days > 0 ? cogs / days * 30 : 0;
+  return { value: val, monthly, months: monthly > 0 ? val / monthly : null };
+}

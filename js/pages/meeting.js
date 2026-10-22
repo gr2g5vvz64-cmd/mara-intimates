@@ -31,7 +31,7 @@ export function render() {
     const row = (label, f, goodUp = true, fmtv = v => N(v)) => ({ label, a: f(A.c), b: f(B.c), fm: fmtv });
     const cmp = [
       row('فروش', c => c.total), row('تعداد فاکتور', c => c.count, true, v => fmt(v)), row('میانگین هر فاکتور', c => c.avg),
-      row('سود فاکتورها', c => c.profit), row('مشتری (نفر)', c => c.customers, true, v => fmt(v)), row('مشتری جدید', c => c.fresh, true, v => fmt(v)),
+      row('سود فاکتورها (پیش از هزینه‌های عمومی)', c => c.profit), row('مشتری (نفر)', c => c.customers, true, v => fmt(v)), row('مشتری جدید', c => c.fresh, true, v => fmt(v)),
       row('تخفیف داده‌شده (٪ فروش)', c => c.discPct, false, v => fmt(Math.round(v)) + '٪'), row('فاکتور بدون نام خریدار', c => c.anon, false, v => fmt(v)),
       row('نسیه‌ی سررسیدگذشته', c => c.lateAmt, false), row('مرجوعی', c => c.retCount, false, v => fmt(v))
     ];
@@ -51,6 +51,7 @@ export function render() {
 
       h('h3', { class: 'sec' }, '۳ · مقایسه‌ی مهسا و رعنا'),
       dtable([{ label: 'شاخص', main: true, render: x => x.label }, { label: 'مهسا', cls: 'num', render: x => x.fm(x.a) }, { label: 'رعنا', cls: 'num', render: x => x.fm(x.b) }], cmp),
+      h('p', { class: 'hint' }, 'فروش بیشتر به‌تنهایی به معنای عملکرد بهتر نیست؛ کانال فروش، نوع مشتری، قیمت کالا و مرجوعی هر نفر فرق می‌کند.'),
 
       h('h3', { class: 'sec' }, '۴ · کجا خوب بودیم و کجا ضعیف'),
       h('div', { class: 'grid2' }, ...r.people.map(x => h('div', { class: 'card' }, h('div', { class: 'ct' }, x.p),

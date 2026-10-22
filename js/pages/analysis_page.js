@@ -2,7 +2,8 @@
 import { h, jlong, todayISO, toast } from '../util.js';
 import { S, api } from '../store.js';
 import { pill, kpi, chips, tabsBar } from '../ui.js';
-import { head } from './common.js';
+import { head, btn } from './common.js';
+import { copyAiPack } from '../aipack.js';
 import { saleDetail, purchaseDetail } from './trade.js';
 import { buildReport, reportText, PERIODS } from '../report.js';
 import { errText } from '../store.js';
@@ -75,5 +76,5 @@ export function render() {
   const pick = () => (tab === 'audit' ? auditTab() : tab === 'perf' ? perfTab() : advisorTab());
   const draw = () => { body.replaceChildren(pick()); host.querySelector('.tabs') && host.querySelector('.tabs').replaceWith(bar()); };
   const bar = () => tabsBar([{ id: 'advisor', label: '🧭 مشاور خرید' }, { id: 'perf', label: '📈 تحلیل عملکرد' }, { id: 'audit', label: '🔍 بررسی اشتباهات' }, { id: 'meeting', label: '🧑‍💼 گزارش جلسه‌ی دو هفته‌ای' }], tab, t => { if (t === 'meeting') { location.hash = '#/meeting'; return; } tab = t; draw(); });
-  host.append(head('تحلیل', [], `${jlong(todayISO())} · فقط مدیر`), bar(), body); body.append(pick()); return host;
+  host.append(head('تحلیل', [btn('📤 خروجی برای بررسی هوش مصنوعی', async e => { const b = e.currentTarget; b.disabled = true; try { await copyAiPack(); } catch (er) { toast(errText(er), 'err'); } finally { b.disabled = false; } }, 'ghost'), btn('📤 همان، بدون نام مشتری', async e => { const b = e.currentTarget; b.disabled = true; try { await copyAiPack(true); } catch (er) { toast(errText(er), 'err'); } finally { b.disabled = false; } }, 'ghost')], `${jlong(todayISO())} · فقط مدیر`), bar(), body); body.append(pick()); return host;
 }

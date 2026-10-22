@@ -2,6 +2,7 @@
 import { h, fmt, jstr, todayISO, addDaysISO, sum } from './util.js';
 import { S, activeSales, businessAccounts, accBalance } from './store.js';
 import { pendingCount, blockedCount } from './outbox.js';
+import { stockMonths, bizDays } from './analytics.js';
 import { modal, pill } from './ui.js';
 import { toast } from './util.js';
 
@@ -103,6 +104,8 @@ export function analyze() {
   else if (pend) add('warn', 'ثبت ارسال‌نشده', `${pend} ثبت هنوز در سرور ننشسته.`, { fix: 'اینترنت را چک کن و صفحه را باز نگه دار.', href: '#/savelog' });
   if (S.diagErrors > 0) add('warn', 'خطاهای سیستمی ثبت شده', `${S.diagErrors} خطا در تشخیص مشکل.`, { href: '#/diag' });
   check('هیچ ثبت ارسال‌نشده یا خطای سیستمی نداریم', blk || pend || S.diagErrors > 0);
+  const sm = stockMonths();
+  if (sm.months != null && sm.months >= 2) add(sm.months >= 3 ? 'warn' : 'info', 'سرمایه‌ی زیادی در انبار خوابیده', `موجودی انبار ${fmt(Math.round(sm.value))} ریال است و با سرعت فروش ۳۰ روز اخیر معادل حدود ${sm.months.toFixed(1)} ماه فروش می‌شود${bizDays() < 60 ? ' (فعالیت تازه است؛ تقریبی)' : ''}.`, { fix: 'فعلاً خرید جدید نکنید و کالای کم‌گردش را با پیشنهاد هدفمند بفروشید؛ جزئیات در «مشاور خرید».', href: '#/analysis' });
 
   const order = { err: 0, warn: 1, info: 2 };
   F.sort((a, b) => order[a.lvl] - order[b.lvl]);
