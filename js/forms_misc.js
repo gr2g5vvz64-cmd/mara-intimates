@@ -271,17 +271,28 @@ export function supplierReturnForm(edit) {
 }
 
 /* ----- جابجایی کالا بین مهسا و رعنا ----- */
-export function moveStockForm(lotId) {
-  let date = todayISO(), from = 'مهسا';
-  const lot = S.LOT[lotId];
+export function moveStockForm(lotId0) {
+  let date = todayISO(), from = 'مهسا', lotId = lotId0 || null;
   const to = () => (from === 'مهسا' ? 'رعنا' : 'مهسا');
-  const fc = chips([{ v: 'مهسا', label: 'از مهسا به رعنا' }, { v: 'رعنا', label: 'از رعنا به مهسا' }], from, v => { from = v; qty.setMax(lot[holdKey(from)]); info(); }, { cls: 'two' });
-  const qty = intField({ value: 1, min: 1, max: lot.rem_m || 1, big: true });
-  const inf = h('div', { class: 'hint' }); const info = () => { inf.textContent = `موجودی این دسته نزد ${from}: ${lot[holdKey(from)]} عدد`; }; info();
+  const lot = () => S.LOT[lotId];
+  const lots = () => S.lots.filter(l => !l.voided && l.rem > 0).sort((a, b) => (a.item < b.item ? -1 : a.item > b.item ? 1 : a.date < b.date ? -1 : a.id - b.id));
+  const mx = () => (lot() ? lot()[holdKey(from)] || 0 : 0);
+  const qty = intField({ value: 1, min: 1, max: 1, big: true });
+  const inf = h('div', { class: 'hint' });
+  const info = () => { qty.setMax(Math.max(mx(), 1)); inf.textContent = lot() ? `موجودی این دسته نزد ${from}: ${mx()} عدد · قیمت تمام‌شده‌ی هر عدد: ${fmt(Math.round(lot().landed_unit || 0))}` : 'اول کالا را انتخاب کن'; };
+  const fc = chips([{ v: 'مهسا', label: 'از مهسا به رعنا' }, { v: 'رعنا', label: 'از رعنا به مهسا' }], from, v => { from = v; info(); }, { cls: 'two' });
+  let pick = null;
+  if (!lotId0) {
+    const L = lots(); if (!L.length) return toast('کالایی با موجودی نداریم', 'err');
+    lotId = L[0].id;
+    pick = h('select', { class: 'sel full', 'aria-label': 'کالا و دسته' }, L.map(l => h('option', { value: l.id }, `${l.item} · ${l.lot_no} · مهسا ${l.rem_m} · رعنا ${l.rem_r}`)));
+    pick.onchange = () => { lotId = +pick.value; info(); };
+  }
+  info();
   const note = h('input', { class: 'inp', placeholder: 'توضیح' });
   const btn = h('button', { class: 'btn primary lg', type: 'button' }, 'ثبت جابجایی');
-  btn.onclick = async () => { const r = await run(btn, () => rpc('move_stock', { date, lot_id: lotId, from_holder: from, to_holder: to(), qty: qty.get(), note: note.value })); if (r) finish(m, 'جابجایی ثبت شد'); };
-  const m = modal({ title: `جابجایی ${lot.item} (${lot.lot_no})`, body: h('div', { class: 'form' }, field('تاریخ', dateField(date, v => { date = v; })), fc, inf, field('چند عدد؟', qty), field('توضیح', note)), footer: [btn] });
+  btn.onclick = async () => { if (!lot()) return toast('کالا را انتخاب کن', 'err'); if (mx() < 1) return toast(`نزد ${from} از این دسته موجودی نیست`, 'err'); const r = await run(btn, () => rpc('move_stock', { date, lot_id: lotId, from_holder: from, to_holder: to(), qty: qty.get(), note: note.value })); if (r) finish(m, 'جابجایی ثبت شد'); };
+  const m = modal({ title: lotId0 ? `جابجایی ${lot().item} (${lot().lot_no})` : 'جابجایی کالا بین مهسا و رعنا', body: h('div', { class: 'form' }, field('تاریخ', dateField(date, v => { date = v; })), pick ? field('کدام کالا؟', pick) : null, fc, inf, field('چند عدد؟', qty), field('توضیح', note)), footer: [btn] });
 }
 
 /* ----- کالا و تامین‌کننده ----- */

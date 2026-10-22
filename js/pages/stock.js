@@ -82,8 +82,7 @@ export function render(query) {
       const rows = S.lots.filter(l => !l.voided && l.rem > 0 && inCat(cat, S.I[l.item_id] || {}) && match(q, l.item, l.lot_no, l.supplier, l.invoice_no)).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id));
       body.replaceChildren(dtable([
         { label: 'دسته', main: true, render: l => l.lot_no }, { label: 'کالا', render: l => l.item }, { label: 'فاکتور', hm: true, render: l => l.invoice_no }, { label: 'تاریخ', hm: true, render: l => jstr(l.date) }, { label: 'تامین‌کننده', hm: true, render: l => l.supplier },
-        { label: 'تمام‌شده', cls: 'num', render: l => N(l.landed_unit) }, { label: 'نزد مهسا', cls: 'num', render: l => l.rem_m }, { label: 'نزد رعنا', cls: 'num', render: l => l.rem_r }, { label: 'ارزش', cls: 'num', render: l => N(l.value) },
-        { label: '', render: l => btn('جابجایی', e => { e.stopPropagation(); moveStockForm(l.id); }, 'ghost sm') }
+        { label: 'تمام‌شده', cls: 'num', render: l => N(l.landed_unit) }, { label: 'نزد مهسا', cls: 'num', render: l => l.rem_m }, { label: 'نزد رعنا', cls: 'num', render: l => l.rem_r }, { label: 'ارزش', cls: 'num', render: l => N(l.value) }
       ], rows, { empty: 'دسته‌ی دارای موجودی نیست' }));
       const mv = (S.moves || []).filter(x => !x.voided).sort((x, y) => (x.date < y.date ? 1 : -1)).slice(0, 15);
       if (canEdit() && mv.length) body.append(h('h3', { class: 'sec' }, 'آخرین جابجایی‌ها'), dtable([
@@ -94,7 +93,7 @@ export function render(query) {
     }
   };
   const tot = S.totals.stock_value || 0;
-  root.append(head('موجودی', [btn('برگشت به تامین‌کننده', () => supplierReturnForm(), 'ghost'), btn('＋ خرید', () => purchaseForm(), 'primary')], 'فروش از قدیمی‌ترین دسته شروع می‌شود (FIFO) و با قیمت تمام‌شده‌ی همان دسته حساب می‌شود.'),
+  root.append(head('موجودی', [canEdit() ? btn('جابجایی', () => moveStockForm(), 'ghost') : null, btn('برگشت به تامین‌کننده', () => supplierReturnForm(), 'ghost'), btn('＋ خرید', () => purchaseForm(), 'primary')], 'فروش از قدیمی‌ترین دسته شروع می‌شود (FIFO) و با قیمت تمام‌شده‌ی همان دسته حساب می‌شود.'),
     flowCard(), warehouseCard(), byCategoryCard(),
     h('div', { class: 'kpis' }, kpi('ارزش کل موجودی', N(tot), { sub: 'به قیمت تمام‌شده' }), kpi('تعداد کل', h('span', { class: 'n' }, fmt(S.stock.reduce((a, i) => a + i.rem, 0)))), kpi('کم‌موجودی', h('span', { class: 'n' }, T.filter(i => i.rem > 0 && i.rem <= i.min_stock).length), { tone: 'warn' })),
     h('div', { class: 'bar' }, searchBox(v => { q = v; limit = 30; draw(); }, 'جستجو با کد، نام، دسته، رنگ یا سایز…')),
