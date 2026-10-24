@@ -712,3 +712,14 @@ ul.plain{list-style:none;padding:0;margin:4px 0}
 .pgrow .rm{border:1.5px solid var(--bd)}
 .btn.ghost{border-color:var(--bd)}
 .sheet{border:1.5px solid var(--bd)}
+
+/* ===== ۷.۲۲: همه‌ی فیلدهای یک ردیف هم‌تراز؛ آخرین قیمت خرید کمرنگ ===== */
+@media (min-width:821px){
+  .pgrow{align-items:start}
+  .pgrow .rn{margin-top:6px}
+  .pgrow .pg-code{height:42px}
+  .pgrow .c-tot .tot{display:block;line-height:42px}
+  .pgrow .rm{margin-top:4px}
+  .pgrow .pg-dls{line-height:42px}
+}
+.pgrow .numf .inp.lastp::placeholder{color:color-mix(in srgb,var(--ink) 38%,var(--bg));font-weight:700;opacity:1}

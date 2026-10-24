@@ -34,9 +34,11 @@ export function purchaseForm(preset = {}) {
   }
   function addRow(init = {}) { const r = Object.assign(newRow(), init); rows.push(r); body1.append(mkRow(r)); return r; }
   function ensureTail() { if (!rows.length || !isBlank(rows[rows.length - 1])) addRow(); }
+  /* آخرین قیمت خرید فقط به‌صورت متن کمرنگ (placeholder) نشان داده می‌شود؛ مقدار فیلد نیست و کاربر باید خودش فی را بنویسد */
+  function priceHint(pc, id) { const inp = pc.querySelector('input'), lp = id ? lastPrice(id) : 0; inp.placeholder = lp ? fmt(lp) : '—'; inp.title = lp ? 'آخرین قیمت خرید این کالا (فقط راهنما؛ فی را خودت بنویس)' : ''; inp.classList.toggle('lastp', !!lp); }
   function pickItem(r, id) {
     r.item = id || 0; r.ui.nameC.set(id || null);
-    if (id && !r.price) { const lp = lastPrice(id); r.ui.pc.querySelector('input').placeholder = lp ? 'آخرین: ' + fmt(lp) : '—'; }
+    priceHint(r.ui.pc, id);
   }
   function mkRow(r) {
     const num = (val, cb, lab) => { const e = h('input', { class: 'inp qi', type: 'text', inputmode: 'numeric', dir: 'ltr', value: val ? String(val) : '', placeholder: '—', 'aria-label': lab }); e.addEventListener('input', () => cb(Math.max(0, parseNum(e.value)))); e.addEventListener('focus', () => setTimeout(() => e.select(), 0)); return e; };
@@ -44,7 +46,7 @@ export function purchaseForm(preset = {}) {
     const mi = num(r.m, n => { r.m = Math.min(n, r.qty); r.r = r.qty - r.m; r.manual = true; ri.value = String(r.r); paint(); }, 'تحویل به مهسا');
     const ri = num(r.r, n => { r.r = Math.min(n, r.qty); r.m = r.qty - r.r; r.manual = true; mi.value = String(r.m); paint(); }, 'تحویل به رعنا');
     const nameC = combo({ placeholder: 'نام یا کد کالا را بنویس تا لیست بیاید…', options: itemOpts(), emptyText: 'کالایی با این نام نیست؛ از دکمهٔ «＋ کالای جدید» بالای جدول بساز',
-      onChange: id => { r.item = id; if (id && !r.price) { const lp = lastPrice(id); pc.querySelector('input').placeholder = lp ? 'آخرین: ' + fmt(lp) : '—'; } paint(); } });
+      onChange: id => { r.item = id; priceHint(pc, id); paint(); } });
     const pc = numField({ unit: '', value: r.price || '', placeholder: '—', onInput: n => { r.price = n; if (n > 0 && rows[rows.length - 1] === r) addRow(); paint(); } });
     const noteI = h('input', { class: 'inp pg-note', type: 'text', placeholder: 'توضیحات', 'aria-label': 'توضیحات ردیف', value: r.note || '' });
     noteI.addEventListener('input', () => { r.note = noteI.value; });
