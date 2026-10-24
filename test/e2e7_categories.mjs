@@ -1,4 +1,4 @@
-import { serve, launch, newPage, login, API } from './h5.mjs';
+import { serve, launch, newPage, login, API, gridRow, gridNext } from './h5.mjs';
 const { srv, url } = await serve(); const browser = await launch(); const logs = []; let fails = 0;
 const ok = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) fails++; };
 const tk = async (i, pw) => (await (await fetch(API + '/api/auth/login/', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ identifier: i, password: pw }) })).json()).data.token;
@@ -29,11 +29,14 @@ try {
   const t1 = await D(); ok(t1.categories.some(c => c.name === 'لباس خواب') && t1.items.find(i => i.name === 'ست خواب ساتن').category === 'لباس خواب', 'دسته و کالا در دیتابیس ثبت شد');
   // ساخت کالا وسط خرید: باید دسته بپرسد
   await go('#/purchases'); await page.locator('button', { hasText: /خرید جدید/ }).first().click(); await M.waitFor(); await sleep(600);
-  await M.locator('.lcard .cmb input').first().fill('تاپ ورزشی نخی'); await sleep(300);
-  await M.locator('.cmb-o.create').first().waitFor(); await M.locator('.cmb-o.create').first().click(); await page.locator('.ov').last().locator('.chip', { hasText: 'تاپ' }).waitFor();
-  ok(await page.locator('.ov').last().innerText().then(x => /دسته‌ی «تاپ ورزشی نخی» چیست/.test(x)), 'وسط خرید برای کالای تازه دسته می‌پرسد');
-  await page.locator('.ov').last().locator('.chip', { hasText: 'تاپ' }).click(); await page.locator('.ov').last().locator('button', { hasText: 'ساخت کالا' }).click(); await sleep(2000);
-  const t1b = await D(); ok((t1b.items.find(i => i.name === 'تاپ ورزشی نخی') || {}).category === 'تاپ', 'کالا با دسته‌ی تاپ ساخته شد');
+  await M.locator('button', { hasText: '＋ کالای جدید' }).click(); const dl = page.locator('.ov').last(); await dl.locator('input.inp').first().fill('تاپ ورزشی نخی');
+  ok(await dl.locator('.chip', { hasText: 'تاپ' }).count() >= 1, 'فرم کالای جدید وسط خرید دسته می‌پرسد');
+  await dl.locator('.chip', { hasText: 'تاپ' }).first().click(); await dl.locator('button', { hasText: 'افزودن کالا' }).click(); await sleep(2500);
+  await gridRow(page, M, 0, { name: 'تاپ ورزشی نخی', qty: 2, price: 100000 });
+  ok((await M.locator('.pgrow').first().locator('.pg-code').innerText()).startsWith('MR-'), 'کد کالا خودکار در ستون کد نشست');
+  await gridNext(page, M); await M.locator('.pg2 .cmb input').first().click(); await M.locator('.pg2 .cmb-o').first().click(); await sleep(200);
+  await M.locator('.pg2 .lcard').first().locator('button.chip', { hasText: 'حساب مهسا' }).click(); await M.locator('[data-act=submit]').click(); await sleep(2500);
+  const t1b = await D(); ok((t1b.items.find(i => (i.base_name || i.name) === 'تاپ ورزشی نخی') || {}).category === 'تاپ' && t1b.purchase_lines.some(l => (t1b.items.find(i => i.id === l.item_id) || {}).name.startsWith('تاپ ورزشی نخی')), 'کالا با دسته‌ی تاپ ساخته شد و در فاکتور خرید ثبت شد');
   await page.keyboard.press('Escape'); await sleep(300); await go('#/items');
   // مدیریت دسته‌ها
   await page.locator('button', { hasText: /^دسته‌ها$/ }).click(); await M.waitFor();

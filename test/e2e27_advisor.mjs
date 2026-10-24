@@ -30,12 +30,12 @@ try {
   ok(avoidSec.includes('مشاور راکد'), 'کالای راکد در «خرید نکنید» است');
   // ثبت خرید از روی پیشنهاد: فرم با کالا و تعداد پر می‌شود و نظر مشاور دیده می‌شود
   await buyRow.locator('button', { hasText: 'ثبت خرید' }).click(); await M.waitFor(); await sleep(900);
-  ok((await M.locator('.cmb input').nth(1).inputValue()).includes('مشاور پرفروش'), 'فرم خرید با کالای پیشنهادی باز شد');
+  ok((await M.locator('.pgrow').first().locator('.c-name input').inputValue()).includes('مشاور پرفروش'), 'فرم خرید با کالای پیشنهادی باز شد');
   ok(await M.locator('.advbox.buy:visible, .advbox.urgent:visible').count() === 1, 'در فرم خرید، نظر مشاور (بخرید) دیده می‌شود');
   await page.keyboard.press('Escape'); await sleep(300);
   // خرید یک کالای راکد: هشدار «خرید نکن» در فرم خرید
   await page.evaluate(() => { location.hash = '#/purchases'; }); await sleep(500); await page.click('text=＋ خرید جدید'); await M.waitFor();
-  await M.locator('.lcard .cmb input').first().fill('مشاور راکد'); await M.locator('.lcard .cmb-o').first().click(); await sleep(900);
+  await M.locator('.pgrow').first().locator('.c-name input').fill('مشاور راکد'); await sleep(200); await page.locator('.cmb-list:not([hidden]) .cmb-o').first().click(); await sleep(1200);
   ok(await M.locator('.advbox.avoid:visible').count() === 1, 'هشدار «خرید نکن» برای کالای راکد در فرم خرید');
   await page.keyboard.press('Escape'); await sleep(300);
   // تب گزارش جلسه

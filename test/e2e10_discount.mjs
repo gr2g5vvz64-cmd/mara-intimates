@@ -1,4 +1,4 @@
-import { serve, launch, newPage, login, API, buyer } from './h5.mjs';
+import { serve, launch, newPage, login, API, buyer, gridRow, gridNext } from './h5.mjs';
 const { srv, url } = await serve(); const browser = await launch(); const logs = []; let fails = 0;
 const ok = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) fails++; };
 const fa = x => String(x).replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٬,\s]/g, '');
@@ -24,17 +24,16 @@ try {
 
   // ۲) خرید با تخفیف
   await go('#/purchases'); await page.locator('button', { hasText: /خرید جدید/ }).first().click(); await M.waitFor(); await sleep(700);
-  await M.locator('.cmb input').first().click(); await M.locator('.cmb-o').first().click(); await sleep(200);
-  const c = M.locator('.dpanel'); await c.locator('.cmb input').fill('تاپ'); await c.locator('.ilist .cmb-o').first().click(); await sleep(300);
-  ok(await c.locator('.idesc').isVisible() && (await c.locator('.idesc').innerText()).includes(DESC), 'توضیحات کالا زیر نام کالا در فاکتور خرید دیده می‌شود');
-  await c.locator('.stp.big .stp-i').fill('10'); await c.locator('.sline .numinp').first().fill('100000'); await sleep(200); await c.locator('.add').click(); await sleep(200);
+  await gridRow(page, M, 0, { name: NAME, qty: 10, price: 100000 });
+  await gridNext(page, M);
+  await M.locator('.pg2 .cmb input').first().click(); await M.locator('.pg2 .cmb-o').first().click(); await sleep(200);
+  ok((await M.locator('.pg-il').innerText()).includes('تاپ'), 'کالا در «اقلام در فاکتور» مرحله مالی');
   const allL = await M.locator('.fld > .lbl').allInnerTexts(); ok(allL.some(x => x.includes('تخفیف خرید')), 'فیلد «تخفیف خرید» در فرم هست');
   await F('تخفیف خرید').locator('input').fill('200000'); await sleep(250);
-  const sumTxt = (await M.locator('.sm2').first().innerText()).replace(/\s+/g, ' '); console.log('   ', sumTxt);
+  const sumTxt = (await M.locator('.pg2r').first().innerText()).replace(/\s+/g, ' '); console.log('   ', sumTxt.slice(0, 120));
   ok(/تخفیف/.test(sumTxt) && fa(sumTxt).includes('800000'), 'خلاصه‌ی فاکتور: جمع پس از تخفیف ۸۰۰٬۰۰۰');
-  ok(fa(await M.locator('.pgr2 .irow').first().innerText()).includes('80000'), 'قیمت تمام‌شده‌ی هر عدد پس از تخفیف ۸۰٬۰۰۰');
   await M.locator('.lcard', { hasText: 'پرداخت 1' }).locator('button.chip', { hasText: 'حساب مهسا' }).click(); await sleep(150);
-  await M.locator('button', { hasText: 'ثبت فاکتور' }).click(); await sleep(2000);
+  await M.locator('[data-act=submit]').click(); await sleep(2000);
   const t1 = await D(); const inv = t1.purchase_invoices.filter(i => i.supplier_id).sort((a, b) => b.id - a.id)[0];
   ok(inv && +inv.discount === 200000 && +inv.goods_total === 800000, `فاکتور خرید: تخفیف ${inv && inv.discount} · جمع پس از تخفیف ${inv && inv.goods_total}`);
   const pl = t1.purchase_lines.filter(l => l.invoice_id === inv.id)[0]; ok(Math.round(pl.landed_unit) === 80000, 'بهای تمام‌شده‌ی ثبت‌شده ۸۰٬۰۰۰');

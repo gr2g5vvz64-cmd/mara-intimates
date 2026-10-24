@@ -1,0 +1,53 @@
+import { serve, launch, newPage, login, API, gridRow, gridNext } from './h5.mjs';
+const { srv, url } = await serve(); const browser = await launch(); const logs = []; let fails = 0;
+const ok = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) fails++; };
+const tok = (await (await fetch(API + '/api/auth/login/', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ identifier: 'hamid@example.com', password: 'hamid-pass-333' }) })).json()).data.token;
+const D = async () => (await (await fetch(API + '/api/data/', { headers: { authorization: 'Bearer ' + tok } })).json()).data.tables;
+const page = await newPage(browser, url, { logs }); await login(page, 'mahsa@example.com', 'mahsa-pass-1'); page.setDefaultTimeout(8000);
+const M = page.locator('.ov').last(), sleep = ms => page.waitForTimeout(ms);
+const go = async h => { await page.evaluate(x => { location.hash = x; }, h); await sleep(500); };
+const NOTE = 'بسته‌بندی جدا؛ رنگ دقیقاً مطابق نمونه ' + 'x'.repeat(500);
+const pay = async P => { await P.locator('.pg2 .cmb input').first().fill('بازار تهران'); await P.locator('.pg2 .cmb-o', { hasText: 'بازار تهران' }).first().click(); await sleep(200); await P.locator('.pg2 .lcard').first().locator('button.chip', { hasText: 'حساب مهسا' }).click(); await sleep(150); await P.locator('[data-act=submit]').click(); await sleep(2800); };
+try {
+  const t0 = await D();
+  await go('#/purchases'); await page.click('text=＋ خرید جدید'); await M.waitFor(); await sleep(600);
+  ok(!(await M.locator('.pg-head').innerText()).includes('سایز') || (await M.locator('.pg-head').innerText()).includes('رنگ · سایز'), 'ستون‌های جدا سایز و رنگ در جدول نیست');
+  // کالای جدید: همان فرم کالا (رنگ × سایز) و بعد پیدا شدن در جستجو
+  await M.locator('button', { hasText: '＋ کالای جدید' }).click(); const dl = page.locator('.ov').last();
+  await dl.locator('input.inp').first().fill('پیژامه تست گرید');
+  await dl.locator('.chip', { hasText: 'تاپ' }).first().click(); await dl.locator('.chip', { hasText: 'مشکی' }).first().click(); await sleep(200);
+  await dl.locator('button', { hasText: /افزودن کالا/ }).click(); await sleep(2500);
+  const t1 = await D(); const made = t1.items.filter(i => i.base_name === 'پیژامه تست گرید');
+  ok(made.length >= 2 && made.every(i => i.color === 'مشکی' && /^MR-/.test(i.code || '')), `کالاهای رنگ/سایز با کد ساخته شد (${made.length})`);
+  const target = made.find(i => i.size === 'M') || made[0];
+  const r0 = M.locator('.pgrow').first();
+  await r0.locator('.c-name input').fill(target.name); await sleep(250);
+  const opt = page.locator('.cmb-list:not([hidden]) .cmb-o').first(); ok((await opt.innerText()).includes(target.code), 'گزینهٔ جستجو کد کالا را نشان می‌دهد'); await opt.click(); await sleep(250);
+  ok((await r0.locator('.pg-code').innerText()) === target.code && (await r0.locator('.pg-vr').innerText()).includes('مشکی') && (await r0.locator('.pg-vr').innerText()).includes(target.size), 'کد، رنگ و سایز خودکار پر شد: ' + (await r0.locator('.pg-vr').innerText()).replace(/\s+/g, ' '));
+  await gridRow(page, M, 0, { qty: 5, price: 100000, note: NOTE });
+  ok(await r0.locator('.c-note input').inputValue() === NOTE, 'توضیحات بدون محدودیت طول (۵۰۰+ نویسه)');
+  await gridNext(page, M); await pay(M);
+  const t2 = await D(); const inv = t2.purchase_invoices.sort((a, b) => b.id - a.id)[0], ln = t2.purchase_lines.find(l => l.invoice_id === inv.id);
+  ok(ln && ln.item_id === target.id && ln.note === NOTE && t2.items.length === t1.items.length, 'خط فاکتور روی همان کد؛ توضیح ذخیره شد؛ کالای اضافه ساخته نشد');
+  await go('#/purchases'); await page.locator('tbody tr', { hasText: inv.no }).first().click(); await sleep(500);
+  ok((await M.innerText()).includes('رنگ دقیقاً مطابق نمونه'), 'توضیح ردیف در جزئیات فاکتور خرید دیده می‌شود');
+  await M.locator('button', { hasText: 'ویرایش' }).first().click(); await sleep(900);
+  const e0 = M.locator('.pgrow').first();
+  ok((await e0.locator('.c-name input').inputValue()) === target.name && (await e0.locator('.pg-code').innerText()) === target.code && (await e0.locator('.c-note input').inputValue()) === NOTE, 'ویرایش: کالا، کد و توضیح پیش‌پر شد');
+  await page.keyboard.press('Escape'); await sleep(300);
+  // موبایل
+  await page.close();
+  const mp = await newPage(browser, url, { logs, viewport: { width: 390, height: 844 } }); await login(mp, 'mahsa@example.com', 'mahsa-pass-1'); mp.setDefaultTimeout(8000);
+  await mp.evaluate(() => { location.hash = '#/purchases'; }); await mp.waitForTimeout(500);
+  await mp.locator('button', { hasText: /خرید جدید/ }).first().click(); await mp.locator('.ov').last().waitFor(); await mp.waitForTimeout(600);
+  const MM = mp.locator('.ov').last();
+  await MM.locator('.pgrow').first().locator('.c-name input').fill('جوراب'); await mp.waitForTimeout(200); await mp.locator('.cmb-list:not([hidden]) .cmb-o').first().click(); await mp.waitForTimeout(200);
+  await MM.locator('.pgrow').first().locator('.c-qty input').fill('6'); await MM.locator('.pgrow').first().locator('.c-fee input').fill('50000'); await mp.waitForTimeout(300);
+  const lay = await mp.evaluate(() => { const r = document.querySelector('.pgrow'), cs = getComputedStyle(r); return { cols: cs.gridTemplateColumns.split(' ').length, ovf: document.documentElement.scrollWidth > innerWidth + 2 }; });
+  ok(lay.cols === 2 && !lay.ovf, 'موبایل: کارت ردیف دو‌ستونه و بدون اسکرول افقی ' + JSON.stringify(lay));
+  ok(await MM.locator('button', { hasText: '＋ کالای جدید' }).isVisible() && await MM.locator('[data-act=next]').isVisible(), 'موبایل: دکمهٔ کالای جدید و ادامه دیده می‌شود');
+  await mp.screenshot({ path: '/tmp/grid_mobile.png' });
+  const errs = logs.filter(l => !/Failed to load resource|fonts|net::ERR/.test(l)); ok(errs.length === 0, 'بدون خطای کنسول' + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));
+} catch (e) { console.log('FAIL exception', e.stack.split('\n').slice(0,3).join(' / ')); fails++; }
+await browser.close(); srv.close();
+console.log(fails ? `FAILS: ${fails}` : 'ALL OK'); process.exit(fails ? 1 : 0);

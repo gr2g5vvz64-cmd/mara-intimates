@@ -1,4 +1,4 @@
-import { serve, launch, newPage, login, API } from './h5.mjs';
+import { serve, launch, newPage, login, API, gridRow, gridNext } from './h5.mjs';
 import fs from 'fs';
 const { srv, url } = await serve(); const browser = await launch(); const logs = [];
 let fails = 0; const ok = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) fails++; };
@@ -59,15 +59,14 @@ async function main() {
   if (await M.count()) { ok(/صورت‌حساب/.test(await M.first().innerText()), 'صورت‌حساب تامین‌کننده'); await page.keyboard.press('Escape'); await sleep(200); }
   // ۴) خرید نسیه با سررسید
   await go('purchases'); await page.click('text=＋ خرید جدید');
-  await M.locator('.cmb input').first().fill('بازار تهران'); await M.locator('.cmb-o', { hasText: 'بازار تهران' }).first().click(); await sleep(200);
-  card = M.locator('.dpanel');
-  await card.locator('.cmb input').fill('سوتین'); await card.locator('.ilist .cmb-o').first().click();
-  await card.locator('.stp.big .stp-i').fill('4'); await card.locator('.sline .numinp').first().fill('2500000'); await card.locator('.add').click(); await sleep(200);
+  await gridRow(page, M, 0, { name: 'سوتین', qty: 4, price: 2500000 });
+  await gridNext(page, M);
+  await M.locator('.pg2 .cmb input').first().fill('بازار تهران'); await M.locator('.cmb-o', { hasText: 'بازار تهران' }).first().click(); await sleep(200);
   await M.locator('button.chip', { hasText: 'پرداخت جزئی' }).click(); await sleep(150);
   const p1 = M.locator('.lcard', { hasText: 'پرداخت 1' }); await p1.locator('.numinp').fill('4000000'); await p1.locator('button.chip', { hasText: 'حساب مهسا' }).click();
   await sleep(200); ok(await M.locator('button.chip', { hasText: /^۱۰ روز$/ }).count() === 1, 'سررسید برای باقی‌مانده نمایش داده شد');
   await M.locator('button.chip', { hasText: /^۱۰ روز$/ }).click();
-  await M.locator('button', { hasText: 'ثبت فاکتور' }).click(); await modalGone();
+  await M.locator('[data-act=submit]').click(); await modalGone();
   t = await D(); const inv = t.v_invoices.find(i => i.no === 'F-0003'); ok(inv && inv.debt === 6000000 && inv.due_date === plus(10), `خرید نسیه: بدهی ${inv && inv.debt} سررسید ${inv && inv.due_date} ${await err()}`);
   // ۵) تمدید سررسید
   await page.locator('tbody tr', { hasText: 'F-0003' }).first().click(); await sleep(300);

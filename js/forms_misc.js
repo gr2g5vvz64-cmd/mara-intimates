@@ -342,7 +342,7 @@ export function categoriesForm() {
 
 /* ----- رنگ و سایز کالا: گزینه‌های آماده + گزینه‌هایی که خودت اضافه می‌کنی ----- */
 const COLOR_HEX = { 'مشکی': '#111111', 'سفید': '#FFFFFF', 'کرم': '#F3E3D3', 'بژ': '#D8BFA0', 'صورتی': '#E3A9BC', 'زرشکی': '#8E1B3A', 'قرمز': '#C62828', 'طوسی': '#9E9E9E', 'سرمه‌ای': '#1F2A5A', 'آبی': '#2F6FB5', 'سبز': '#3C7A4E', 'یاسی': '#B79AD6', 'نباتی': '#C2185B', 'قهوه‌ای': '#6D4C41' };
-const DEF_COLORS = ['مشکی', 'کرم', 'سفید', 'صورتی', 'زرشکی', 'بژ', 'طوسی', 'سرمه‌ای'];
+export const DEF_COLORS = ['مشکی', 'کرم', 'سفید', 'صورتی', 'زرشکی', 'بژ', 'طوسی', 'سرمه‌ای'];
 const DEF_SIZES = ['۷۰', '۷۵', '۸۰', '۸۵', '۹۰', 'S', 'M', 'L', 'XL', 'فری'];
 const faDigits = s => String(s).replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]).trim();
 function optionList(prefKey, defaults, field, strict) {
@@ -465,6 +465,7 @@ export function itemForm(it) {
     zone2('۵', 'هشدار کم‌موجودی', null, field('هشدار از … عدد (برای هر ترکیب)', min)),
     it ? zone2('۶', 'وضعیت', null, act) : null), footer: [btn, ...(it ? [delBtn] : [])] });
   buildSizes();
+  return m;
 }
 export function supplierForm(s) {
   if (s && !canEdit()) { toast("ویرایش فقط برای حمیدرضا، مهسا و رعنا باز است", "err"); return; }

@@ -1,4 +1,4 @@
-import { serve, launch, newPage, login, API } from './h5.mjs';
+import { serve, launch, newPage, login, API, gridRow, gridNext } from './h5.mjs';
 const { srv, url } = await serve(); const browser = await launch(); const logs = []; let fails = 0;
 const ok = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) fails++; };
 const fa = x => String(x).replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٬,\s]/g, '');
@@ -8,33 +8,30 @@ const page = await newPage(browser, url, { logs }); await login(page, 'mahsa@exa
 const M = page.locator('.ov').last(), sleep = ms => page.waitForTimeout(ms);
 const go = async h => { await page.evaluate(x => { location.hash = x; }, h); await sleep(500); };
 const F = l => M.locator('.fld', { hasText: l }).first();
-const add = async (name, qty, price) => { const P = M.locator('.dpanel'); await P.locator('.cmb input').fill(name); await P.locator('.ilist .cmb-o').first().click(); await sleep(250); await P.locator('.stp.big .stp-i').fill(String(qty)); await P.locator('.sline .numinp').first().fill(String(price)); await sleep(150); await P.locator('.add').click(); await sleep(250); };
 try {
   const t0 = await D(); const n0 = t0.purchase_invoices.length;
   await go('#/purchases'); await page.click('text=＋ خرید جدید'); await M.waitFor(); await sleep(600);
-  const zt = (await M.locator('.z2 > .zt').allInnerTexts()).map(x => x.replace(/\s+/g, ' '));
-  ok(zt.length === 6 && zt.some(x => x.includes('پرداخت به تامین‌کننده')) && zt.some(x => x.includes('تخفیف و هزینه‌ی حمل')), 'پنج کادر شماره‌دار: ' + zt.join(' | '));
-  ok(await M.locator('.dpanel').count() === 1 && await M.locator('.sm2 .b').count() === 6, 'پنل کناری و نوار شش‌گانه هست');
-  await M.locator('.cmb input').first().fill('بازار تهران'); await M.locator('.cmb-o', { hasText: 'بازار تهران' }).first().click(); await sleep(200);
-  await add('سوتین', 12, 900000); await add('جوراب', 30, 60000);
-  ok(await M.locator('.pgr2 .irow').count() === 2, 'دو ردیف در فاکتور');
-  const r1 = M.locator('.pgr2 .irow').first();
-  ok(await r1.locator('input.qi').nth(1).inputValue() === '6' && await r1.locator('input.qi').nth(2).inputValue() === '6', 'تحویل پیش‌فرض نصف‌نصف');
-  await r1.locator('input.qi').nth(1).fill('12'); await sleep(150);
-  ok(await r1.locator('input.qi').nth(2).inputValue() === '0', 'با ۱۲ برای مهسا، رعنا خودکار ۰ شد');
+  ok(await M.locator('.pgrow').count() === 1 && await M.locator('.pg-head').isVisible(), 'جدول با یک ردیف خالی باز شد');
+  await gridRow(page, M, 0, { name: 'سوتین اسپرت', qty: 12, price: 900000 });
+  await gridRow(page, M, 1, { name: 'جوراب', qty: 30, price: 60000 });
+  ok(await M.locator('.pgrow').count() === 3, 'دو ردیف پر + یک ردیف خالی خودکار');
+  const r1 = M.locator('.pgrow').first();
+  ok(await r1.locator('.c-dl input').nth(0).inputValue() === '6' && await r1.locator('.c-dl input').nth(1).inputValue() === '6', 'تحویل پیش‌فرض نصف‌نصف');
+  await r1.locator('.c-dl input').nth(0).fill('12'); await sleep(150);
+  ok(await r1.locator('.c-dl input').nth(1).inputValue() === '0', 'با ۱۲ برای مهسا، رعنا خودکار ۰ شد');
+  const bar = fa(await M.locator('.pgf-s').first().innerText()); ok(bar.includes('+27عدد') && bar.includes('11700000'), 'موجودی مهسا ۲۷ عدد ≈ ۱۱٫۷م');
+  await gridNext(page, M);
+  await M.locator('.pg2 .cmb input').first().fill('بازار تهران'); await M.locator('.cmb-o', { hasText: 'بازار تهران' }).first().click(); await sleep(200);
   await F('تخفیف خرید').locator('input').fill('200000'); await F('هزینه‌ی حمل').locator('input').fill('600000'); await sleep(200);
-  await M.locator('.lcard', { hasText: 'حمل' }).count();
-  const land = fa(await r1.innerText()); ok(land.includes('928571'), 'تمام‌شده‌ی هر عدد ردیف اول ۹۲۸٬۵۷۱');
-  const sm = fa(await M.locator('.sm2').innerText()); ok(sm.includes('13000000') && sm.includes('12600000'), 'نوار پایین: جمع کالا ۱۲٫۶م و تمام‌شده ۱۳م');
-  await M.locator('button', { hasText: 'ثبت فاکتور' }).click(); await sleep(600);
-  ok(/حمل/.test(await page.locator('.toast, .tst').last().innerText().catch(() => '')) || true, 'ثبت بدون حساب حمل رد می‌شود (یا پیام)');
+  const sm = fa(await M.locator('.pg2r').first().innerText()); ok(sm.includes('13000000') && sm.includes('12600000'), 'خلاصه: جمع کالا ۱۲٫۶م و تمام‌شده ۱۳م');
+  await M.locator('[data-act=submit]').click(); await sleep(600);
   await M.locator('.fld', { hasText: 'هزینه‌ی حمل را چه کسی' }).locator('button.chip').first().click(); await sleep(150);
   await M.locator('button.chip', { hasText: 'پرداخت جزئی' }).click(); await sleep(150);
   const p1 = M.locator('.lcard', { hasText: 'پرداخت 1' }); await p1.locator('.numinp').fill('8000000'); await p1.locator('button.chip', { hasText: 'حساب مهسا' }).click(); await sleep(200);
-  ok(fa(await M.locator('.sm2').innerText()).includes('4400000'), 'بدهی به تامین‌کننده ۴٫۴م');
+  ok(fa(await M.locator('.pg2r').first().innerText()).includes('4400000'), 'بدهی به تامین‌کننده ۴٫۴م');
   await M.locator('button.chip', { hasText: /^۱۰ روز$/ }).click();
   await page.screenshot({ path: '/tmp/purchase_form.png' });
-  await M.locator('button', { hasText: 'ثبت فاکتور' }).click(); await sleep(2200);
+  await M.locator('[data-act=submit]').click(); await sleep(2500);
   const t1 = await D(); const inv = t1.purchase_invoices.sort((a, b) => b.id - a.id)[0];
   ok(t1.purchase_invoices.length === n0 + 1 && +inv.goods_total === 12400000 && +inv.ship_cost === 600000 && +inv.discount === 200000, `فاکتور ثبت شد: جمع ${inv.goods_total} حمل ${inv.ship_cost}`);
   const ls = t1.purchase_lines.filter(l => l.invoice_id === inv.id).sort((a, b) => a.id - b.id);
@@ -43,7 +40,8 @@ try {
   // ویرایش
   await go('#/purchases'); await page.locator('tbody tr', { hasText: inv.no }).first().click(); await sleep(400);
   await M.locator('button', { hasText: 'ویرایش' }).first().click(); await sleep(900);
-  ok(await M.locator('.pgr2 .irow').count() === 2 && fa(await M.locator('.sm2').innerText()).includes('4400000'), 'ویرایش: ردیف‌ها و بدهی پیش‌پر شد');
+  ok(await M.locator('.pgrow').count() === 3 && await M.locator('.pgrow').first().locator('.c-qty input').inputValue() === '12', 'ویرایش: ردیف‌ها پیش‌پر شد (۲ ردیف + ردیف خالی)');
+  await gridNext(page, M); ok(fa(await M.locator('.pg2r').first().innerText()).includes('4400000'), 'ویرایش: بدهی پیش‌پر شد');
   await page.keyboard.press('Escape'); await sleep(300);
   const errs = logs.filter(l => !/Failed to load resource|fonts|net::ERR/.test(l)); ok(errs.length === 0, 'بدون خطای کنسول' + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));
 } catch (e) { console.log('FAIL exception', e.message); fails++; }

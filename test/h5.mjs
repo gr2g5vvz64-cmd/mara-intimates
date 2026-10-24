@@ -32,3 +32,15 @@ export async function buyer(page, M, name = 'خریدار تست ' + (++_b)) {
   const c = M.locator('.cmb input').first(); await c.fill(name); await page.waitForTimeout(250);
   const cr = M.locator('.cmb-o.create'); await (await cr.count() ? cr.first() : M.locator('.cmb-o').first()).click(); await page.waitForTimeout(1500);
 }
+
+/** فاکتور خرید جدولی: ردیف i (از ۰) را پر می‌کند. f = {name, qty, price, note, m, r}؛ name = بخشی از نام کالا (اولین پیشنهاد لیست انتخاب می‌شود) */
+export async function gridRow(page, M, i, f) {
+  const row = M.locator('.pgrow').nth(i), sl = ms => page.waitForTimeout(ms);
+  if (f.name != null) { await row.locator('.c-name input').fill(f.name); await sl(200); await page.locator('.cmb-list:not([hidden]) .cmb-o').first().click(); await sl(150); }
+  if (f.qty != null) { await row.locator('.c-qty input').fill(String(f.qty)); await sl(80); }
+  if (f.m != null) { await row.locator('.c-dl input').nth(0).fill(String(f.m)); await sl(80); }
+  if (f.r != null) { await row.locator('.c-dl input').nth(1).fill(String(f.r)); await sl(80); }
+  if (f.note != null) { await row.locator('.c-note input').fill(f.note); await sl(50); }
+  if (f.price != null) { await row.locator('.c-fee input').fill(String(f.price)); await sl(120); }
+}
+export const gridNext = async (page, M) => { await M.locator('[data-act=next]').click(); await page.waitForTimeout(500); };
