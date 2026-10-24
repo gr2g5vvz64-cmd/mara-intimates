@@ -125,7 +125,7 @@ let staleErr = null, staleTimer = null, staleN = 0;
 async function refresh() {
   document.body.classList.add('busy');
   try {
-    await loadAll({ retries: 1 }); route(); loadDiagCount();
+    await loadAll({ retries: 1 }); lastLoad = Date.now(); route(); loadDiagCount();
     if (staleErr) { staleErr = null; staleN = 0; clearTimeout(staleTimer); toast('اطلاعات دوباره از سرور رسید ✔'); renderBar(); }
   } catch (e) {
     staleErr = e; renderBar(); clearTimeout(staleTimer);
@@ -283,5 +283,14 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) { hiddenAt = Date.now(); return; }
   if (S.loaded && hiddenAt && Date.now() - hiddenAt > 45000 && !document.querySelector('.ov')) refresh();
 });
+/* به‌روزرسانی خودکار: اگر برنامه باز بماند، هر چند دقیقه دادهٔ تازه (تغییرات بقیه) را بی‌صدا می‌گیرد؛ فقط وقتی فرمی باز نیست، چیزی تایپ نمی‌شود، ثبتی در صف نیست و کاربر چند ثانیه بیکار است */
+let lastAct = Date.now(), lastLoad = Date.now();
+['pointerdown', 'keydown', 'scroll', 'touchstart'].forEach(ev => window.addEventListener(ev, () => { lastAct = Date.now(); }, { capture: true, passive: true }));
+setInterval(() => {
+  const every = window.__MARA_REFRESH_MS || 3 * 60 * 1000, idle = window.__MARA_IDLE_MS || 15000, ae = document.activeElement;
+  if (document.hidden || !S.loaded || Date.now() - lastLoad < every || Date.now() - lastAct < idle) return;
+  if (document.querySelector('.ov') || pendingCount() || (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))) return;
+  lastLoad = Date.now(); refresh();
+}, 5000);
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost') && !window.__MARA_API__) navigator.serviceWorker.register('./sw.js').catch(() => {});
 boot();
