@@ -178,11 +178,20 @@ export function combo({ options = [], value = null, placeholder = 'جستجو…
     if (!rows.length) list.append(h('div', { class: 'cmb-e' }, emptyText));
     if (onCreate && q.trim()) list.append(h('button', { type: 'button', class: 'cmb-o create', onmousedown: e => e.preventDefault(), onclick: async () => { const v = await onCreate(q.trim()); if (v != null) { close(); } } }, `＋ ${createLabel} «${q.trim()}»`));
   };
-  const openL = () => { open = true; list.hidden = false; inp.setAttribute('aria-expanded', 'true'); q = ''; render(); };
-  const close = () => { open = false; list.hidden = true; inp.setAttribute('aria-expanded', 'false'); inp.value = labelOf(cur); };
+  // فهرست با موقعیت «ثابت» روی صفحه می‌نشیند تا زیر کارت‌ها/جدول‌های زیری (overflow و z-index) پنهان یا بریده نشود
+  const place = () => {
+    if (!open) return;
+    const r = inp.getBoundingClientRect(), vh = window.innerHeight, vw = window.innerWidth, below = vh - r.bottom - 10, up = below < 170 && r.top > below;
+    Object.assign(list.style, { position: 'fixed', insetInline: 'auto', left: r.left + 'px', width: r.width + 'px', zIndex: 300,
+      top: up ? 'auto' : (r.bottom + 4) + 'px', bottom: up ? (vh - r.top + 4) + 'px' : 'auto', maxHeight: Math.max(120, Math.min(270, up ? r.top - 14 : below)) + 'px' });
+    const w = list.offsetWidth; if (r.left + w > vw - 8) list.style.left = Math.max(8, vw - 8 - w) + 'px';
+  };
+  const onMove = () => place();
+  const openL = () => { open = true; list.hidden = false; inp.setAttribute('aria-expanded', 'true'); q = ''; render(); place(); window.addEventListener('scroll', onMove, true); window.addEventListener('resize', onMove); };
+  const close = () => { open = false; list.hidden = true; inp.setAttribute('aria-expanded', 'false'); inp.value = labelOf(cur); window.removeEventListener('scroll', onMove, true); window.removeEventListener('resize', onMove); };
   const pick = v => { cur = v; close(); onChange && onChange(v); };
   inp.addEventListener('focus', () => { openL(); setTimeout(() => inp.select(), 0); });
-  inp.addEventListener('input', () => { q = inp.value; if (!open) openL(); else render(); });
+  inp.addEventListener('input', () => { q = inp.value; if (!open) openL(); else { render(); place(); } });
   inp.addEventListener('blur', () => setTimeout(close, 120));
   inp.addEventListener('keydown', e => {
     if (e.key === 'Escape') { inp.blur(); }
