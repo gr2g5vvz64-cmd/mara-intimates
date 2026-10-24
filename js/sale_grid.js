@@ -167,7 +167,8 @@ export function saleForm(preset = {}) {
   /* ================= سربرگ مرحلهٔ ۱ ================= */
   const sellerChips = chips([{ v: 'مهسا', label: 'مهسا' }, { v: 'رعنا', label: 'رعنا' }], seller, v => { seller = v; rows.forEach(r => { r.manual = false; allocate(r); if (r.ui) sync(r); }); defaultAccounts(); paint(); }, { cls: 'two', label: 'فروشنده' });
   const dateCtl = dateField(date, v => { date = v; due.refresh(); });
-  const channel = chips(CHANNELS.map(c => ({ v: c, label: c })), edit ? edit.channel : pref('channel', CHANNELS[0]), () => {}, { label: 'کانال فروش' });
+  const narrow = window.matchMedia && window.matchMedia('(max-width:820px)').matches;   // در موبایل نام کوتاه (بدون «پیج») تا همهٔ کانال‌ها در یک سطر بیایند
+  const channel = chips(CHANNELS.map(c => ({ v: c, label: narrow ? c.replace(/^پیج\s+/, '') : c })), edit ? edit.channel : pref('channel', CHANNELS[0]), () => {}, { label: 'کانال فروش' });
   const custOpts = () => customers().map(c => { const b = S.vCus.find(x => x.id === c.id); return { v: c.id, label: c.name, sub: (c.phone || '') + (b && b.outstanding > 0 ? ' · بدهکار ' + fmt(b.outstanding) : '') }; });
   const customer = combo({
     placeholder: 'نام خریدار (الزامی)', createLabel: 'مشتری جدید', options: custOpts(),
@@ -194,7 +195,7 @@ export function saleForm(preset = {}) {
     }, 300);
   }
   const topHead = h('div', { class: 'sg-head' },
-    field('فروشنده', sellerChips), field('تاریخ', dateCtl), field('کانال فروش', channel),
+    field('فروشنده', sellerChips), field('تاریخ', dateCtl), h('div', { class: 'sg-ch' }, field('کانال فروش', channel)),
     h('div', { class: 'sg-cust' }, field('خریدار (الزامی) *', customer), field('مانده‌ی قبلی خریدار', custInfo)));
   const topBar = h('div', { class: 'pg-top' },
     h('div', null, h('b', null, 'اقلام فاکتور'), h('div', { class: 'hint' }, 'کالا را با نام یا کد جستجو کن؛ کد، رنگ، سایز و موجودی همان کالا خودکار می‌آید · «برداشت از» پیش‌فرض از موجودی فروشنده است و اگر کم بود، باقی خودکار از نفر دیگر می‌آید (هر عددی را می‌توانی دستی بنویسی) · سود هر ردیف با بهای تمام‌شده (FIFO) حساب می‌شود · عدد کمرنگ داخل «فی» فقط فی پیشنهادی است')),
