@@ -1,4 +1,4 @@
-import { serve, launch, newPage, login, API } from './h5.mjs';
+import { serve, launch, newPage, login, API, gridRow, gridNext } from './h5.mjs';
 const { srv, url } = await serve(); const browser = await launch(); const logs = []; let fails = 0;
 const ok = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) fails++; };
 const fa = x => String(x).replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٬,\s]/g, '');
@@ -30,8 +30,7 @@ try {
   await page.keyboard.press('Escape'); await sleep(300);
   // نام خریدار اجباری
   await go('#/sales'); await page.click('text=＋ فروش جدید'); await M.waitFor(); await sleep(500);
-  const sc = M.locator('.lcard').first(); await sc.locator('.cmb input').fill('شورت'); await sc.locator('.cmb-o').first().click(); await sleep(400);
-  await M.locator('button', { hasText: 'ثبت فروش' }).click(); await sleep(500);
+  await gridRow(page, M, 0, { name: 'شورت', qty: 1, price: 900000 }); await gridNext(page, M);
   ok((await page.locator('body').innerText()).includes('نام خریدار'), 'ثبت فروش بدون خریدار رد شد');
   const labels = await M.locator('.fld > .lbl').allInnerTexts(); ok(labels.some(x => x.includes('خریدار')), 'برچسب فیلد «خریدار *» است');
   await page.keyboard.press('Escape'); await sleep(300);

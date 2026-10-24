@@ -7,7 +7,7 @@ import { itemForm } from './forms_misc.js';
 import { adviceFor, adviceText } from './advisor.js';
 
 const ceilHalf = n => Math.ceil(n / 2);
-const COLOR_HEX = { 'مشکی': '#111111', 'سفید': '#FFFFFF', 'کرم': '#F3E3D3', 'بژ': '#D8BFA0', 'صورتی': '#E3A9BC', 'زرشکی': '#8E1B3A', 'قرمز': '#C62828', 'طوسی': '#9E9E9E', 'سرمه‌ای': '#1F2A5A', 'آبی': '#2F6FB5', 'سبز': '#3C7A4E', 'یاسی': '#B79AD6', 'نباتی': '#C2185B', 'قهوه‌ای': '#6D4C41' };
+export const COLOR_HEX = { 'مشکی': '#111111', 'سفید': '#FFFFFF', 'کرم': '#F3E3D3', 'بژ': '#D8BFA0', 'صورتی': '#E3A9BC', 'زرشکی': '#8E1B3A', 'قرمز': '#C62828', 'طوسی': '#9E9E9E', 'سرمه‌ای': '#1F2A5A', 'آبی': '#2F6FB5', 'سبز': '#3C7A4E', 'یاسی': '#B79AD6', 'نباتی': '#C2185B', 'قهوه‌ای': '#6D4C41' };
 
 export function purchaseForm(preset = {}) {
   const edit = preset.edit ? S.INV[preset.edit] : null;
@@ -54,7 +54,7 @@ export function purchaseForm(preset = {}) {
     const totEl = h('b', { class: 'tot' }), msg = h('div', { class: 'pg-msg', hidden: true }), adv = h('div', { class: 'advbox', hidden: true });
     const rm = h('button', { class: 'rm', type: 'button', 'aria-label': 'حذف این ردیف', onclick: () => { rows.splice(rows.indexOf(r), 1); r.el.remove(); ensureTail(); paint(); } }, '✕');
     const cell = (cls, lab, ...k) => h('div', { class: 'pgc ' + cls }, h('em', null, lab), ...k);
-    r.el = h('div', { class: 'pgrow' }, cell('c-ix', '', idx), cell('c-code', 'کد', codeEl), cell('c-name', 'نام کالا', nameC, vr), cell('c-qty', 'تعداد', qi), cell('c-fee', 'فی (ریال)', pc),
+    r.el = h('div', { class: 'pgrow m4' }, cell('c-ix', '', idx), cell('c-code', 'کد', codeEl), cell('c-name', 'نام کالا', nameC, vr), cell('c-qty', 'تعداد', qi), cell('c-fee', 'فی (ریال)', pc),
       cell('c-tot', 'جمع (ریال)', totEl), cell('c-dl', 'تحویل به مهسا · رعنا', h('div', { class: 'pg-dl' }, h('label', null, h('small', null, 'مهسا'), mi), h('label', null, h('small', null, 'رعنا'), ri), h('span', { class: 'pg-dls' }))),
       cell('c-note', 'توضیحات', noteI), cell('c-rm', '', rm), msg, adv);
     r.ui = { idx, codeEl, vr, totEl, msg, adv, mi, ri, qi, nameC, pc, noteI, dls: r.el.querySelector('.pg-dls') };
@@ -90,7 +90,7 @@ export function purchaseForm(preset = {}) {
       const u = r.ui, st = an[i], blank = isBlank(r), it = r.item ? S.I[r.item] : null, sk = r.item ? stockOf(r.item) : null;
       u.idx.textContent = String(i + 1); u.idx.classList.toggle('dim', blank);
       u.codeEl.textContent = it ? (it.code || '—') : 'کد خودکار'; u.codeEl.classList.toggle('ph', !it);
-      u.vr.replaceChildren(...(it ? [it.color ? h('span', { class: 'pg-v' }, h('i', { class: 'pg-dot', style: { background: COLOR_HEX[it.color] || '#C9B5BE' } }), it.color) : null, it.size ? h('span', { class: 'pg-sz' }, it.size) : null, sk ? h('span', { class: 'pg-stk' }, `موجودی: م ${fmt(sk.rem_m)} · ر ${fmt(sk.rem_r)}`) : null].filter(Boolean) : []));
+      u.vr.replaceChildren(...(it ? [it.color ? h('span', { class: 'pg-v' }, h('i', { class: 'pg-dot', style: { background: COLOR_HEX[it.color] || '#C9B5BE' } }), it.color) : null, it.size ? h('span', { class: 'pg-sz' }, it.size) : null, sk ? h('span', { class: 'pg-stk' }, `موجودی: م ${fmt(sk.rem_m)} · ر ${fmt(sk.rem_r)}`) : null, it.description ? h('span', { class: 'pg-desc', title: it.description }, '📝 ' + it.description) : null].filter(Boolean) : []));
       u.totEl.textContent = r.price > 0 && r.qty > 0 ? fmt(r.qty * r.price) : '—';
       r.el.classList.toggle('blank', blank);
       r.el.classList.toggle('err', st.some(x => x.lvl === 'err')); r.el.classList.toggle('warn', st.some(x => x.lvl === 'warn') && !st.some(x => x.lvl === 'err'));
@@ -149,7 +149,7 @@ export function purchaseForm(preset = {}) {
   const due = dueField(() => date, { label: 'سررسید پرداخت مانده' }), dueBox = h('div', { hidden: true }, due);
   const remainEl = h('div', { class: 'hint' }), paysBox = h('div', { class: 'paylist' });
   const morePay = h('button', { class: 'btn dashed', type: 'button', hidden: true, onclick: () => addPay() }, '＋ پرداخت دیگر (اگر دو نفر پرداخت کردند)');
-  const payChips = chips([{ v: 'full', label: 'پرداخت کامل' }, { v: 'part', label: 'پرداخت جزئی (مانده بدهی می‌ماند)' }], 'full', v => { payMode = v; syncPayMode(); recalc(); }, { cls: 'two', label: 'نحوه‌ی پرداخت' });
+  const payChips = chips([{ v: 'full', label: 'پرداخت کامل (نقدی)' }, { v: 'part', label: 'نسیه یا پرداخت بخشی (مانده = بدهی به تامین‌کننده)' }], 'full', v => { payMode = v; syncPayMode(); recalc(); }, { cls: 'two', label: 'نحوه‌ی پرداخت' });
   function syncPayMode() { const full = payMode === 'full'; pays.forEach((P, i) => { P.card.hidden = full && i > 0; P.ctl.input.disabled = full; }); morePay.hidden = full; }
   function addPay() {
     const P = { acc: null, amt: 0 };
@@ -246,7 +246,7 @@ export function purchaseForm(preset = {}) {
   /* ================= پوستهٔ مودال ================= */
   const chip1 = h('span', { class: 'pg-chip on' }, '۱ · کالاها'), chip2 = h('span', { class: 'pg-chip' }, '۲ · مالی (تامین‌کننده، حمل، پرداخت)');
   const bar1 = h('div', { class: 'pgf' },
-    h('div', { class: 'pgf-s' }, h('div', null, h('small', null, 'ردیف'), stats.rows), h('div', null, h('small', null, 'جمع تعداد'), stats.qty), h('div', null, h('small', null, 'جمع کل (ریال)'), stats.total),
+    h('div', { class: 'pgf-s sg' }, h('div', null, h('small', null, 'ردیف'), stats.rows), h('div', null, h('small', null, 'جمع تعداد'), stats.qty), h('div', null, h('small', null, 'جمع کل (ریال)'), stats.total),
       h('div', { class: 'pc' }, h('small', null, 'موجودی مهسا پس از این فاکتور'), h('span', null, stats.mq, ' · ', stats.mv)), h('div', { class: 'pc' }, h('small', null, 'موجودی رعنا پس از این فاکتور'), h('span', null, stats.rq, ' · ', stats.rv)),
       h('div', { class: 'pgf-n' }, 'بدون هزینهٔ حمل؛ سهم حمل در مرحلهٔ مالی اضافه می‌شود')), nextBtn);
   const bar2 = h('div', { class: 'pgf', hidden: true }, backBtn, submit);

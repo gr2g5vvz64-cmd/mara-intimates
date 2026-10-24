@@ -26,7 +26,7 @@ try {
   const sm = fa(await M.locator('.pg2r').first().innerText()); ok(sm.includes('13000000') && sm.includes('12600000'), 'خلاصه: جمع کالا ۱۲٫۶م و تمام‌شده ۱۳م');
   await M.locator('[data-act=submit]').click(); await sleep(600);
   await M.locator('.fld', { hasText: 'هزینه‌ی حمل را چه کسی' }).locator('button.chip').first().click(); await sleep(150);
-  await M.locator('button.chip', { hasText: 'پرداخت جزئی' }).click(); await sleep(150);
+  await M.locator('button.chip', { hasText: 'نسیه یا پرداخت بخشی' }).click(); await sleep(150);
   const p1 = M.locator('.lcard', { hasText: 'پرداخت 1' }); await p1.locator('.numinp').fill('8000000'); await p1.locator('button.chip', { hasText: 'حساب مهسا' }).click(); await sleep(200);
   ok(fa(await M.locator('.pg2r').first().innerText()).includes('4400000'), 'بدهی به تامین‌کننده ۴٫۴م');
   await M.locator('button.chip', { hasText: /^۱۰ روز$/ }).click();

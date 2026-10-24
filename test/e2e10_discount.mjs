@@ -41,16 +41,16 @@ try {
 
   // ۳) فروش با تخفیف
   await go('#/sales'); await page.click('text=＋ فروش جدید'); await M.waitFor(); await sleep(500);
-  const sc = M.locator('.lcard').first(); await sc.locator('.cmb input').fill('تاپ'); await sc.locator('.cmb-o').first().click(); await sleep(400);
-  ok(await sc.locator('.idesc').isVisible() && (await sc.locator('.idesc').innerText()).includes(DESC), 'توضیحات کالا در فرم فروش هم دیده می‌شود');
-  const costTxt = fa(await sc.locator('.c-cost .ro').innerText()); const price = fa(await sc.locator('.c-price input').inputValue());
-  ok(costTxt === '80000' && price === '96000', `بهای تمام‌شده ۸۰٬۰۰۰ و فی فروش پیش‌فرض ۹۶٬۰۰۰ (${costTxt} / ${price})`);
-  await sc.locator('.stp.big .stp-i').fill('2'); await sleep(200); await sc.locator('button.add').click(); await sleep(300);
+  await gridRow(page, M, 0, { name: 'تاپ', qty: 2 }); const r0 = M.locator('.pgrow').first();
+  ok((await r0.locator('.c-name').innerText()).includes(DESC), 'توضیحات کالا در فرم فروش هم دیده می‌شود');
+  const price = fa(await r0.locator('.c-fee input').getAttribute('placeholder'));
+  ok(price === '96000', `فی پیشنهادی (کمرنگ) ۹۶٬۰۰۰ است و مقدار فیلد خالی می‌ماند (${price} / [${await r0.locator('.c-fee input').inputValue()}])`);
+  await r0.locator('.c-fee input').fill('96000'); await sleep(300);
+  await buyer(page, M); await gridNext(page, M);
   ok((await M.locator('.fld > .lbl').allInnerTexts()).some(x => x.includes('تخفیف فروش')), 'فیلد «تخفیف فروش» در فرم هست');
   await F('تخفیف فروش').locator('input').fill('42000'); await sleep(300);
-  const st = fa(await page.locator('.ov .sm2').last().innerText()); ok(st.includes('192000') && st.includes('42000') && st.includes('150000'), 'خلاصه‌ی پایین فرم: جمع ۱۹۲٬۰۰۰ − تخفیف ۴۲٬۰۰۰ = ۱۵۰٬۰۰۰ ' + st);
-  await buyer(page, M);
-  await M.locator('button', { hasText: 'صدور فاکتور' }).click(); await sleep(2000);
+  const st = fa(await M.locator('.pg2r').innerText()); ok(st.includes('192000') && st.includes('42000') && st.includes('150000'), 'خلاصه‌ی فاکتور: جمع ۱۹۲٬۰۰۰ − تخفیف ۴۲٬۰۰۰ = ۱۵۰٬۰۰۰ ' + st.replace(/\s+/g, ' ').slice(0, 120));
+  await M.locator('[data-act=submit]').click(); await sleep(2000);
   const t2 = await D(); const sale = t2.v_sales.sort((a, b) => b.id - a.id)[0];
   ok(+sale.total === 150000 && +sale.discount === 42000, `فروش: مبلغ ${sale.total} · تخفیف ${sale.discount}`);
   ok(Math.round(sale.profit) === 150000 - 160000 + 0 || Math.round(sale.profit) === -10000, 'سود = ۱۵۰٬۰۰۰ − ۲×۸۰٬۰۰۰ = −۱۰٬۰۰۰: ' + sale.profit);

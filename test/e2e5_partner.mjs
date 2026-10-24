@@ -1,4 +1,4 @@
-import { serve, launch, newPage, login, API, buyer } from './h5.mjs';
+import { serve, launch, newPage, login, API, buyer, gridRow, gridNext } from './h5.mjs';
 const { srv, url } = await serve(); const browser = await launch(); const logs = []; let fails = 0;
 const ok = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) fails++; };
 const tk = async (i, pw) => (await (await fetch(API + '/api/auth/login/', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ identifier: i, password: pw }) })).json()).data.token;
@@ -13,18 +13,16 @@ try {
   ok(!/کل MARA|مقایسه/.test(dtx), 'عملکرد شریک دیگر دیده نمی‌شود');
   // فروش از موجودی رعنا توسط مهسا
   await page.evaluate(() => { location.hash = '#/sales'; }); await sleep(500); await page.click('text=＋ فروش جدید');
-  const card = M.locator('.lcard').first();
-  await card.locator('.cmb input').fill('ست'); await card.locator('.cmb-o').first().click(); await sleep(300);
-  await card.locator('.numinp').first().fill('5000000');
-  const hb = (await card.locator('.holdbox').innerText()).replace(/\s+/g, ' ');
-  ok(/مهسا · 0 عدد/.test(hb) && /رعنا · 8 عدد/.test(hb), 'موجودی هر دو نفر نمایش داده شد: ' + hb);
-  ok(/نزد خودش ندارد/.test(hb) && await card.locator('.holdbox .chip.on').innerText().then(x => x.includes('رعنا')), 'خودکار روی موجودی رعنا رفت');
-  ok(await M.locator('.warn').filter({ hasText: 'کافی نیست' }).isVisible().catch(() => false) === false, 'هشدار کمبود موجودی ندارد');
-  await card.locator('.stp.big .stp-i').fill('9'); await sleep(300);
-  ok(/کافی نیست/.test(await card.locator('.prev').innerText()), 'تعداد بیش از موجودی رعنا: هشدار');
-  await card.locator('.stp.big .stp-i').fill('2'); await sleep(300);
+  await gridRow(page, M, 0, { name: 'ست', qty: 5, price: 5000000 });
+  const row = M.locator('.pgrow').first(), dl = row.locator('.c-dl input');
+  ok(/م 0 · ر 8/.test((await row.locator('.pg-stk').innerText()).replace(/\s+/g, ' ')), 'موجودی هر دو نفر نمایش داده شد');
+  ok(await dl.nth(0).inputValue() === '0' && await dl.nth(1).inputValue() === '5', 'خودکار روی موجودی رعنا رفت (مهسا ۰ دارد)');
+  ok(/باقی‌مانده از موجودی رعنا/.test(await row.locator('.pg-msg').innerText()), 'پیام «از موجودی رعنا برداشته می‌شود» دیده می‌شود');
+  await row.locator('.c-qty input').fill('9'); await sleep(300);
+  ok(/کافی نیست|کم داری/.test(await row.locator('.pg-msg').innerText()), 'تعداد بیش از موجودی دو نفر: خطا');
+  await row.locator('.c-qty input').fill('2'); await sleep(300);
   await buyer(page, M);
-  await M.locator('button', { hasText: 'ثبت فروش' }).click(); await sleep(1200);
+  await gridNext(page, M); await M.locator('[data-act=submit]').click(); await sleep(1500);
   const t = await D(); const sale = t.v_sales.filter(s => s.items_text && s.items_text.includes('ست لاکچری')).sort((a, b) => b.id - a.id)[0];
   const sl = t.sale_lines.filter(l => l.sale_id === sale.id);
   ok(sale && sale.seller === 'مهسا' && sl.length && sl.every(l => l.holder === 'رعنا'), `فروش به نام ${sale && sale.seller} از موجودی ${sl.map(l => l.holder)}`);

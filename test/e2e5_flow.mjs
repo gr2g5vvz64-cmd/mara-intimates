@@ -17,19 +17,18 @@ async function main() {
   // ۱) فروش نسیه به مشتری جدید با سررسید ۵ روز
   
   await go('sales'); await page.click('text=＋ فروش جدید');
-  let card = M.locator('.lcard').first();
-  await card.locator('.cmb input').fill('سوتین'); await card.locator('.cmb-o').first().click();
-  await card.locator('.stp.big .stp-i').fill('2'); await card.locator('.numinp').first().fill('3800000');
+  await gridRow(page, M, 0, { name: 'سوتین', qty: 2, price: 3800000 });
+  await gridNext(page, M);
+  ok((await err()).includes('خریدار'), 'فروش بدون خریدار رد شد: ' + await err());
+  const cust = M.locator('.sg-cust .cmb input');
+  await cust.fill('سارا'); await M.locator('.cmb-o.create').first().click(); await sleep(1600);
+  await gridNext(page, M);
   await M.locator('button.chip', { hasText: 'جزئی (نسیه)' }).click();
   await M.locator('.fld', { has: page.locator('.lbl', { hasText: 'مبلغ دریافتی' }) }).locator('input').fill('1000000');
-  await M.locator('button', { hasText: 'صدور فاکتور' }).click(); await sleep(500);
-  ok((await err()).includes('خریدار'), 'فروش بدون خریدار رد شد: ' + await err());
-  const cust = M.locator('.fld', { has: page.locator('.lbl', { hasText: /^خریدار/ }) }).locator('.cmb input');
-  await cust.fill('سارا'); await M.locator('.cmb-o.create').first().click(); await sleep(700);
   await M.locator('button.chip', { hasText: /^۵ روز$/ }).click(); await sleep(200);
   const hintTxt = await M.locator('.hint', { hasText: 'سررسید:' }).innerText(); ok(/سررسید/.test(hintTxt), 'نمایش سررسید در فرم: ' + hintTxt);
   await page.screenshot({ path: 'shots/f5_sale_credit.png' });
-  await M.locator('button', { hasText: 'صدور فاکتور' }).click(); await modalGone();
+  await M.locator('[data-act=submit]').click(); await modalGone();
   let t = await D(); const sara = t.v_sales.find(s => s.customer === 'سارا');
   ok(sara && sara.outstanding === 6600000 && sara.due_date === plus(5), `فروش نسیه: مانده ${sara && sara.outstanding} سررسید ${sara && sara.due_date} (انتظار ${plus(5)}) ${await err()}`);
   // ۲) صفحه مشتریان و دریافت قسطی
@@ -62,7 +61,7 @@ async function main() {
   await gridRow(page, M, 0, { name: 'سوتین', qty: 4, price: 2500000 });
   await gridNext(page, M);
   await M.locator('.pg2 .cmb input').first().fill('بازار تهران'); await M.locator('.cmb-o', { hasText: 'بازار تهران' }).first().click(); await sleep(200);
-  await M.locator('button.chip', { hasText: 'پرداخت جزئی' }).click(); await sleep(150);
+  await M.locator('button.chip', { hasText: 'نسیه یا پرداخت بخشی' }).click(); await sleep(150);
   const p1 = M.locator('.lcard', { hasText: 'پرداخت 1' }); await p1.locator('.numinp').fill('4000000'); await p1.locator('button.chip', { hasText: 'حساب مهسا' }).click();
   await sleep(200); ok(await M.locator('button.chip', { hasText: /^۱۰ روز$/ }).count() === 1, 'سررسید برای باقی‌مانده نمایش داده شد');
   await M.locator('button.chip', { hasText: /^۱۰ روز$/ }).click();
@@ -122,4 +121,4 @@ async function main() {
   const real = logs.filter(l => !/ERR_FAILED|net::ERR|403|401|400|404/.test(l)); if (real.length) { console.log('LOGS', [...new Set(real)]); fails++; }
   console.log(fails ? 'FAILS: ' + fails : 'ALL FLOWS OK'); await browser.close(); srv.close(); process.exit(fails ? 1 : 0);
 }
-main().catch(async e => { console.log('ERR', e.message.split('\n')[0]); await page.screenshot({ path: 'shots/fail.png' }); console.log([...new Set(logs.filter(l => !/ERR_FAILED/.test(l)))]); process.exit(1); });
+main().catch(async e => { console.log('ERR', e.stack.split('\n').slice(0,4).join(' / ')); await page.screenshot({ path: 'shots/fail.png' }); console.log([...new Set(logs.filter(l => !/ERR_FAILED/.test(l)))]); process.exit(1); });

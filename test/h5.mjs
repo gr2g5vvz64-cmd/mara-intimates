@@ -36,7 +36,7 @@ export async function buyer(page, M, name = 'خریدار تست ' + (++_b)) {
 /** فاکتور خرید جدولی: ردیف i (از ۰) را پر می‌کند. f = {name, qty, price, note, m, r}؛ name = بخشی از نام کالا (اولین پیشنهاد لیست انتخاب می‌شود) */
 export async function gridRow(page, M, i, f) {
   const row = M.locator('.pgrow').nth(i), sl = ms => page.waitForTimeout(ms);
-  if (f.name != null) { await row.locator('.c-name input').fill(f.name); await sl(200); await page.locator('.cmb-list:not([hidden]) .cmb-o').first().click(); await sl(150); }
+  if (f.name != null) { await sl(350); await row.locator('.c-name input').fill(f.name); await sl(200); await page.locator('.cmb-list:not([hidden]) .cmb-o').first().click(); await sl(150); }
   if (f.qty != null) { await row.locator('.c-qty input').fill(String(f.qty)); await sl(80); }
   if (f.m != null) { await row.locator('.c-dl input').nth(0).fill(String(f.m)); await sl(80); }
   if (f.r != null) { await row.locator('.c-dl input').nth(1).fill(String(f.r)); await sl(80); }

@@ -1,15 +1,19 @@
-import { serve, launch, newPage, login } from './h5.mjs';
+import { serve, launch, newPage, login, API } from './h5.mjs';
 const { srv, url } = await serve(); const browser = await launch(); const logs = []; let fails = 0;
 const ok = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) fails++; };
 const fa = x => String(x).replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٬,\s]/g, '');
 const roundK = n => Math.round(n / 1000) * 1000;
+const tok = (await (await fetch(API + '/api/auth/login/', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ identifier: 'hamid@example.com', password: 'hamid-pass-333' }) })).json()).data.token;
 const page = await newPage(browser, url, { logs }); await login(page, 'hamid@example.com', 'hamid-pass-333'); page.setDefaultTimeout(8000);
 const M = page.locator('.ov').last(), sleep = ms => page.waitForTimeout(ms);
 const go = async h => { await page.evaluate(x => { location.hash = x; }, h); await sleep(700); };
 const priceFor = async name => {
   await go('#/sales'); await page.click('text=＋ فروش جدید'); await M.waitFor(); await sleep(500);
-  const c = M.locator('.lcard').first(); await c.locator('.cmb input').fill(name); await c.locator('.cmb-o').first().click(); await sleep(500);
-  const cost = +fa(await c.locator('.c-cost .ro').innerText()), price = +fa(await c.locator('.c-price input').inputValue());
+  const r0 = M.locator('.pgrow').first(); await r0.locator('.c-name input').fill(name); await sleep(200); await page.locator('.cmb-list:not([hidden]) .cmb-o').first().click(); await sleep(400);
+  const price = +fa(await r0.locator('.c-fee input').getAttribute('placeholder'));
+  const t = await (await fetch(API + '/api/data/', { headers: { authorization: 'Bearer ' + tok } })).json(); const tb = t.data.tables;
+  const it = tb.items.find(i => i.name.includes(name)); const lot = tb.v_lots.filter(l => l.item_id === it.id && !l.voided && (l.rem_m + l.rem_r) > 0).sort((a, b) => (a.date < b.date ? -1 : a.id - b.id))[0];
+  const cost = +lot.landed_unit;
   await page.keyboard.press('Escape'); await sleep(300); return { cost, price };
 };
 try {

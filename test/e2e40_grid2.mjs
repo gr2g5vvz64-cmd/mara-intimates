@@ -44,7 +44,7 @@ try {
   await MM.locator('.pgrow').first().locator('.c-name input').fill('جوراب'); await mp.waitForTimeout(200); await mp.locator('.cmb-list:not([hidden]) .cmb-o').first().click(); await mp.waitForTimeout(200);
   await MM.locator('.pgrow').first().locator('.c-qty input').fill('6'); await MM.locator('.pgrow').first().locator('.c-fee input').fill('50000'); await mp.waitForTimeout(300);
   const lay = await mp.evaluate(() => { const r = document.querySelector('.pgrow'), cs = getComputedStyle(r); return { cols: cs.gridTemplateColumns.split(' ').length, ovf: document.documentElement.scrollWidth > innerWidth + 2 }; });
-  ok(lay.cols === 2 && !lay.ovf, 'موبایل: کارت ردیف دو‌ستونه و بدون اسکرول افقی ' + JSON.stringify(lay));
+  ok(lay.cols === 4 && !lay.ovf, 'موبایل: کارت ردیف فشرده (۴ ستون برای تعداد، فی، مهسا، رعنا) و بدون اسکرول افقی ' + JSON.stringify(lay));
   ok(await MM.locator('button', { hasText: '＋ کالای جدید' }).isVisible() && await MM.locator('[data-act=next]').isVisible(), 'موبایل: دکمهٔ کالای جدید و ادامه دیده می‌شود');
   await mp.screenshot({ path: '/tmp/grid_mobile.png' });
   const errs = logs.filter(l => !/Failed to load resource|fonts|net::ERR/.test(l)); ok(errs.length === 0, 'بدون خطای کنسول' + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));

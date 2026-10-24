@@ -1,4 +1,4 @@
-import { serve, launch, newPage, login, API, buyer } from './h5.mjs';
+import { serve, launch, newPage, login, API, buyer, gridRow, gridNext } from './h5.mjs';
 const { srv, url } = await serve(); const browser = await launch(); const logs = []; let fails = 0;
 const ok = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) fails++; };
 const tk = async (i, pw) => (await (await fetch(API + '/api/auth/login/', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ identifier: i, password: pw }) })).json()).data.token;
@@ -9,12 +9,10 @@ const M = page.locator('.ov'), sleep = ms => page.waitForTimeout(ms);
 const go = async h => { await page.evaluate(x => { location.hash = '#/' + x; }, h); await sleep(500); };
 const nSales = async () => (await D()).v_sales.length;
 async function fillSale(price = '300000') {
-  await go('sales'); await page.click('text=＋ فروش جدید');
-  const card = M.locator('.lcard').first();
-  await card.locator('.cmb input').fill('جوراب'); await card.locator('.cmb-o').first().click();
-  await card.locator('.numinp').first().fill(price);
+  await go('sales'); await page.click('text=＋ فروش جدید'); await sleep(500);
+  await gridRow(page, M, 0, { name: 'جوراب', qty: 1, price });
   await buyer(page, M);
-  await M.locator('button', { hasText: 'ثبت فروش' }).click();
+  await gridNext(page, M); await M.locator('[data-act=submit]').click();
 }
 const banner = () => page.locator('#savebar').innerText().catch(() => '');
 try {
@@ -59,5 +57,5 @@ try {
   await page.waitForFunction(() => !/اطلاعات از سرور نیامد/.test(document.getElementById('savebar').innerText), null, { timeout: 30000 });
   ok(true, 'بعد از وصل شدن، اطلاعات خودکار تازه شد');
   const real = logs.filter(l => !/ERR_FAILED|net::ERR|40\d|Failed to load resource/.test(l)); if (real.length) { console.log(real); fails++; }
-} catch (e) { console.log('ERR', e.message.split('\n')[0]); await page.screenshot({ path: 'shots/fail.png' }); fails++; }
+} catch (e) { console.log('ERR', e.stack.split('\n').slice(0,6).join(' / ')); await page.screenshot({ path: 'shots/fail.png' }); fails++; }
 console.log(fails ? 'FAILS ' + fails : 'ALL OK'); await browser.close(); srv.close(); process.exit(fails ? 1 : 0);

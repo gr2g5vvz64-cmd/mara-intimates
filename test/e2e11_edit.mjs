@@ -24,8 +24,9 @@ try {
   await M.locator('button', { hasText: 'ویرایش' }).first().click(); await sleep(pm, 900);
   const M2 = pm.locator('.ov').last();
   ok((await M2.innerText()).includes('ویرایش فروش ' + cand.no), 'فرم ویرایش با عنوان درست باز شد');
-  await M2.locator('.irow').first().locator('.c-price input').fill('777000'); await sleep(pm, 300);
-  await M2.locator('button', { hasText: 'ذخیره‌ی ویرایش فاکتور' }).click(); await sleep(pm, 2200);
+  await M2.locator('.pgrow').first().locator('.c-fee input').fill('777000'); await sleep(pm, 300);
+  await M2.locator('[data-act=next]').click(); await sleep(pm, 500);
+  await M2.locator('[data-act=submit]').click(); await sleep(pm, 2200);
   const t1 = await D();
   const old = t1.v_sales.find(s => s.id === cand.id);
   ok(old && old.voided, 'فروش قبلی باطل شد (در تاریخچه می‌ماند)');
