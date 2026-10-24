@@ -15,7 +15,7 @@ export function modal({ title, body, footer, wide = false, onClose }) {
   const hd = h('div', { class: 'sheet-h' }, h('h2', null, title), h('button', { class: 'x', type: 'button', 'aria-label': 'بستن', onclick: close }, '✕'));
   const bd = h('div', { class: 'sheet-b' }, body);
   const ft = footer ? h('div', { class: 'sheet-f' }, footer) : null;
-  const ov = h('div', { class: 'ov', role: 'dialog', 'aria-modal': 'true', 'aria-label': title, onmousedown: e => { if (e.target === ov) close(); } },
+  const ov = h('div', { class: 'ov', role: 'dialog', 'aria-modal': 'true', 'aria-label': title, onmousedown: e => { if (e.target === ov && window.innerWidth <= 800) close(); } },
     h('div', { class: 'sheet' + (wide ? ' wide' : '') }, hd, bd, ft));
   document.addEventListener('keydown', onKey); modalStack.push(me);
   document.body.append(ov); document.body.classList.add('lock');
