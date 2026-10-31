@@ -22,7 +22,7 @@ import * as mcn from './pages/monthcount.js';
 import { onOutbox, initOutbox, pendingCount, blockedCount, pump, state as obState } from './outbox.js';
 import { saleForm, purchaseForm } from './forms_trade.js';
 import { navCounts } from './insights.js';
-import { THEMES, currentTheme, chooseTheme, loadTheme } from './theme.js';
+import { themesFor, currentTheme, chooseTheme, loadTheme } from './theme.js';
 import { fmt } from './util.js';
 
 const ROUTES = {
@@ -171,8 +171,8 @@ function themePanel(startOpen = false) {
     wrap.replaceChildren(
       h('button', { type: 'button', class: 'tb-btn', id: 'themebtn', 'aria-expanded': String(open), 'aria-controls': 'themegrid', onclick: () => draw(!open) }, strip(cur), h('b', null, '🎨 تم رنگی'), h('small', null, cur.name), h('span', { class: 'tb-arrow', 'aria-hidden': 'true' }, open ? '▲' : '▼')),
       h('div', { class: 'tb-grid', id: 'themegrid', role: 'radiogroup', 'aria-label': 'انتخاب تم رنگی', hidden: !open },
-        THEMES.map(t => h('button', { type: 'button', class: 'tb-opt' + (t.id === cur.id ? ' on' : ''), role: 'radio', 'aria-checked': String(t.id === cur.id), 'data-theme-id': t.id,
-          onclick: () => { chooseTheme(t.id, S.me.name); toast(`تم «${t.name}» انتخاب شد و برایت می‌ماند ✔`); draw(true); if (!document.querySelector('.ov')) route(); } },
+        themesFor(isAdmin()).map(t => h('button', { type: 'button', class: 'tb-opt' + (t.id === cur.id ? ' on' : ''), role: 'radio', 'aria-checked': String(t.id === cur.id), 'data-theme-id': t.id,
+          onclick: () => { chooseTheme(t.id, S.me.name, isAdmin()); toast(`تم «${t.name}» انتخاب شد و برایت می‌ماند ✔`); draw(true); if (!document.querySelector('.ov')) route(); } },
           strip(t), h('b', null, t.name, t.id === cur.id ? h('span', { class: 'ok' }, '✓ فعلی') : null), h('small', null, t.desc)))));
   };
   draw(startOpen); return wrap;
@@ -260,7 +260,7 @@ async function start() {
       if (!w.ok) return showMsg('سرور جواب نمی‌دهد', `${w.msg} [کد ${w.code}]`, h('button', { class: 'btn primary', onclick: () => location.reload() }, 'تلاش دوباره'));
       showLogin.woke = true;
     }
-    await loadAll(); loadTheme(S.me.name); shell(); initOutbox(); renderBar(); pump(true); if (!location.hash) location.hash = '#/'; route();
+    await loadAll(); loadTheme(S.me.name, isAdmin()); shell(); initOutbox(); renderBar(); pump(true); if (!location.hash) location.hash = '#/'; route();
   } catch (e) {
     if (['E_AUTH_BAD', 'E_AUTH_EXPIRED', 'E_AUTH_REQUIRED'].includes(e.code)) { setToken(null); return showLogin('نشست تمام شده؛ دوباره وارد شو.'); }
     showMsg('خطا در اتصال', errText(e), h('button', { class: 'btn primary', onclick: () => location.reload() }, 'تلاش دوباره'));

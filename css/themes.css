@@ -13,3 +13,26 @@ html[data-theme="t8"]{--bg:#F7EFE6;--card:#FFFFFF;--ink:#2E1B10;--brown:#6B4A36;
 html[data-theme="t9"]{--bg:#FFF4F9;--card:#FFFFFF;--ink:#111111;--brown:#6B3A55;--gold:#F276B4;--gold-d:#B8327F;--lux:#F5A6CF;--line:#F9D5E8;--tint:#FDE8F3;--pinkl:#F5A6CF;--deep:#000000;--deepfg:#FFFFFF;--deepfg2:#F5A6CF;--onp:#000000}
 html[data-theme="t9"] .btn.gold:hover{background:#F5A6CF}
 html[data-theme="t9"] a{color:var(--gold-d)}
+
+/* تم ۱۰ — شیشه‌ای تیره (ویژه‌ی مدیر): کارت‌های شیشه‌ای، نور ملایم و انیمیشن؛ با «کاهش حرکت» سیستم خاموش می‌شود */
+html[data-theme="t10"]{--bg:#150B12;--card:rgba(255,255,255,.06);--ink:#F5E9F0;--brown:#C9AEBE;--gold:#FF7FB0;--gold-d:#FFA3C6;--lux:#F2C14E;--line:rgba(255,255,255,.13);--line2:rgba(255,255,255,.16);--tint:rgba(255,255,255,.08);--pinkl:#FF7FB0;--deep:#0B0509;--deepfg:#F5E9F0;--deepfg2:#C9AEBE;--onp:#2A0A1A;--green:#6FD3A0;--green-bg:rgba(111,211,160,.14);--blue:#8CC4F0;--blue-bg:rgba(140,196,240,.14);--red:#FF8A80;--red-bg:rgba(255,138,128,.14);--amber:#F2C14E;--amber-bg:rgba(242,193,78,.14);--gray-bg:rgba(255,255,255,.07);--warn-bg:rgba(242,193,78,.14);--warn-fg:#F2C14E;--warn-bd:rgba(242,193,78,.4);--shadow:0 8px 30px rgba(0,0,0,.35);color-scheme:dark}
+html[data-theme="t10"] body{background:radial-gradient(900px 520px at 85% -8%,rgba(224,48,111,.28),transparent 60%),radial-gradient(760px 480px at 8% 18%,rgba(111,80,200,.20),transparent 60%),#150B12;background-attachment:fixed}
+html[data-theme="t10"] .card,html[data-theme="t10"] .kpi,html[data-theme="t10"] .tw,html[data-theme="t10"] .acc,html[data-theme="t10"] .stp{-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid var(--line);transition:transform .25s ease,border-color .25s ease,box-shadow .25s ease}
+html[data-theme="t10"] .card:hover,html[data-theme="t10"] .kpi:hover{transform:translateY(-2px);border-color:rgba(255,127,176,.45);box-shadow:0 10px 34px rgba(224,48,111,.22)}
+html[data-theme="t10"] .btn.danger{color:#2A0A1A} html[data-theme="t10"] .btn.danger.ghost{color:var(--red);border-color:var(--red)}
+html[data-theme="t10"] .t tbody tr:hover td{background:var(--tint)}
+html[data-theme="t10"] .btn.gold,html[data-theme="t10"] .btn.primary{background:linear-gradient(135deg,#FF7FB0,#E0306F);color:#2A0A1A;border-color:transparent;box-shadow:0 0 18px rgba(255,127,176,.35)}
+html[data-theme="t10"] .hero2{background:linear-gradient(135deg,rgba(224,48,111,.38),rgba(111,80,200,.28));border:1px solid rgba(255,255,255,.16);position:relative;overflow:hidden}
+html[data-theme="t10"] .hero2::after{content:"";position:absolute;inset:-40%;background:conic-gradient(from 0deg,transparent,rgba(255,127,176,.16),transparent 35%);animation:t10spin 14s linear infinite;pointer-events:none}
+html[data-theme="t10"] .lc-svg path[stroke-dasharray="none"],html[data-theme="t10"] .lc-svg path:last-of-type{stroke-dasharray:1400;stroke-dashoffset:1400;animation:t10draw 1.6s ease-out .15s forwards;filter:drop-shadow(0 0 6px rgba(255,127,176,.7))}
+html[data-theme="t10"] .hc-fill{transform-origin:right center;animation:t10grow .9s cubic-bezier(.2,.8,.2,1) both}
+html[data-theme="t10"] .dn-svg circle:not(:first-child){animation:t10fade 1.1s ease-out both}
+html[data-theme="t10"] .spark path{filter:drop-shadow(0 0 4px currentColor)}
+html[data-theme="t10"] #view>*{animation:t10up .55s cubic-bezier(.2,.8,.2,1) both}
+html[data-theme="t10"] #view>*:nth-child(2){animation-delay:.05s}html[data-theme="t10"] #view>*:nth-child(3){animation-delay:.1s}html[data-theme="t10"] #view>*:nth-child(4){animation-delay:.15s}html[data-theme="t10"] #view>*:nth-child(5){animation-delay:.2s}html[data-theme="t10"] #view>*:nth-child(n+6){animation-delay:.25s}
+@keyframes t10up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes t10draw{to{stroke-dashoffset:0}}
+@keyframes t10grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes t10fade{from{opacity:0}to{opacity:1}}
+@keyframes t10spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){html[data-theme="t10"] *{animation:none!important;transition:none!important}html[data-theme="t10"] .lc-svg path{stroke-dashoffset:0!important}}
