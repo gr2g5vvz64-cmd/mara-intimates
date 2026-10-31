@@ -5,6 +5,7 @@ import * as trade from './pages/trade.js';
 import * as stock from './pages/stock.js';
 import * as pay from './pages/pay.js';
 import * as fin from './pages/finance.js';
+import * as chq from './pages/cheques.js';
 import * as master from './pages/master.js';
 import * as help from './pages/help.js';
 import * as cust from './pages/customers.js';
@@ -36,6 +37,7 @@ const ROUTES = {
   customers: { t: 'مشتریان و طلب‌ها', i: '👥', f: q => cust.render(q) },
   invoices: { t: 'بدهی به تامین‌کننده', i: '📄', f: () => trade.invoices() },
   finance: { t: 'مالی', i: '◎', f: () => fin.render() },
+  cheques: { t: 'چک‌های پرداختی', i: '🧾', f: () => chq.render() },
   stocktake: { t: 'انبارگردانی', i: '☑', f: () => stk.render() },
   monthcount: { t: 'انبارگردانی ماهانه', i: '🗓', f: q => mcn.render(q) },
   items: { t: 'کالاها', i: '🏷', f: () => master.items() },
@@ -58,7 +60,7 @@ const GROUPS = [
   { id: 'sales', t: 'فروش', i: '🛍', kids: ['sales', 'customers', 'returns'] },
   { id: 'buy', t: 'خرید', i: '📦', kids: ['purchases', 'suppliers', 'sreturns'] },
   { id: 'wh', t: 'انبار', i: '▤', kids: ['stock', 'monthcount', 'items'] },
-  { id: 'money', t: 'مالی', i: '◎', kids: ['finance', 'pay', 'invoices', 'settle'] },
+  { id: 'money', t: 'مالی', i: '◎', kids: ['finance', 'pay', 'invoices', 'cheques', 'settle'] },
   { id: 'set', t: 'تنظیمات', i: '⚙', kids: ['settings', 'history', 'help', 'savelog', 'diag'] }
 ];
 const NAVLBL = { monthcount: 'انبارگردانی', sales: 'فاکتور فروش', purchases: 'فاکتور خرید', finance: 'خلاصه‌ی مالی', pay: 'پرداخت و هزینه', calc: 'محاسبات درصد', pnl: 'سود و زیان ماهانه', meeting: 'گزارش جلسه‌ی دو هفته‌ای', settle: 'حساب‌وکتاب ماهانه' };

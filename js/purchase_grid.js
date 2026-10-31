@@ -5,6 +5,7 @@ import { S, rpc, loadAll, bus, accBalance, errText, canEdit } from './store.js';
 import { modal, field, chips, accountPicker, numField, dateField, dueField, combo, run } from './ui.js';
 import { itemForm } from './forms_misc.js';
 import { adviceFor, adviceText } from './advisor.js';
+import { payMethods } from './cheque_ui.js';
 
 const ceilHalf = n => Math.ceil(n / 2);
 export const COLOR_HEX = { 'مشکی': '#111111', 'سفید': '#FFFFFF', 'کرم': '#F3E3D3', 'بژ': '#D8BFA0', 'صورتی': '#E3A9BC', 'زرشکی': '#8E1B3A', 'قرمز': '#C62828', 'طوسی': '#9E9E9E', 'سرمه‌ای': '#1F2A5A', 'آبی': '#2F6FB5', 'سبز': '#3C7A4E', 'یاسی': '#B79AD6', 'نباتی': '#C2185B', 'قهوه‌ای': '#6D4C41' };
@@ -14,7 +15,6 @@ export function purchaseForm(preset = {}) {
   if (edit && !canEdit()) { toast('ویرایش فقط برای حمیدرضا، مهسا و رعنا باز است', 'err'); return; }
   let date = edit ? edit.date : todayISO();
   let rows = [], uid = 0, step = 1;
-  const pays = [];
 
   /* ================= منبع کالاها ================= */
   const stockOf = id => S.stock.find(x => x.id === id);
@@ -136,30 +136,21 @@ export function purchaseForm(preset = {}) {
   const step1 = h('div', { class: 'pg1' }, topBar, h('div', { class: 'pg-tbl' }, head1, body1, h('div', { class: 'pg-foot' }, h('span', null, 'تعداد یا فی خالی/صفر → هشدار «پر کن» · ردیف خالی آخر با «ادامه» خودکار حذف می‌شود'), halfAll)), probs);
 
   /* ================= مرحلهٔ ۲ · مالی ================= */
-  const dateCtl = dateField(date, v => { date = v; due.refresh(); });
+  const dateCtl = dateField(date, v => { date = v; due.refresh(); if (pm) pm.refresh(); });
   const supOpts = () => S.suppliers.filter(s => s.active).map(s => ({ v: s.id, label: s.name, sub: s.phone || '' }));
-  const supplier = combo({ placeholder: 'نام تامین‌کننده (الزامی)', createLabel: 'تامین‌کننده‌ی جدید', options: supOpts(), onChange: () => recalc(),
+  const supplier = combo({ placeholder: 'نام تامین‌کننده (الزامی)', createLabel: 'تامین‌کننده‌ی جدید', options: supOpts(), onChange: () => { if (pm) pm.supplierChanged(); recalc(); },
     onCreate: async name => { try { const r = await rpc('save_supplier', { name }, { queue: false }); await loadAll(); supplier.setOptions(supOpts()); supplier.set(r.id); toast('تامین‌کننده اضافه شد'); recalc(); return r.id; } catch (e) { toast(errText(e), 'err'); return null; } } });
   const supInfo = h('div', { class: 'inp ro bal' }, '—');
   const ship = numField({ onInput: () => recalc() }), discount = numField({ onInput: () => recalc() });
   const shipAcc = accountPicker(S.accounts, null, () => {}, { pockets: true });
   const shipBox = h('div', { hidden: true }, field('هزینه‌ی حمل را چه کسی / از کدام حساب داد؟', shipAcc, 'روی قیمت هر قلم سرشکن می‌شود و قیمت تمام‌شده را می‌سازد.'));
   const note = h('input', { class: 'inp', type: 'text', placeholder: 'شماره‌ی فاکتور تامین‌کننده / یادداشت (اختیاری)', 'aria-label': 'توضیحات فاکتور' });
-  let payMode = 'full';
   const due = dueField(() => date, { label: 'سررسید پرداخت مانده' }), dueBox = h('div', { hidden: true }, due);
-  const remainEl = h('div', { class: 'hint' }), paysBox = h('div', { class: 'paylist' });
-  const morePay = h('button', { class: 'btn dashed', type: 'button', hidden: true, onclick: () => addPay() }, '＋ پرداخت دیگر (اگر دو نفر پرداخت کردند)');
-  const payChips = chips([{ v: 'full', label: 'پرداخت کامل (نقدی)' }, { v: 'part', label: 'نسیه یا پرداخت بخشی (مانده = بدهی به تامین‌کننده)' }], 'full', v => { payMode = v; syncPayMode(); recalc(); }, { cls: 'two', label: 'نحوه‌ی پرداخت' });
-  function syncPayMode() { const full = payMode === 'full'; pays.forEach((P, i) => { P.card.hidden = full && i > 0; P.ctl.input.disabled = full; }); morePay.hidden = full; }
-  function addPay() {
-    const P = { acc: null, amt: 0 };
-    const acc = accountPicker(S.accounts, null, v => { P.acc = v; }, { pockets: true, balances: accBalance });
-    const amt = numField({ onInput: n => { P.amt = n; recalc(); } }); P.ctl = amt;
-    const rmBtn = pays.length ? h('button', { class: 'rm', type: 'button', 'aria-label': 'حذف این پرداخت', onclick: () => { pays.splice(pays.indexOf(P), 1); P.card.remove(); recalc(); } }, '✕') : null;
-    P.card = h('div', { class: 'lcard' }, h('div', { class: 'lrow' }, h('b', null, 'پرداخت ' + (pays.length + 1)), rmBtn), field('مبلغ پرداخت‌شده (ریال)', amt), field('پرداخت از (تنخواه / حساب بانکی / جیب شخصی)', acc));
-    P.set = (a, n) => { acc.set(a); P.acc = a; amt.set(n); P.amt = n; };
-    pays.push(P); paysBox.append(P.card); syncPayMode(); recalc(); return P;
-  }
+  const remainEl = h('div', { class: 'hint' });
+  const payable = () => { const g0 = goods(); return g0 - Math.min(discount.get(), g0); };
+  const ownIds = new Set(edit ? S.cheques.filter(c => !c.voided && S.chequeAllocs.some(a => a.cheque_id === c.id && a.invoice_id === edit.id)).map(c => c.id) : []);
+  let pm = null;
+  pm = payMethods({ getTotal: () => payable(), getDate: () => date, getSupplier: () => supplier.get(), onChange: () => recalc(), toast, ownIds });
   const S2 = { goods: h('b', { class: 'n' }, '0'), disc: h('b', { class: 'n' }, '0'), ship: h('b', { class: 'n' }, '0'), landed: h('b', { class: 'n' }, '0'), paid: h('b', { class: 'n' }, '0'), debt: h('b', { class: 'n' }, '0'), cnt: h('span', null, ''), mq: h('span', null, ''), rq: h('span', null, '') };
   const itemsList = h('div', { class: 'pg-il' });
   const done = () => rows.filter(r => r.item && r.price > 0);
@@ -169,14 +160,14 @@ export function purchaseForm(preset = {}) {
     const g0 = goods(), sh = ship.get(), dc = Math.min(discount.get(), g0), g = g0 - dc;
     shipBox.hidden = sh <= 0;
     let mv = 0, rv = 0; done().forEach(r => { const lt = r.qty * r.price, landed = g0 > 0 ? (lt + sh * lt / g0 - dc * lt / g0) / r.qty : r.price; mv += r.m * landed; rv += r.r * landed; });
-    if (payMode === 'full' && pays[0]) { pays[0].amt = g; pays[0].ctl.set(g || ''); }
-    const paid = payMode === 'full' ? g : sum(pays, p => p.amt), left = g - paid;
+    pm.refresh();
+    const paid = pm.total(), left = g - paid;
     S2.goods.textContent = fmt(g0); S2.disc.textContent = fmt(dc); S2.ship.textContent = fmt(sh); S2.landed.textContent = fmt(g + sh); S2.paid.textContent = fmt(paid);
     S2.debt.textContent = fmt(Math.abs(left)); S2.debt.className = 'n ' + (left > 0 ? 'neg' : left < 0 ? 'pos' : '');
     S2.cnt.textContent = `جمع کالاها (${fmt(done().length)} ردیف · ${fmt(sum(done(), r => r.qty))} عدد)`;
     S2.mq.textContent = `+${fmt(sum(done(), r => r.m))} عدد · ${fmt(Math.round(mv))} ریال`; S2.rq.textContent = `+${fmt(sum(done(), r => r.r))} عدد · ${fmt(Math.round(rv))} ریال`;
-    remainEl.textContent = left > 0 ? `مانده‌ی فاکتور به حساب بدهی ما به تامین‌کننده می‌رود: ${fmt(left)} ریال` : left < 0 ? `اضافه‌پرداخت: تامین‌کننده ${fmt(-left)} ریال به ما بدهکار می‌شود` : '';
-    dueBox.hidden = payMode === 'full' || left <= 0;
+    remainEl.textContent = left > 0.5 ? `مانده‌ی ${fmt(left)} ریال «نسیه» می‌ماند و به بدهی ما به تامین‌کننده اضافه می‌شود.` : left < -0.5 ? `جمع پرداخت‌ها ${fmt(-left)} ریال از فاکتور بیشتر است؛ مبلغ‌ها را اصلاح کن.` : 'کل فاکتور پرداخت شده است.'; remainEl.className = 'hint' + (left < -0.5 ? ' errt' : '');
+    dueBox.hidden = left <= 0.5;
     const sid = supplier.get(), sb = sid && S.vSup.find(x => x.id === sid);
     supInfo.textContent = !sid ? '—' : (sb && sb.balance > 0.5 ? `${fmt(sb.balance)} ریال بدهکاریم` : sb && sb.balance < -0.5 ? `${fmt(-sb.balance)} ریال طلبکاریم` : 'تسویه'); supInfo.classList.toggle('debt', !!(sb && sb.balance > 0.5));
   }
@@ -188,7 +179,7 @@ export function purchaseForm(preset = {}) {
     h('div', { class: 'pg2l' },
       zone('۱', 'مشخصات خرید', null, h('div', { class: 'two-col dt' }, field('تامین‌کننده (فروشنده‌ی کالا) *', supplier), field('مانده‌ی قبلی تامین‌کننده', supInfo)), h('div', { class: 'two-col dt' }, field('تاریخ خرید', dateCtl), field('شماره‌ی فاکتور / یادداشت', note))),
       zone('۲', 'تخفیف و هزینه‌ی حمل', 'اختیاری · سرشکن روی اقلام', h('div', { class: 'two-col dt' }, field('تخفیف خرید (ریال)', discount, 'از جمع فاکتور و بدهی به تامین‌کننده کم می‌شود.'), field('هزینه‌ی حمل (ریال)', ship)), shipBox),
-      zone('۳', 'پرداخت به تامین‌کننده', 'چقدر دادی؟ از کدام حساب؟', payChips, paysBox, morePay, remainEl, dueBox)),
+      zone('۳', 'روش پرداخت به تامین‌کننده', 'نقد، چک یا ترکیبی', pm.el, remainEl, dueBox)),
     h('div', { class: 'pg2r' },
       h('section', { class: 'z2 dk' }, h('div', { class: 'zt dark' }, h('span', null, 'خلاصهٔ فاکتور')), h('div', { class: 'zx' },
         h('div', { class: 'sr' }, S2.cnt, S2.goods), h('div', { class: 'sr' }, h('span', null, 'تخفیف'), S2.disc), h('div', { class: 'sr' }, h('span', null, 'هزینه‌ی حمل'), S2.ship),
@@ -233,11 +224,10 @@ export function purchaseForm(preset = {}) {
     const sh = ship.get(), g0 = goods();
     if (discount.get() > g0) return toast('تخفیف نمی‌تواند از جمع کالاها بیشتر باشد', 'err');
     if (sh > 0 && !shipAcc.get()) return toast('حساب پرداخت‌کننده‌ی هزینه حمل را انتخاب کن', 'err');
-    const used = (payMode === 'full' ? pays.slice(0, 1) : pays).filter(p => p.amt > 0);
-    if (used.some(p => !p.acc)) return toast('حساب هر پرداخت را انتخاب کن', 'err');
-    const left = g0 - discount.get() - sum(used, p => p.amt);
+    const perr = pm.check(); if (perr) return toast(perr, 'err');
+    const left = g0 - discount.get() - pm.total();
     const payload = { date, supplier_id: supplier.get(), ship_cost: sh, discount: discount.get(), ship_account_id: sh > 0 ? shipAcc.get() : null, due_date: left > 0 ? due.get() : null, note: note.value.trim(),
-      lines: ds.map(r => ({ item_id: r.item, qty: r.qty, unit_price: r.price, hold_m: r.m, hold_r: r.r, note: (r.note || '').trim() })), payments: used.map(p => ({ account_id: p.acc, amount: p.amt })) };
+      lines: ds.map(r => ({ item_id: r.item, qty: r.qty, unit_price: r.price, hold_m: r.m, hold_r: r.r, note: (r.note || '').trim() })), payments: pm.payments(), cheques: pm.cheques() };
     const r0 = await run(submit, () => rpc(edit ? 'edit_purchase' : 'create_purchase', edit ? { ...payload, id: edit.id } : payload));
     if (!r0) return;
     toast(`فاکتور ${r0.no} ${edit ? 'ویرایش شد' : 'ثبت شد'}`); m.close(); await bus.refresh();
@@ -256,7 +246,7 @@ export function purchaseForm(preset = {}) {
 
   /* ================= شروع ================= */
   if (!edit) {
-    addPay(); addRow();
+    addRow();
     if (preset.item && S.I[preset.item]) { const r = rows[0]; pickItem(r, preset.item); if (preset.qty) { r.ui.qi.value = String(preset.qty); setQty(r, preset.qty); } }
     ensureTail(); paint();
   } else {
@@ -266,10 +256,10 @@ export function purchaseForm(preset = {}) {
       r.ui.nameC.set(r.item); r.ui.qi.value = String(r.qty); r.ui.mi.value = String(r.m); r.ui.ri.value = String(r.r); r.ui.pc.set(r.price); r.ui.noteI.value = r.note;
     }
     discount.set(edit.discount || ''); ship.set(edit.ship_cost || ''); if (edit.ship_account_id) shipAcc.set(edit.ship_account_id);
-    const old = S.payments.filter(p => p.invoice_id === edit.id && !p.voided);
-    const gEdit = edit.goods_total || sum(rows, r => r.qty * r.price) - (edit.discount || 0);
-    if (old.length) old.forEach(p => addPay().set(p.account_id, p.amount)); else addPay();
-    if (old.length > 1 || sum(old, p => p.amount) < gEdit - 0.5) { payMode = 'part'; payChips.set('part'); syncPayMode(); }
+    pm.preload({
+      payments: S.payments.filter(p => p.invoice_id === edit.id && !p.voided && !p.cheque_id && p.account_id).map(p => ({ account_id: p.account_id, amount: p.amount })),
+      cheques: S.cheques.filter(c => ownIds.has(c.id)).sort((a, b) => a.id - b.id).map(c => ({ payer: c.payer, payee_name: c.payee_name, national_id: c.national_id, bank: c.bank, cheque_no: c.cheque_no, sayadi: c.sayadi, due_date: c.due_date, amount: c.amount }))
+    });
     if (edit.due_date) due.setDate(edit.due_date);
     note.value = edit.note || ''; ensureTail(); paint();
   }

@@ -6,7 +6,7 @@ import { CHANGELOG } from '../changelog.js';
 import { head, btn } from './common.js';
 
 const ACT = { INSERT: ['ثبت', 'green'], UPDATE: ['ویرایش/ابطال', 'amber'], DELETE: ['حذف', 'red'], LOGIN: ['ورود', 'blue'], LOGIN_FAIL: ['ورود ناموفق', 'red'], LOGOUT: ['خروج', 'gray'], EXPORT: ['خروجی', 'gold'], PASSWORD: ['رمز', 'amber'], LINK: ['اتصال بات', 'blue'], LINK_FAIL: ['اتصال ناموفق', 'red'], CRON: ['کرون', 'gray'] };
-const TABLES = [['', 'همه‌ی بخش‌ها'], ['sales', 'فروش'], ['purchase_invoices', 'فاکتور خرید'], ['supplier_payments', 'پرداخت به تامین‌کننده'], ['collections', 'دریافت از مشتری'], ['returns', 'مرجوعی'],
+const TABLES = [['', 'همه‌ی بخش‌ها'], ['sales', 'فروش'], ['purchase_invoices', 'فاکتور خرید'], ['supplier_payments', 'پرداخت به تامین‌کننده'], ['cheques', 'چک پرداختی'], ['collections', 'دریافت از مشتری'], ['returns', 'مرجوعی'],
   ['expenses', 'هزینه'], ['transfers', 'انتقال'], ['stock_moves', 'جابجایی کالا'], ['items', 'کالا'], ['suppliers', 'تامین‌کننده'], ['customers', 'مشتری'], ['auth', 'ورود و خروج'], ['export', 'خروجی اکسل'], ['bot', 'بات‌ها']];
 const tm = iso => { const d = new Date(iso); const t = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Tehran', hour: '2-digit', minute: '2-digit', hour12: false }).format(d); return jstr(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tehran' }).format(d)) + ' ' + t; };
 

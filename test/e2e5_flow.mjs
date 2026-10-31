@@ -47,12 +47,12 @@ async function main() {
   await M.locator('button', { hasText: 'ثبت دریافت' }).click(); await modalGone();
   t = await D(); ok(t.v_customer_balance.find(c => c.name === 'سارا').outstanding === 0, 'قسط آخر: تسویه کامل ' + await err());
   // ۳) پرداخت به تامین‌کننده بدون فاکتور → پخش خودکار
-  await go('invoices'); await page.click('text=＋ پرداخت به تامین‌کننده');
+  await go('invoices'); await page.click('text=＋ تسویه با تامین‌کننده');
   await M.locator('.cmb input').first().click(); await M.locator('.cmb-o', { hasText: 'تولیدی احمدی' }).click(); await sleep(300);
   const before = t.v_supplier_balance.find(s => s.name === 'تولیدی احمدی').balance;
-  await M.locator('.numinp').first().fill('5000000'); await sleep(200);
-  ok(/F-0002/.test(await M.locator('.sumbox').innerText()), 'پیش‌نمایش پخش روی فاکتور: ' + (await M.locator('.sumbox').innerText()).replace(/\s+/g, ' '));
-  await M.locator('button', { hasText: 'ثبت پرداخت' }).click(); await modalGone();
+  await M.locator('.cq-pick input').last().check(); await sleep(150);
+  await M.locator('.cq-methods .chip[data-m=biz]').click(); await sleep(250); await M.locator('.cq-z').nth(1).locator('.numf input').first().fill('5000000'); await sleep(200);
+  await M.locator('button', { hasText: 'ذخیره و تسویه' }).click(); await modalGone();
   t = await D(); ok(t.v_supplier_balance.find(s => s.name === 'تولیدی احمدی').balance === before - 5000000, `بدهی تامین‌کننده ${before} → ${t.v_supplier_balance.find(s => s.name === 'تولیدی احمدی').balance} ${await err()}`);
   await page.locator('tbody tr', { hasText: 'تولیدی احمدی' }).first().click({ position: { x: 20, y: 10 } }).catch(() => {}); await sleep(300);
   if (await M.count()) { ok(/صورت‌حساب/.test(await M.first().innerText()), 'صورت‌حساب تامین‌کننده'); await page.keyboard.press('Escape'); await sleep(200); }
@@ -61,8 +61,7 @@ async function main() {
   await gridRow(page, M, 0, { name: 'سوتین', qty: 4, price: 2500000 });
   await gridNext(page, M);
   await M.locator('.pg2 .cmb input').first().fill('بازار تهران'); await M.locator('.cmb-o', { hasText: 'بازار تهران' }).first().click(); await sleep(200);
-  await M.locator('button.chip', { hasText: 'نسیه یا پرداخت بخشی' }).click(); await sleep(150);
-  const p1 = M.locator('.lcard', { hasText: 'پرداخت 1' }); await p1.locator('.numinp').fill('4000000'); await p1.locator('button.chip', { hasText: 'حساب مهسا' }).click();
+  await M.locator('.cq-methods .chip[data-m=biz]').click(); await sleep(250); await M.locator('.cq-z').nth(1).locator('.numf input').first().fill('4000000');
   await sleep(200); ok(await M.locator('button.chip', { hasText: /^۱۰ روز$/ }).count() === 1, 'سررسید برای باقی‌مانده نمایش داده شد');
   await M.locator('button.chip', { hasText: /^۱۰ روز$/ }).click();
   await M.locator('[data-act=submit]').click(); await modalGone();

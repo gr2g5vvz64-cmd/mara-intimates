@@ -126,6 +126,7 @@ export function navCounts() {
     sreturns: mk(S.returns.filter(x => !x.voided && x.kind === 'supplier' && x.date >= mk30).length, false, true),
     customers: mk(debtors.length, or),
     invoices: mk(unpaid.length, od),
+    cheques: (() => { const a = S.cheques.filter(c => !c.voided), b = a.filter(c => c.state === 'bounced').length, o = a.filter(c => c.state === 'open').length; return mk(b + o, b > 0, b === 0); })(),
     finance: mk(fin, Math.abs((S.totals || {}).check_diff || 0) > 1 || negativeAccounts().length > 0),
     monthcount: (() => { const o = openCountInfo(); return mk(o.n, o.red); })(),
     items: mk(S.items.filter(i => i.active).length, false, true),

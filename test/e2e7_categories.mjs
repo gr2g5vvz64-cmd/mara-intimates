@@ -35,7 +35,7 @@ try {
   await gridRow(page, M, 0, { name: 'تاپ ورزشی نخی', qty: 2, price: 100000 });
   ok((await M.locator('.pgrow').first().locator('.pg-code').innerText()).startsWith('MR-'), 'کد کالا خودکار در ستون کد نشست');
   await gridNext(page, M); await M.locator('.pg2 .cmb input').first().click(); await M.locator('.pg2 .cmb-o').first().click(); await sleep(200);
-  await M.locator('.pg2 .lcard').first().locator('button.chip', { hasText: 'حساب مهسا' }).click(); await M.locator('[data-act=submit]').click(); await sleep(2500);
+  await M.locator('.cq-methods .chip[data-m=biz]').click(); await sleep(250); await M.locator('.cq-z').nth(1).locator('button', { hasText: 'حساب مهسا' }).first().click(); await M.locator('[data-act=submit]').click(); await sleep(2500);
   const t1b = await D(); ok((t1b.items.find(i => (i.base_name || i.name) === 'تاپ ورزشی نخی') || {}).category === 'تاپ' && t1b.purchase_lines.some(l => (t1b.items.find(i => i.id === l.item_id) || {}).name.startsWith('تاپ ورزشی نخی')), 'کالا با دسته‌ی تاپ ساخته شد و در فاکتور خرید ثبت شد');
   await page.keyboard.press('Escape'); await sleep(300); await go('#/items');
   // مدیریت دسته‌ها

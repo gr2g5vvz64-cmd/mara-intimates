@@ -59,7 +59,7 @@ try {
   await page.screenshot({ path: '/tmp/grid_fin.png' });
   // مالی
   await M.locator('.pg2 .cmb input').first().fill('بازار تهران'); await M.locator('.cmb-o', { hasText: 'بازار تهران' }).first().click(); await sleep(200);
-  await M.locator('.pg2 .lcard').first().locator('button.chip', { hasText: 'حساب مهسا' }).click(); await sleep(150); await M.locator('[data-act=submit]').click(); await sleep(2500);
+  await M.locator('.cq-methods .chip[data-m=biz]').click(); await sleep(250); await M.locator('.cq-z').nth(1).locator('button', { hasText: 'حساب مهسا' }).first().click(); await sleep(150); await M.locator('[data-act=submit]').click(); await sleep(2500);
   const t1 = await D(); const inv = t1.purchase_invoices.sort((a, b) => b.id - a.id)[0];
   ok(t1.purchase_invoices.length === n0 + 1, 'فاکتور ثبت شد');
   const ls = t1.purchase_lines.filter(l => l.invoice_id === inv.id).sort((a, b) => a.id - b.id);

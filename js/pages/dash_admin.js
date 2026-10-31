@@ -8,7 +8,7 @@ import { RANGES, period, salesStats, buyerStats, supplierStats, buyerTable, supp
 import { analyze } from '../analysis.js';
 import { goalProgress } from '../insights.js';
 import { goalForm } from '../forms_misc.js';
-import { sv, mil, tip, hbars, dueChart, categoryProfitCard, reorderCard } from './dashboard.js';
+import { capitalCard, chequeCard, sv, mil, tip, hbars, dueChart, categoryProfitCard, reorderCard } from './dashboard.js';
 
 let rangeN = 30, trendKind = 'week', tableTab = 'buyers', tableSort = 'range';
 
@@ -136,7 +136,7 @@ export function adminDashboard() {
       nE || nW ? h('div', { class: 'alert ' + (nE ? 'red' : 'amber') }, `${nE ? '🔴 ' + nE + ' مشکل' : ''}${nE && nW ? ' · ' : ''}${nW ? '🟡 ' + nW + ' هشدار' : ''} — ${A.filter(f => f.lvl !== 'info').slice(0, 3).map(f => f.title).join('، ')}`)
         : h('div', { class: 'alert ok' }, '✅ مشکل یا هشداری نیست.'));
 
-    body.replaceChildren(kp, flow, people,
+    body.replaceChildren(capitalCard(), chequeCard(), kp, flow, people,
       chips([{ v: 'week', label: 'هفتگی' }, { v: 'month', label: 'ماهانه' }], trendKind, v => { trendKind = v; draw(); }, { label: 'روند' }), trendCards,
       tops, mid, worth, health, reorderCard(), dueChart(), tables(P));
   };

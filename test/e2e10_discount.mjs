@@ -32,7 +32,7 @@ try {
   await F('تخفیف خرید').locator('input').fill('200000'); await sleep(250);
   const sumTxt = (await M.locator('.pg2r').first().innerText()).replace(/\s+/g, ' '); console.log('   ', sumTxt.slice(0, 120));
   ok(/تخفیف/.test(sumTxt) && fa(sumTxt).includes('800000'), 'خلاصه‌ی فاکتور: جمع پس از تخفیف ۸۰۰٬۰۰۰');
-  await M.locator('.lcard', { hasText: 'پرداخت 1' }).locator('button.chip', { hasText: 'حساب مهسا' }).click(); await sleep(150);
+  await M.locator('.cq-methods .chip[data-m=biz]').click(); await sleep(250); await M.locator('.cq-z').nth(1).locator('button', { hasText: 'حساب مهسا' }).first().click(); await sleep(150);
   await M.locator('[data-act=submit]').click(); await sleep(2000);
   const t1 = await D(); const inv = t1.purchase_invoices.filter(i => i.supplier_id).sort((a, b) => b.id - a.id)[0];
   ok(inv && +inv.discount === 200000 && +inv.goods_total === 800000, `فاکتور خرید: تخفیف ${inv && inv.discount} · جمع پس از تخفیف ${inv && inv.goods_total}`);

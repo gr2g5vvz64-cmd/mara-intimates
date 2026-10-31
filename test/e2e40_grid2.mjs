@@ -7,7 +7,7 @@ const page = await newPage(browser, url, { logs }); await login(page, 'mahsa@exa
 const M = page.locator('.ov').last(), sleep = ms => page.waitForTimeout(ms);
 const go = async h => { await page.evaluate(x => { location.hash = x; }, h); await sleep(500); };
 const NOTE = 'بسته‌بندی جدا؛ رنگ دقیقاً مطابق نمونه ' + 'x'.repeat(500);
-const pay = async P => { await P.locator('.pg2 .cmb input').first().fill('بازار تهران'); await P.locator('.pg2 .cmb-o', { hasText: 'بازار تهران' }).first().click(); await sleep(200); await P.locator('.pg2 .lcard').first().locator('button.chip', { hasText: 'حساب مهسا' }).click(); await sleep(150); await P.locator('[data-act=submit]').click(); await sleep(2800); };
+const pay = async P => { await P.locator('.pg2 .cmb input').first().fill('بازار تهران'); await P.locator('.pg2 .cmb-o', { hasText: 'بازار تهران' }).first().click(); await sleep(200); await P.locator('.cq-methods .chip[data-m=biz]').click(); await sleep(250); await P.locator('.cq-z').nth(1).locator('button', { hasText: 'حساب مهسا' }).first().click(); await sleep(150); await P.locator('[data-act=submit]').click(); await sleep(2800); };
 try {
   const t0 = await D();
   await go('#/purchases'); await page.click('text=＋ خرید جدید'); await M.waitFor(); await sleep(600);

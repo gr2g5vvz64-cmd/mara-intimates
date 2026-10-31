@@ -3,10 +3,11 @@ import { overdue } from '../insights.js';
 import { S, canEdit } from '../store.js';
 import { dtable, N, pill, tabsBar, kpi } from '../ui.js';
 import { supplierPaymentForm, expenseForm, collectionForm, transferForm, returnForm, supplierReturnForm, voidEntry, editEntryForm } from '../forms_misc.js';
-import { head, btn, searchBox, match, sortNew, detail, stamp, accName, rowCls } from './common.js';
+import { head, btn, searchBox, match, sortNew, detail, stamp, accName as accName0, rowCls } from './common.js';
+const accName = id => (id ? accName0(id) : 'چک (بدون حساب)');
 
 function entryDetail(kind, title, rows, row) {
-  const m = detail({ title, rows: [...rows, ['ثبت‌کننده', stamp(row)], row.voided ? ['باطل‌شده', row.void_reason || ''] : null], actions: row.voided || row.stocktake_id || (kind === 'transfer' && !(S.me && S.me.role === 'admin') && (row.kind === 'profit_payout' || (S.A[row.to_account_id] || {}).kind === 'pocket' && (S.A[row.from_account_id] || {}).kind !== 'pocket' && row.kind !== 'capital')) || !canEdit() ? [] : [btn('ویرایش', () => { m.close(); if (kind === 'return') (row.kind === 'customer' ? returnForm(S.saleLines.find(l => l.id === row.sale_line_id).sale_id, row) : supplierReturnForm(row)); else editEntryForm(kind, row); }, 'ghost'), btn('ابطال', async () => { if (await voidEntry(kind, row, title)) m.close(); }, 'danger ghost')] });
+  const m = detail({ title, rows: [...rows, ['ثبت‌کننده', stamp(row)], row.voided ? ['باطل‌شده', row.void_reason || ''] : null], actions: row.voided || row.stocktake_id || row.cheque_id || row.settles_cheque_id || (kind === 'transfer' && !(S.me && S.me.role === 'admin') && (row.kind === 'profit_payout' || (S.A[row.to_account_id] || {}).kind === 'pocket' && (S.A[row.from_account_id] || {}).kind !== 'pocket' && row.kind !== 'capital')) || !canEdit() ? [] : [btn('ویرایش', () => { m.close(); if (kind === 'return') (row.kind === 'customer' ? returnForm(S.saleLines.find(l => l.id === row.sale_line_id).sale_id, row) : supplierReturnForm(row)); else editEntryForm(kind, row); }, 'ghost'), btn('ابطال', async () => { if (await voidEntry(kind, row, title)) m.close(); }, 'danger ghost')] });
 }
 
 export function render(query, defTab = 'sup') {
@@ -24,7 +25,7 @@ export function render(query, defTab = 'sup') {
       sup: () => dtable([
         { label: 'تاریخ', main: true, render: r => h('span', null, jstr(r.date), ' ', r.voided ? pill('باطل', 'red') : null) }, { label: 'تامین‌کننده', render: r => S.SUP[r.supplier_id].name }, { label: 'فاکتور', hm: true, render: r => (r.invoice_id ? S.INV[r.invoice_id].no : 'کلی') },
         { label: 'مبلغ', cls: 'num', render: r => N(r.amount) }, { label: 'از حساب', render: r => accName(r.account_id) }, { label: 'توضیح', hm: true, render: r => r.note || '' }, { label: 'ثبت‌کننده', hm: true, render: r => r.created_by }
-      ], S.payments.filter(r => !!r.voided === V && match(q, S.SUP[r.supplier_id].name, r.note, accName(r.account_id))).sort(sortNew), { onRow: r => entryDetail('payment', 'پرداخت به ' + S.SUP[r.supplier_id].name, [['تاریخ', jstr(r.date)], ['مبلغ', N(r.amount)], ['از حساب', accName(r.account_id)], r.invoice_id ? ['فاکتور', S.INV[r.invoice_id].no] : null, r.note ? ['توضیح', r.note] : null], r), rowCls, empty: 'پرداختی ثبت نشده' }),
+      ], S.payments.filter(r => !!r.voided === V && match(q, S.SUP[r.supplier_id].name, r.note, accName(r.account_id))).sort(sortNew), { onRow: r => entryDetail('payment', 'پرداخت به ' + S.SUP[r.supplier_id].name, [['تاریخ', jstr(r.date)], ['مبلغ', N(r.amount)], ['از حساب', accName(r.account_id)], r.cheque_id ? ['توضیح چک', 'از صفحه‌ی «چک‌های پرداختی» مدیریت می‌شود'] : null, r.invoice_id ? ['فاکتور', S.INV[r.invoice_id].no] : null, r.note ? ['توضیح', r.note] : null], r), rowCls, empty: 'پرداختی ثبت نشده' }),
       exp: () => dtable([
         { label: 'تاریخ', main: true, render: r => h('span', null, jstr(r.date), ' ', r.voided ? pill('باطل', 'red') : null) }, { label: 'دسته', render: r => r.category }, { label: 'مبلغ', cls: 'num', render: r => N(r.amount) },
         { label: 'از حساب', render: r => accName(r.account_id) }, { label: 'توضیح', hm: true, render: r => r.note || '' }, { label: 'ثبت‌کننده', hm: true, render: r => r.created_by }

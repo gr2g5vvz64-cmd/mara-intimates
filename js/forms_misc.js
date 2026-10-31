@@ -5,6 +5,7 @@ import { willGoNegative } from './insights.js';
 import { findDup } from './dup.js';
 import { jmonthKey, jmonthName } from './util.js';
 import { modal, field, chips, accountPicker, numField, intField, dateField, dueField, combo, run, confirmBox, promptBox, dl, pill, N } from './ui.js';
+import { payMethods } from './cheque_ui.js';
 import { KINDS, BANDS, CUPS, BRA_COMMON, ALPHA_START, SOCK, alphaList, kindOf, hintOf, bandHint, groupOf, SUMMARY, FREE_NOTE } from './sizes.js';
 
 const P = (text) => h('p', { class: 'hint' }, text);
@@ -36,46 +37,47 @@ export function collectionForm(saleId) {
   const m = modal({ title: 'دریافت از مشتری (تسویه نسیه)', body: h('div', { class: 'form' }, field('تاریخ', dateField(date, v => { date = v; })), field('کدام فروش؟', sale), field('مبلغ دریافتی', amt), field('به کدام حساب آمد؟', acc), field('یادداشت', note)), footer: [btn] });
 }
 
-/* ----- پرداخت به تامین‌کننده ----- */
+/* ----- تسویه‌ی تامین‌کننده: فاکتورهای انتخابی یا مانده‌ی حساب؛ با سرمایه‌ی شخصی، حساب کسب‌وکار و/یا چک ----- */
 export function supplierPaymentForm(preset = {}) {
-  let date = todayISO();
-  const sup = combo({ placeholder: 'تامین‌کننده…', options: S.suppliers.map(s => ({ v: s.id, label: s.name })), value: preset.supplier_id || null, onChange: () => { drawInv(); } });
-  const inv = h('select', { class: 'sel full', 'aria-label': 'فاکتور' });
-  const amt = numField({ value: '', onInput: () => preview() });
-  const hint = h('div', { class: 'hint' });
-  const drawInv = () => {
-    const sid = sup.get();
-    const list = S.vInvoices.filter(i => i.supplier_id === sid && !i.voided && i.debt > 0);
-    inv.replaceChildren(h('option', { value: '' }, 'خودکار: روی قدیمی‌ترین فاکتورها پخش شود'), ...list.map(i => h('option', { value: i.id }, `${i.no} · ${jstr(i.date)} · مانده ${fmt(i.debt)}`)));
-    if (preset.invoice_id && list.some(i => i.id === preset.invoice_id)) inv.value = preset.invoice_id;
-    pickInv(); preview();
-    const bal = S.vSup.find(x => x.id === sid); hint.textContent = bal ? (bal.balance > 0 ? `کل بدهی فعلی به این تامین‌کننده: ${fmt(bal.balance)} ریال` : bal.balance < 0 ? `این تامین‌کننده ${fmt(-bal.balance)} ریال به ما بدهکار است` : 'بدهی‌ای وجود ندارد') : '';
-  };
-  const pickInv = () => { const i = S.INV[+inv.value]; if (i) amt.set(i.debt); preview(); };
-  inv.onchange = pickInv;
-  const prevBox = h('div', { class: 'sumbox', hidden: true });
-  function preview() {
-    const sid = sup.get(), a = amt.get(); prevBox.replaceChildren(); prevBox.hidden = true;
-    if (!sid || !a) return;
-    const r = (k, v, c = '') => h('div', { class: 'srow ' + c }, h('span', null, k), h('b', { class: 'n' }, fmt(v)));
-    if (inv.value) { const i = S.INV[+inv.value]; prevBox.hidden = false; prevBox.append(r(`مانده‌ی ${i.no} بعد از این پرداخت`, Math.max(0, i.debt - a), i.debt - a < 0 ? 'warn' : 'ok')); if (a > i.debt) prevBox.append(h('div', { class: 'hint' }, 'مبلغ از بدهی این فاکتور بیشتر است؛ «خودکار» را انتخاب کن.')); return; }
-    let left = a; const list = S.vInvoices.filter(i => i.supplier_id === sid && !i.voided && i.debt > 0.5).sort((x, y) => (x.date < y.date ? -1 : x.date > y.date ? 1 : x.id - y.id));
-    prevBox.hidden = false;
-    for (const i of list) { if (left <= 0) break; const p = Math.min(left, i.debt); prevBox.append(r(`${i.no} (${jstr(i.date)})`, p, p >= i.debt ? 'ok' : '')); left -= p; }
-    if (left > 0) prevBox.append(r('اضافه‌پرداخت (پیش‌پرداخت؛ تامین‌کننده بدهکار ما می‌شود)', left, 'info'));
+  let date = todayISO(), balanceOnly = false; const pre = { ...preset }; const picked = new Set(pre.invoice_id ? [pre.invoice_id] : []);
+  let pm = null, firstDraw = true;
+  const sup = combo({ placeholder: 'تامین‌کننده…', options: S.suppliers.map(s => ({ v: s.id, label: s.name })), value: preset.supplier_id || null, onChange: () => { picked.clear(); pre.invoice_id = null; balanceOnly = false; firstDraw = true; drawInv(); if (pm) pm.supplierChanged(); } });
+  const hint = h('div', { class: 'hint' }), invBox = h('div', { class: 'cq-inv' }), sumBox = h('div', { class: 'cq-sum' });
+  const openInv = () => S.vInvoices.filter(i => i.supplier_id === sup.get() && !i.voided && i.debt > 0.5).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id));
+  const balance = () => Math.max(0, ((S.vSup.find(x => x.id === sup.get()) || {}).balance) || 0);
+  const target = () => (balanceOnly ? balance() : sum(openInv().filter(i => picked.has(i.id)), i => i.debt));
+  function drawInv() {
+    const sid = sup.get(), list = openInv();
+    if (firstDraw) { firstDraw = false; if (pre.invoice_id && !list.some(i => i.id === pre.invoice_id)) picked.clear(); if (!picked.size && sid) list.forEach(i => picked.add(i.id)); }
+    const bal = S.vSup.find(x => x.id === sid);
+    hint.textContent = !sid ? '' : bal ? (bal.balance > 0 ? `کل بدهی فعلی به این تامین‌کننده: ${fmt(bal.balance)} ریال` : bal.balance < 0 ? `این تامین‌کننده ${fmt(-bal.balance)} ریال به ما بدهکار است` : 'بدهی‌ای ندارد') : '';
+    const row = (checked, label, g, onchg) => h('label', { class: 'cq-pick' + (checked ? ' on' : '') }, h('input', { type: 'checkbox', checked, onchange: onchg }), label, h('span', { class: 'g' }, g));
+    invBox.replaceChildren(...list.map(i => row(!balanceOnly && picked.has(i.id), h('span', null, h('b', null, i.no), ' ', h('span', { class: 'hint' }, jstr(i.date))), N(i.debt), e => { balanceOnly = false; e.target.checked ? picked.add(i.id) : picked.delete(i.id); drawInv(); })),
+      sid ? row(balanceOnly, 'فقط روی مانده‌ی حساب (بدون فاکتور مشخص)', bal && bal.balance > 0 ? N(bal.balance) : '', e => { balanceOnly = e.target.checked; if (balanceOnly) picked.clear(); drawInv(); }) : null,
+      sid && !list.length ? h('div', { class: 'hint' }, 'فاکتور بازی برای این تامین‌کننده نیست؛ پرداخت به‌صورت «پیش‌پرداخت» ثبت می‌شود.') : null);
+    if (pm) pm.refresh(); sumUp();
   }
-  const acc = accountPicker(S.accounts, null, () => {}, { pockets: true, balances: accBalance });
-  const lastA = pref('payAcc', null); acc.set(lastA && S.A[lastA] ? lastA : (businessAccounts()[1] || businessAccounts()[0]).id);
+  function sumUp() {
+    const tg = target(), pd = pm ? pm.total() : 0, left = tg - pd;
+    sumBox.className = 'cq-sum' + (left < -0.5 ? ' bad' : '');
+    sumBox.replaceChildren(h('span', null, 'جمع پرداخت‌ها'), N(pd), h('span', null, balanceOnly ? 'مانده‌ی حساب' : 'بدهی انتخاب‌شده'), N(tg), h('span', null, left < -0.5 ? `${fmt(-left)} بیشتر از بدهی` : left > 0.5 ? `باقی‌مانده: ${fmt(left)}` : 'مانده: ۰ ✓'));
+  }
+  pm = payMethods({ getTotal: () => target(), getDate: () => date, getSupplier: () => sup.get(), onChange: () => sumUp(), toast });
   const note = h('input', { class: 'inp', placeholder: 'یادداشت (اختیاری)' });
-  const btn = h('button', { class: 'btn primary lg', type: 'button' }, 'ثبت پرداخت');
+  const btn = h('button', { class: 'btn primary lg', type: 'button' }, 'ذخیره و تسویه');
   btn.onclick = async () => {
     if (!sup.get()) return toast('تامین‌کننده را انتخاب کن', 'err');
-    if (!amt.get()) return toast('مبلغ را بنویس', 'err');
-    if (!(await okNeg(acc.get(), amt.get()))) return;
-    const r = await run(btn, () => rpc('add_supplier_payment', { date, supplier_id: sup.get(), invoice_id: inv.value || null, account_id: acc.get(), amount: amt.get(), note: note.value }));
-    if (r) { setPref('payAcc', acc.get()); finish(m, 'پرداخت ثبت شد'); }
+    if (!balanceOnly && !picked.size && openInv().length) return toast('حداقل یک فاکتور را تیک بزن یا «فقط روی مانده‌ی حساب» را انتخاب کن', 'err');
+    const tg = target(); if (!pm.total()) return toast('یک روش پرداخت را انتخاب و مبلغ را بنویس', 'err');
+    const perr = pm.check(); if (perr) return toast(perr, 'err');
+    if (!balanceOnly && picked.size && pm.total() > tg + 0.5) return toast('جمع پرداخت از بدهی فاکتورهای انتخابی بیشتر است', 'err');
+    for (const p of pm.payments()) if (!(await okNeg(p.account_id, p.amount))) return;
+    const r = await run(btn, () => rpc('settle_supplier', { date, supplier_id: sup.get(), invoice_ids: balanceOnly ? [] : [...picked], note: note.value, payments: pm.payments(), cheques: pm.cheques() }));
+    if (r) finish(m, 'تسویه ثبت شد');
   };
-  const m = modal({ title: 'پرداخت بدهی تامین‌کننده', body: h('div', { class: 'form' }, field('تاریخ', dateField(date, v => { date = v; })), field('تامین‌کننده', sup, null), hint, field('مربوط به کدام فاکتور؟', inv, 'برای قسط‌های تکه‌تکه، هر بار فقط مبلغ همان قسط را بنویس.'), field('مبلغ', amt), prevBox, field('از کدام حساب پرداخت شد؟', acc), field('یادداشت', note)), footer: [btn] });
+  const m = modal({ title: 'تسویه با تامین‌کننده', wide: true, body: h('div', { class: 'form' }, field('تاریخ', dateField(date, v => { date = v; if (pm) pm.refresh(); })), field('تامین‌کننده', sup, null), hint,
+    h('div', null, h('div', { style: { fontWeight: 800, margin: '4px 0 6px' } }, 'پرداخت برای کدام فاکتورها باشد؟'), invBox, h('div', { class: 'hint' }, 'مبلغ از قدیمی‌ترین فاکتور انتخاب‌شده کم می‌شود. چک می‌تواند برای یک فاکتور، چند فاکتور یا مانده‌ی حساب باشد.')),
+    h('div', { style: { fontWeight: 800 } }, 'روش پرداخت'), pm.el, sumBox, field('یادداشت', note)), footer: btn });
   drawInv();
 }
 

@@ -6,7 +6,7 @@ import { N, pill } from '../ui.js';
 import { saleForm, purchaseForm } from '../forms_trade.js';
 import { returnForm, expenseForm, dayCloseForm } from '../forms_misc.js';
 import { dayCloseOpen } from '../insights.js';
-import { goalsCard } from './dashboard.js';
+import { goalsCard, capitalCard, chequeCard } from './dashboard.js';
 
 const ageOf = iso => Math.round((Date.parse(todayISO() + 'T00:00:00Z') - Date.parse(String(iso).slice(0, 10) + 'T00:00:00Z')) / 864e5);
 
@@ -68,5 +68,5 @@ export function partnerDashboard(who) {
   return h('div', { class: 'dash partner' },
     h('div', { class: 'hello' }, h('div', null, h('h1', null, `سلام ${S.me.name}`), h('p', { class: 'sub' }, jlong(today) + (viewer ? ` · نمای ${me} (فقط مشاهده)` : ''))), h('img', { class: 'brand-mark', src: 'icons/logo-mark.jpg', alt: 'MR', width: 42, height: 42 })),
     viewer ? null : h('div', { class: 'qas' }, qa('فروش جدید', '🛍', 'gold', () => saleForm()), qa('خرید جدید', '📦', 'dark', () => purchaseForm()), qa('مرجوعی', '↩️', 'line', () => returnForm()), qa('پرداخت / هزینه', '💸', 'line', () => expenseForm())),
-    h('div', { class: 'dbody' }, todayCard, taskCard, money, otherCard, lastCard));
+    h('div', { class: 'dbody' }, capitalCard(), chequeCard(), todayCard, taskCard, money, otherCard, lastCard));
 }

@@ -800,3 +800,79 @@ ul.plain{list-style:none;padding:0;margin:4px 0}
   .sg-ch .chips{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:5px}
   .sg-ch .chip{padding:0 2px;min-height:40px;font-size:13px;justify-content:center;white-space:nowrap}
 }
+
+/* 7.27 کارت سرمایه و بازده */
+.capcard .kpis{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:10px}
+.capbar{display:flex;height:40px;border-radius:10px;overflow:hidden;border:1.5px solid var(--bd,#b99aa8);margin:6px 0 4px}
+.capbar>div{display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff}
+.capbar .cb-c{background:#7a1f45}.capbar .cb-p{background:#1f7a4d}
+@media (max-width:820px){.capcard .kpis{grid-template-columns:1fr 1fr}.capcard .kpis .kpi:first-child,.capcard .kpis .kpi:last-child{grid-column:1/-1}}
+
+/* ===================== چک‌های پرداختی (۷.۳۱) ===================== */
+.errt{color:var(--red);font-weight:600}.okt{color:var(--green);font-weight:700}
+.inp.err,.sel.err{border-color:var(--red)!important;background:var(--red-bg)}
+.cq-pm{display:flex;flex-direction:column;gap:12px}
+.cq-methods .chip{min-height:42px}
+.cq-z .zx{display:flex;flex-direction:column;gap:10px}
+.cq-panel{display:flex;flex-direction:column;gap:10px}
+.cq-read{margin:0}
+.cq-sec{display:flex;flex-direction:column;gap:12px}
+.cq-list{display:flex;flex-direction:column;gap:12px}
+.cq-card{border:1.5px solid var(--bd,#D9A3BB);border-radius:14px;padding:14px 16px;background:var(--bg);display:flex;flex-direction:column;gap:12px}
+.cq-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.cq-tag{display:inline-block;padding:1px 10px;border-radius:99px;font-size:12px;font-weight:700}
+.cq-tag.ok{background:var(--green-bg);color:var(--green)}.cq-tag.warn{background:var(--amber-bg);color:var(--amber)}
+.cq-grid{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:12px;align-items:start}
+.cq-grid .fld{margin:0;min-width:0}
+.cq-grid .s2{grid-column:span 2}.cq-grid .s3{grid-column:span 3}
+.cq-grid .inp,.cq-grid .sel{width:100%;min-width:0}
+.cq-grid .lbl{font-size:12.5px}
+@media (max-width:1100px){.cq-grid{grid-template-columns:repeat(6,minmax(0,1fr))}.cq-grid .s2,.cq-grid .s3{grid-column:span 2}.cq-grid .s3.sy{grid-column:span 3}}
+@media (max-width:640px){.cq-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.cq-grid .s2,.cq-grid .s3{grid-column:span 1}.cq-grid .sy{grid-column:1 / -1}.cq-card{padding:12px}}
+.cq-accsel .fld{margin:0}
+
+/* تسویه‌ی تامین‌کننده */
+.cq-inv{display:flex;flex-direction:column;gap:8px}
+.cq-pick{display:flex;gap:10px;align-items:center;padding:9px 12px;border:1.5px solid var(--bd,#D9A3BB);border-radius:12px;background:var(--card);cursor:pointer}
+.cq-pick.on{border-color:var(--gold);background:var(--tint)}
+.cq-pick .g{margin-inline-start:auto;font-weight:800}
+.cq-pick input{width:20px;height:20px;accent-color:var(--gold)}
+.cq-sum{background:var(--tint);border-radius:12px;padding:10px 14px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-weight:800}
+.cq-sum.bad{background:var(--red-bg);color:var(--red)}
+
+/* صفحه‌ی چک‌ها */
+.chq-page .seg{display:flex;gap:8px;flex-wrap:wrap}
+.chq-page .seg button{min-height:38px;padding:0 14px;border-radius:99px;border:1.5px solid var(--bd,#D9A3BB);background:var(--card);color:var(--brown);font-weight:600;cursor:pointer}
+.chq-page .seg button.on{background:var(--gold);border-color:var(--gold);color:var(--onp)}
+.chq-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--brown)}
+.chq-legend span{display:flex;gap:6px;align-items:center}
+.chq-legend i{display:inline-block;width:14px;height:14px;border-radius:4px}
+.t tr.cq-open td{font-weight:700}
+.t tr.cq-bad td{background:var(--red-bg);font-weight:800;color:#5E1410;border-bottom:1px solid #E3A09B}
+.t tr.cq-done td{opacity:.5;font-weight:400}
+.t tr.cq-setl td{background:#FFF0EE;border-bottom:2px solid var(--red);padding:12px 14px}
+.cq-opts{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.cq-opts label{display:flex;gap:8px;align-items:center;background:var(--card);border:1.5px solid var(--bd,#D9A3BB);border-radius:12px;padding:8px 14px;font-weight:600;cursor:pointer}
+.cq-opts label.on{border-color:var(--gold);background:var(--tint)}
+.btn.cq-bounce{border-color:var(--red);color:var(--red);background:var(--card)}
+.btn.cq-pre{border-color:var(--gold);color:var(--gold-d);background:var(--card)}
+.cq-tags{display:inline-flex;gap:6px;flex-wrap:wrap}
+/* موبایل: هر چک یک کارت */
+.cq-mob{display:none;flex-direction:column;gap:12px}
+.cq-mc{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.cq-mc.bad{background:var(--red-bg);border:2px solid var(--red)}
+.cq-mc.done{opacity:.5}
+.cq-mc .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.cq-mc .rw{display:flex;justify-content:space-between;gap:8px;font-size:13px}
+.cq-mc .rw span:first-child{color:var(--brown)}
+.cq-mc .btn{min-height:42px}
+@media (max-width:820px){.chq-page .cq-desk{display:none}.chq-page .cq-mob{display:flex}}
+
+/* کادر داشبورد */
+.chqcard .kpis{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:10px}
+.chqcard .kpi.bad{background:var(--red-bg);border-color:var(--red)}.chqcard .kpi.bad .k-v,.chqcard .kpi.bad .k-l{color:var(--red)}
+.chqbars{display:flex;gap:6px;align-items:flex-end;height:90px;margin:8px 0 2px}
+.chqbars>div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;min-width:0;font-size:11px;color:var(--brown)}
+.chqbars i{display:block;width:100%;max-width:46px;background:var(--gold);border-radius:6px 6px 0 0;min-height:3px}
+@media (max-width:820px){.chqcard .kpis{grid-template-columns:1fr 1fr}.chqcard .kpis .kpi:first-child,.chqcard .kpis .kpi.bad{grid-column:1/-1}}
+.cq-sec .btn[hidden],.cq-card .btn[hidden],.cq-z[hidden],.cq-panel [hidden],.cq-pm [hidden]{display:none!important}

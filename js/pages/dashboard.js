@@ -1,4 +1,4 @@
-import { h, fmt, jlong, jstr, jmonthKey, jmonthName, todayISO, lastMonths, sum, groupBy, addDaysISO } from '../util.js';
+import { h, fmt, jlong, jstr, jmonthKey, jmonthName, todayISO, lastMonths, sum, groupBy, addDaysISO, toJ } from '../util.js';
 import { S, monthly, itemProfit, businessAccounts, accBalance, activeSales } from '../store.js';
 import { N, pill, kpi, tabsBar } from '../ui.js';
 import { tok } from '../theme.js';
@@ -234,4 +234,42 @@ export function legacyRender() {
 /** هر نقش داشبورد خودش را می‌بیند: مدیر ← تحلیلی، مهسا و رعنا ← کار روزانه */
 import { adminDashboard } from './dash_admin.js';
 import { partnerDashboard } from './dash_partner.js';
+/* کارت «سرمایه و بازده» بالای داشبورد همه (مدیر، مهسا، رعنا، مهدی): جمع سرمایه، سود کل، بازده و ارزش کسب‌وکار */
+export function capitalCard() {
+  const T = S.totals || {}, capM = T.capital_m || 0, capR = T.capital_r || 0, cap = capM + capR, profit = T.profit || 0;
+  const worth = T.net_worth != null ? T.net_worth : cap + profit, roi = cap > 0 ? profit / cap * 100 : null, loss = profit < 0;
+  const diff = capM - capR, hi = diff > 0 ? 'مهسا' : 'رعنا', lo = diff > 0 ? 'رعنا' : 'مهسا', eq = Math.abs(diff) / 2;
+  const gain = worth - cap, tot = Math.max(1, cap + Math.max(0, profit)), pw = Math.max(0, profit) / tot * 100;
+  const R = v => (Math.abs(v) >= 10 ? (Math.round(v * 10) / 10) : (Math.round(v * 100) / 100)).toLocaleString('fa-IR');
+  return h('div', { class: 'card capcard' },
+    h('div', { class: 'ct' }, 'سرمایه و بازده ', h('small', null, '(از روز اول تا امروز · ریال)')),
+    h('div', { class: 'kpis' },
+      kpi('سرمایه‌ی گذاشته‌شده', N(cap), { sub: `مهسا ${fmt(capM)} · رعنا ${fmt(capR)}` }),
+      kpi('سود کل تا امروز', N(profit), { sub: 'بعد از کم شدن هزینه‌ها', tone: loss ? 'neg' : 'pos' }),
+      kpi('بازده سرمایه', h('span', { class: 'n' }, roi == null ? '—' : R(roi) + '٪'), { sub: roi == null ? '' : (loss ? `از هر ۱۰۰ تومان سرمایه، ${R(Math.abs(roi))} تومان زیان` : `از هر ۱۰۰ تومان سرمایه، ${R(roi)} تومان سود`), tone: loss ? 'neg' : '' }),
+      kpi('ارزش کسب‌وکار الان', N(worth), { sub: gain >= 0 ? `${fmt(Math.round(gain))} بیشتر از پولی که گذاشته‌ایم` : `${fmt(Math.round(-gain))} کمتر از پولی که گذاشته‌ایم` })),
+    cap > 0 ? h('div', { class: 'capbar', role: 'img', 'aria-label': 'سرمایه و سود' }, h('div', { class: 'cb-c', style: `flex:${100 - pw}` }, 'سرمایه'), pw > 0 ? h('div', { class: 'cb-p', style: `flex:${pw};min-width:56px` }, 'سود') : null) : null,
+    roi != null ? h('p', { class: 'hint' }, loss ? `تا الان ${R(Math.abs(roi))}٪ از سرمایه‌مان زیان کرده‌ایم.` : `تا الان ${R(roi)}٪ از سرمایه‌مان را سود کرده‌ایم.`) : null,
+    Math.abs(diff) > 1000 ? h('div', { class: 'alert warn' }, `⚖ سرمایه‌ی مهسا و رعنا برابر نیست؛ ${lo} باید ${fmt(Math.round(eq / 10))} تومان (${fmt(Math.round(eq))} ریال) به حساب شخصی ${hi} واریز کند.`) : null);
+}
+
+/** کادر «چک‌های پرداختی» در داشبورد مالی: چک‌های در جریان، نزدیک‌ترین سررسید، منتظر واریز برابری، برگشتی و سررسیدهای ماهانه */
+export function chequeCard() {
+  const act = S.cheques.filter(c => !c.voided), open = act.filter(c => c.state === 'open'), bad = act.filter(c => c.state === 'bounced');
+  if (!open.length && !bad.length) return null;
+  const next = open.slice().sort((a, b) => (a.due_date < b.due_date ? -1 : 1))[0], wait = open.filter(c => c.half_left > 1000);
+  const byM = new Map(); open.forEach(c => { const k = jmonthKey(c.due_date); byM.set(k, (byM.get(k) || 0) + c.amount); });
+  const ms = [...byM.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)).slice(0, 6), mx = Math.max(1, ...ms.map(x => x[1]));
+  const dash = iso => { const [y, m, d] = jlongParts(iso); return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`; };
+  return h('div', { class: 'card chqcard' },
+    h('div', { class: 'ct' }, '🧾 چک‌های پرداختی ', h('button', { type: 'button', class: 'mini', onclick: () => { location.hash = '#/cheques'; } }, 'همه‌ی چک‌ها ←')),
+    h('div', { class: 'kpis' },
+      kpi('در جریان', h('span', null, `${fmt(open.length)} چک`), { sub: `جمع ${fmt(sum(open, c => c.amount))} ریال` }),
+      kpi('نزدیک‌ترین سررسید', next ? h('span', { class: 'n' }, dash(next.due_date)) : '—', { sub: next ? (next.days_left <= 0 ? 'امروز' : `${fmt(next.days_left)} روز دیگر`) + ` · ${fmt(next.amount)} ریال` : '' }),
+      kpi('منتظر واریز برابری', h('span', null, `${fmt(wait.length)} چک`), { sub: wait.length ? `جمع ${fmt(sum(wait, c => c.half_left))} ریال` : 'همه برابر شده' }),
+      bad.length ? kpi('برگشتی', h('span', null, `${fmt(bad.length)} چک`), { sub: `${fmt(sum(bad, c => c.amount))} ریال · نیاز به تسویه‌ی فوری`, tone: 'bad' }) : kpi('برگشتی', h('span', null, '۰ چک'), { sub: 'مشکلی نیست' })),
+    ms.length ? h('div', { class: 'chqbars', role: 'img', 'aria-label': 'سررسید چک‌ها در ماه‌های آینده' }, ms.map(([k, v]) => h('div', null, h('span', { class: 'n' }, mil(v)), h('i', { style: `height:${Math.max(3, v / mx * 60)}px` }), h('span', null, jmonthName(k))))) : null);
+}
+const jlongParts = iso => toJ(iso);
+
 export function render() { return S.me && S.me.role === 'admin' ? adminDashboard() : partnerDashboard(S.me && S.me.role === 'viewer' ? (S.me.view_as || 'رعنا') : S.me.name); }

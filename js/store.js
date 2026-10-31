@@ -68,6 +68,7 @@ export const S = {
   me: null, loaded: false, bots: {},
   accounts: [], items: [], suppliers: [], customersT: [], invoices: [], lines: [], payments: [], sales: [], saleLines: [],
   collections: [], returns: [], expenses: [], transfers: [], moves: [], stocktakes: [], stocktakeLines: [], monthlyCounts: [], monthlyParts: [], monthlyLines: [], monthlyResults: [], monthlyScores: [], monthlyCls: [], charges: [], goals: [], dayCloses: [], categories: [], settings: [], diagErrors: null,
+  cheques: [], chequeAllocs: [], chequeBanks: [],
   lots: [], stock: [], vInvoices: [], vSup: [], vCus: [], due: [], bal: [], vSales: [], totals: {},
   A: {}, I: {}, SUP: {}, LOT: {}, SALE: {}, INV: {}, CUS: {}
 };
@@ -79,6 +80,7 @@ export async function loadAll({ retries = 9 } = {}) {
     accounts: t.accounts, items: t.items, suppliers: t.suppliers, customersT: t.customers, invoices: t.purchase_invoices, lines: t.purchase_lines, payments: t.supplier_payments,
     saleLines: t.sale_lines, collections: t.collections, returns: t.returns, expenses: t.expenses, transfers: t.transfers, moves: t.stock_moves, stocktakes: t.stocktakes || [], stocktakeLines: t.stocktake_lines || [], monthlyCounts: t.monthly_counts || [], monthlyParts: t.monthly_count_parts || [], monthlyLines: t.monthly_count_lines || [], monthlyResults: t.monthly_count_results || [], monthlyScores: t.monthly_scores || [], monthlyCls: t.v_monthly_cls || [], charges: t.partner_charges || [],
     lots: t.v_lots, stock: t.v_stock, vInvoices: t.v_invoices, vSup: t.v_supplier_balance, vCus: t.v_customer_balance, due: t.v_due, bal: t.v_account_balance,
+    cheques: t.v_cheques || [], chequeAllocs: t.cheque_allocs || [], chequeBanks: t.cheque_banks || [],
     vSales: t.v_sales, goals: t.goals || [], dayCloses: t.day_closes || [], periodLocks: t.period_locks || [], categories: t.categories || [], settings: t.app_settings || [], totals: t.v_totals || {}, me: r.data.user, bots: r.data.bots || {}
   });
   S.sales = S.vSales;
