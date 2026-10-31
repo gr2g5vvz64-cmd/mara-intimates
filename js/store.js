@@ -160,3 +160,7 @@ export function pref(k, def) { try { const v = localStorage.getItem('mara.' + k)
 export function setPref(k, v) { try { localStorage.setItem('mara.' + k, JSON.stringify(v)); } catch {} }
 export const CHANNELS = ['پیج اینستاگرام', 'پیج تلگرام', 'پیج بله', 'آشنایان'];
 export const EXPCATS = ['تبلیغات', 'بسته‌بندی (خرید عمده)', 'رفت‌وآمد', 'اجاره و تجهیزات', 'سایر'];
+/* نوع هزینه: متغیر = با تعداد فروش بالا و پایین می‌رود؛ ثابت = هر ماه تقریباً همان است. پیش‌فرض هر دسته (قابل تغییر هنگام ثبت). */
+export const EXP_KIND_DEFAULT = { 'تبلیغات': 'variable', 'بسته‌بندی (خرید عمده)': 'variable', 'رفت‌وآمد': 'variable', 'اجاره و تجهیزات': 'fixed', 'سایر': 'fixed' };
+export const expKindOf = e => (e && e.kind) || EXP_KIND_DEFAULT[e && e.category] || 'fixed';
+export const stockTargetDays = () => { const r = (S.settings || []).find(x => x.key === 'stock_target_days'); return r && r.value != null ? Number(r.value) : 60; };

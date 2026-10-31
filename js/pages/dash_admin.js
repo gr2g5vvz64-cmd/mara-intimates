@@ -8,6 +8,7 @@ import { RANGES, period, salesStats, buyerStats, supplierStats, buyerTable, supp
 import { analyze } from '../analysis.js';
 import { goalProgress } from '../insights.js';
 import { goalForm } from '../forms_misc.js';
+import { healthCard, salesLineCard, donutCard, activityCard, adminHero, sparkline, dailySeries } from '../dash_widgets.js';
 import { capitalCard, chequeCard, sv, mil, tip, hbars, dueChart, categoryProfitCard, reorderCard } from './dashboard.js';
 
 let rangeN = 30, trendKind = 'week', tableTab = 'buyers', tableSort = 'range';
@@ -68,7 +69,7 @@ export function adminDashboard() {
     const T = S.totals || {};
 
     const kp = h('div', { class: 'kpis' },
-      kpi('فروش', ex(N(cur.sales), 'sales'), { ...delta(cur.sales, prev.sales) }), kpi('سود خالص', ex(N(cur.profit), 'dprofit'), { ...delta(cur.profit, prev.profit), tone: cur.profit < 0 ? 'neg' : 'pos' }),
+      kpi('فروش', ex(N(cur.sales), 'sales'), { ...delta(cur.sales, prev.sales), spark: sparkline(dailySeries(14, 'total'), delta(cur.sales, prev.sales).tone) }), kpi('سود خالص', ex(N(cur.profit), 'dprofit'), { ...delta(cur.profit, prev.profit), tone: cur.profit < 0 ? 'neg' : 'pos', spark: sparkline(dailySeries(14, 'profit'), cur.profit < 0 ? 'neg' : 'pos') }),
       kpi('درصد سود', h('span', { class: 'n' }, cur.margin.toFixed(1) + '٪'), { sub: `قبل: ${prev.margin.toFixed(1)}٪` }),
       kpi('تعداد فاکتور', h('span', { class: 'n' }, fmt(cur.count)), { ...delta(cur.count, prev.count) }), kpi('میانگین هر فاکتور', N(cur.avg), { ...delta(cur.avg, prev.avg) }));
 
@@ -136,13 +137,14 @@ export function adminDashboard() {
       nE || nW ? h('div', { class: 'alert ' + (nE ? 'red' : 'amber') }, `${nE ? '🔴 ' + nE + ' مشکل' : ''}${nE && nW ? ' · ' : ''}${nW ? '🟡 ' + nW + ' هشدار' : ''} — ${A.filter(f => f.lvl !== 'info').slice(0, 3).map(f => f.title).join('، ')}`)
         : h('div', { class: 'alert ok' }, '✅ مشکل یا هشداری نیست.'));
 
-    body.replaceChildren(capitalCard(), chequeCard(), kp, flow, people,
+    body.replaceChildren(...[capitalCard(), chequeCard(), healthCard(), kp, h('div', { class: 'grid2' }, salesLineCard(), donutCard()), flow, people,
       chips([{ v: 'week', label: 'هفتگی' }, { v: 'month', label: 'ماهانه' }], trendKind, v => { trendKind = v; draw(); }, { label: 'روند' }), trendCards,
-      tops, mid, worth, health, reorderCard(), dueChart(), tables(P));
+      tops, mid, worth, health, reorderCard(), dueChart(), activityCard(), tables(P)].filter(Boolean));
   };
   const rangeBar = chips(RANGES.map(r => ({ v: r.v, label: r.label })), rangeN, v => { rangeN = v; draw(); }, { label: 'بازه' });
   const quick = (label, icon, cls, fn) => h('button', { type: 'button', class: 'qa ' + cls, onclick: fn }, h('span', { class: 'qi', 'aria-hidden': 'true' }, icon), label);
   host.append(h('div', { class: 'hello' }, h('div', null, h('h1', null, `سلام ${S.me.name}`), h('p', { class: 'sub' }, jlong(today) + ' · داشبورد مدیریت')), h('img', { class: 'brand-mark', src: 'icons/logo-mark.jpg', alt: 'MR', width: 42, height: 42 })),
+    adminHero(),
     h('div', { class: 'qas' }, quick('مشاور و تحلیل', '🧭', 'line', () => { location.hash = '#/analysis'; }), quick('گزارش جلسه', '🧑‍💼', 'line', () => { location.hash = '#/meeting'; })),
     rangeBar, body);
   draw(); return host;

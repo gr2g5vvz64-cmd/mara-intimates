@@ -1,6 +1,6 @@
 // فرم‌های جانبی: دریافت، پرداخت، هزینه، انتقال، مرجوعی، جابجایی کالا، کالا/تامین‌کننده، ابطال
 import { h, fmt, todayISO, toast, sum, jstr, addDaysISO } from './util.js';
-import { S, rpc, bus, loadAll, customers, pref, setPref, businessAccounts, accBalance, EXPCATS, holdKey, canVoid, canEdit, errText, catNames } from './store.js';
+import { S, rpc, bus, loadAll, customers, pref, setPref, businessAccounts, accBalance, EXPCATS, EXP_KIND_DEFAULT, holdKey, canVoid, canEdit, errText, catNames } from './store.js';
 import { willGoNegative } from './insights.js';
 import { findDup } from './dup.js';
 import { jmonthKey, jmonthName } from './util.js';
@@ -84,9 +84,13 @@ export function supplierPaymentForm(preset = {}) {
 /* ----- هزینه ----- */
 export function expenseForm() {
   let date = todayISO(), cat = EXPCATS[0];
-  const catChips = chips(EXPCATS.map(c => ({ v: c, label: c })), cat, v => { cat = v; custom.value = ''; });
+  const catChips = chips(EXPCATS.map(c => ({ v: c, label: c })), cat, v => { cat = v; custom.value = ''; kindChips.set(EXP_KIND_DEFAULT[v] || 'fixed'); showKind(); });
   const custom = h('input', { class: 'inp', placeholder: 'یا دسته‌ی دیگر را بنویس' });
   custom.oninput = () => { if (custom.value) catChips.set(null); };
+  const kindChips = chips([{ v: 'variable', label: 'متغیر' }, { v: 'fixed', label: 'ثابت' }], EXP_KIND_DEFAULT[cat] || 'fixed', () => showKind(), { cls: 'two', label: 'نوع هزینه' });
+  const kindHint = h('div', { class: 'hint' });
+  const showKind = () => { kindHint.textContent = kindChips.get() === 'variable' ? 'متغیر: با تعداد فروش بالا و پایین می‌رود (کیسه، پیک، تبلیغات).' : 'ثابت: هر ماه تقریباً یک عدد است (اجاره، تجهیزات).'; };
+  showKind();
   const amt = numField({ value: '' });
   const acc = accountPicker(S.accounts, null, () => {}, { pockets: true, balances: accBalance });
   const lastA = pref('payAcc', null); acc.set(lastA && S.A[lastA] ? lastA : (businessAccounts()[1] || businessAccounts()[0]).id);
@@ -97,10 +101,10 @@ export function expenseForm() {
     if (!c) return toast('دسته‌ی هزینه را انتخاب کن', 'err');
     if (!amt.get()) return toast('مبلغ را بنویس', 'err');
     if (!(await okNeg(acc.get(), amt.get()))) return;
-    const r = await run(btn, () => rpc('add_expense', { date, category: c, amount: amt.get(), account_id: acc.get(), note: note.value }));
+    const r = await run(btn, () => rpc('add_expense', { date, category: c, amount: amt.get(), account_id: acc.get(), note: note.value, kind: kindChips.get() }));
     if (r) { setPref('payAcc', acc.get()); finish(m, 'هزینه ثبت شد'); }
   };
-  const m = modal({ title: 'هزینه‌ی جدید', body: h('div', { class: 'form' }, field('تاریخ', dateField(date, v => { date = v; })), field('دسته', [catChips, custom]), field('مبلغ', amt), field('از کدام حساب پرداخت شد؟', acc), field('توضیح', note), P('هزینه‌ی پیک و بسته‌بندی هر فروش را در خود فرم فروش بنویس، نه اینجا.')), footer: [btn] });
+  const m = modal({ title: 'هزینه‌ی جدید', body: h('div', { class: 'form' }, field('تاریخ', dateField(date, v => { date = v; })), field('دسته', [catChips, custom]), field('نوع هزینه (خودکار از روی دسته؛ هر وقت خواستی عوض کن)', [kindChips, kindHint]), field('مبلغ', amt), field('از کدام حساب پرداخت شد؟', acc), field('توضیح', note), P('هزینه‌ی پیک و بسته‌بندی هر فروش را در خود فرم فروش بنویس، نه اینجا.')), footer: [btn] });
 }
 
 /* ----- انتقال بین حساب‌ها / سرمایه / برداشت سود ----- */

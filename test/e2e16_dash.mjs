@@ -19,7 +19,7 @@ try {
   for (const [em, pw, me, other] of [['mahsa@example.com', 'mahsa-pass-1', 'مهسا', 'رعنا'], ['rana@example.com', 'rana-pass-22', 'رعنا', 'مهسا']]) {
     const pm = await newPage(browser, url, { logs }); await login(pm, em, pw); await sleep(pm, 1000);
     const x = await pm.locator('.dash').innerText();
-    ok(await pm.locator('.dash svg').count() === 0, me + ': بدون نمودار');
+    ok(await pm.locator('.dash svg:not(.lc-svg):not(.spark)').count() === 0 && await pm.locator('.dash .lc').count() === 1, me + ': فقط نمودار فروش خودش (بدون نمودار مقایسه)');
     ok(x.includes('امروز من') && x.includes('کارهای من') && x.includes('جنس و پول من') && x.includes('سود من'), me + ': بلوک‌های اصلی');
     ok(x.includes('جنس دست ' + other), me + ': موجودی شریک دیگر دیده می‌شود');
     ok(!x.includes('مقایسه') && !x.includes('کل MARA') && !x.includes('بدهی به تامین'), me + ': مقایسه/کل/بدهی تامین‌کننده نیست');

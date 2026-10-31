@@ -232,8 +232,8 @@ export function tabsBar(tabs, active, onSel) {
   tabs.forEach(t => wrap.append(h('button', { type: 'button', role: 'tab', 'aria-selected': t.id === active ? 'true' : 'false', class: t.id === active ? 'on' : '', onclick: () => onSel(t.id) }, t.badge ? cntBadge(t.badge) : null, t.label)));
   return wrap;
 }
-export function kpi(label, value, { sub = '', tone = '' } = {}) {
-  return h('div', { class: 'kpi ' + tone }, h('div', { class: 'k-l' }, label), h('div', { class: 'k-v' }, value), sub ? h('div', { class: 'k-s' }, sub) : null);
+export function kpi(label, value, { sub = '', tone = '', spark = null } = {}) {
+  return h('div', { class: 'kpi ' + tone }, h('div', { class: 'k-l' }, label), h('div', { class: 'k-v' }, value), spark, sub ? h('div', { class: 'k-s' }, sub) : null);
 }
 export function dl(rows) {
   return h('dl', { class: 'dl' }, rows.filter(Boolean).map(([k, v]) => [h('dt', null, k), h('dd', null, v)]));
