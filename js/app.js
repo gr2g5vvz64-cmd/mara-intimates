@@ -9,6 +9,7 @@ import * as master from './pages/master.js';
 import * as help from './pages/help.js';
 import * as cust from './pages/customers.js';
 import * as hist from './pages/history.js';
+import * as mgmt from './pages/mgmt.js';
 import * as diag from './pages/diag.js';
 import * as savelog from './pages/savelog.js';
 import * as calc from './pages/calc.js';
@@ -41,6 +42,7 @@ const ROUTES = {
   suppliers: { t: 'تامین‌کنندگان', i: '🏭', f: () => master.suppliers() },
   history: { t: 'تاریخچه', i: '🕘', f: () => hist.render() },
   help: { t: 'راهنما و پشتیبان', i: '?', f: () => help.render() },
+  mgmt: { t: 'گزارش مدیریتی', i: '📈', f: () => mgmt.render() },
   analysis: { t: 'تحلیل', i: '🔍', f: () => ana.render() },
   calc: { t: 'محاسبات و درصد سود', i: '％', f: () => calc.render() },
   pnl: { t: 'صورت سود و زیان', i: '📒', f: () => rep.pnlPage() },
@@ -52,7 +54,7 @@ const ROUTES = {
 };
 /* منوی کناری در پنج گروه (زیرمجموعه‌ها با کلیک روی عنوان باز و بسته می‌شوند) */
 const GROUPS = [
-  { id: 'dash', t: 'داشبورد', i: '▦', kids: ['', 'analysis', 'pnl', 'calc'] },
+  { id: 'dash', t: 'داشبورد', i: '▦', kids: ['', 'mgmt', 'analysis', 'pnl', 'calc'] },
   { id: 'sales', t: 'فروش', i: '🛍', kids: ['sales', 'customers', 'returns'] },
   { id: 'buy', t: 'خرید', i: '📦', kids: ['purchases', 'suppliers', 'sreturns'] },
   { id: 'wh', t: 'انبار', i: '▤', kids: ['stock', 'monthcount', 'items'] },
@@ -83,7 +85,7 @@ function parseHash() {
 function route() {
   if (!view) return;
   let { path, q } = parseHash();
-  if ((path === 'diag' || path === 'analysis' || path === 'pnl' || path === 'meeting') && !(S.me && S.me.role === 'admin')) { path = ''; history.replaceState(null, '', '#/'); }
+  if ((path === 'diag' || path === 'mgmt' || path === 'analysis' || path === 'pnl' || path === 'meeting') && !(S.me && S.me.role === 'admin')) { path = ''; history.replaceState(null, '', '#/'); }
   if (path === 'settle' && (!S.me || S.me.role === 'viewer')) { path = ''; history.replaceState(null, '', '#/'); }
   const r = ROUTES[path] || ROUTES[''];
   const key = ROUTES[path] ? path : '';
@@ -178,7 +180,7 @@ function shell() {
   const mk = (k, cls) => { const r = ROUTES[k]; const a = h('a', { href: '#/' + k, 'data-r': k, class: cls }, h('span', { class: 'ni', 'aria-hidden': 'true' }, r.i), h('b', { class: 'cnt zero', 'data-c': k, role: 'status' }, '۰'), h('span', { class: 'nt' }, navLabel(k, cls))); navEls.push(a); return a; };
   navEls = []; grpEls = [];
   const grp = (g, cls) => {
-    const kids = g.kids.filter(k => (k !== 'diag' && k !== 'calc' && k !== 'analysis' && k !== 'pnl' && k !== 'meeting') || isAdmin()).filter(k => k !== 'settle' || (S.me && S.me.role !== 'viewer'));
+    const kids = g.kids.filter(k => (k !== 'diag' && k !== 'calc' && k !== 'analysis' && k !== 'mgmt' && k !== 'pnl' && k !== 'meeting') || isAdmin()).filter(k => k !== 'settle' || (S.me && S.me.role !== 'viewer'));
     const cnt = h('b', { class: 'cnt amber', hidden: true, role: 'status' });
     const kidsEl = h('div', { class: 'gk', id: `gk-${cls}-${g.id}` }, kids.map(k => mk(k, cls)));
     const btn = h('button', { type: 'button', class: 'gh', 'aria-expanded': 'false', 'aria-controls': kidsEl.id, onclick: () => setGroup(g.id, !el.classList.contains('open')) },
@@ -263,8 +265,12 @@ async function start() {
   }
 }
 /* تا برنامه باز است سرور را بیدار نگه می‌داریم و وقتی برگشتی به برنامه، فوراً بیدارش می‌کنیم */
+/* برای صرفه‌جویی در ساعت‌های رایگان Render: وقتی چند دقیقه هیچ‌کس با برنامه کار نکرده (تب فراموش‌شده‌ی باز)، نه پینگ می‌رود نه به‌روزرسانی خودکار؛ سرور می‌تواند بخوابد */
+const ACTIVE_MS = window.__MARA_ACTIVE_MS || 10 * 60 * 1000;
+let lastAct = Date.now(), lastLoad = Date.now();
+['pointerdown', 'keydown', 'scroll', 'touchstart'].forEach(ev => window.addEventListener(ev, () => { lastAct = Date.now(); }, { capture: true, passive: true }));
 const ping = () => { try { fetch(apiBase() + '/api/ping/', { mode: 'no-cors', cache: 'no-store', keepalive: true }).catch(() => {}); } catch { /* بی‌اثر */ } };
-setInterval(() => { if (!document.hidden) ping(); }, 4 * 60 * 1000);
+setInterval(() => { if (!document.hidden && Date.now() - lastAct < ACTIVE_MS) ping(); }, 4 * 60 * 1000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) ping(); });
 ping();
 authBus.onLost = () => { if (S.loaded) { S.loaded = false; setToken(null); showLogin('نشست تمام شده؛ دوباره وارد شو.'); } };
@@ -284,11 +290,9 @@ document.addEventListener('visibilitychange', () => {
   if (S.loaded && hiddenAt && Date.now() - hiddenAt > 45000 && !document.querySelector('.ov')) refresh();
 });
 /* به‌روزرسانی خودکار: اگر برنامه باز بماند، هر چند دقیقه دادهٔ تازه (تغییرات بقیه) را بی‌صدا می‌گیرد؛ فقط وقتی فرمی باز نیست، چیزی تایپ نمی‌شود، ثبتی در صف نیست و کاربر چند ثانیه بیکار است */
-let lastAct = Date.now(), lastLoad = Date.now();
-['pointerdown', 'keydown', 'scroll', 'touchstart'].forEach(ev => window.addEventListener(ev, () => { lastAct = Date.now(); }, { capture: true, passive: true }));
 setInterval(() => {
   const every = window.__MARA_REFRESH_MS || 3 * 60 * 1000, idle = window.__MARA_IDLE_MS || 15000, ae = document.activeElement;
-  if (document.hidden || !S.loaded || Date.now() - lastLoad < every || Date.now() - lastAct < idle) return;
+  if (document.hidden || !S.loaded || Date.now() - lastLoad < every || Date.now() - lastAct < idle || Date.now() - lastAct > ACTIVE_MS) return;
   if (document.querySelector('.ov') || pendingCount() || (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))) return;
   lastLoad = Date.now(); refresh();
 }, 5000);
