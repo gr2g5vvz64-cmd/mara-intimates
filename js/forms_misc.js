@@ -231,7 +231,7 @@ export function returnForm(saleId, edit) {
   function preview() {
     const l = cur(); prev.replaceChildren(); syncHolder(); if (!l) return;
     const lot = S.LOT[l.lot_id]; const q = qty.get();
-    const rec = toSup ? q * lot.net_price : cond === 'سالم' ? q * lot.landed_unit : 0;
+    const rec = toSup ? q * lot.unit_price : cond === 'سالم' ? q * lot.landed_unit : 0;
     const eff = rec - refund.get() - debt.get();
     const r = (k, v, c = '') => h('div', { class: 'srow ' + c }, h('span', null, k), h('b', { class: 'n' }, fmt(v)));
     prev.append(r('پول برگشتی به مشتری', refund.get() + debt.get()), r(toSup ? 'اعتبار نزد تامین‌کننده' : cond === 'سالم' ? 'ارزش کالای برگشته به موجودی' : 'ارزش بازیافت‌شده', rec),
@@ -270,10 +270,10 @@ export function supplierReturnForm(edit) {
   const qty = intField({ value: 1, min: 1, big: true, onChange: () => prev() });
   const prevE = h('div', { class: 'sumbox' });
   const note = h('input', { class: 'inp', placeholder: 'دلیل' });
-  function prev() { const l = S.LOT[lot.get()]; prevE.replaceChildren(); if (!l) return; const cr = qty.get() * l.net_price; prevE.append(h('div', { class: 'srow' }, h('span', null, 'اعتبار از بدهی ' + l.supplier), h('b', { class: 'n' }, fmt(cr)))); }
+  function prev() { const l = S.LOT[lot.get()]; prevE.replaceChildren(); if (!l) return; const cr = qty.get() * l.unit_price; prevE.append(h('div', { class: 'srow' }, h('span', null, 'اعتبار از بدهی ' + l.supplier), h('b', { class: 'n' }, fmt(cr)))); }
   const btn = h('button', { class: 'btn primary lg', type: 'button' }, 'ثبت برگشت به تامین‌کننده');
   btn.onclick = async () => { if (!lot.get()) return toast('دسته را انتخاب کن', 'err'); const r = await run(btn, () => rpc(edit ? 'edit_return' : 'create_supplier_return', { ...(edit ? { id: edit.id } : {}), date, lot_id: lot.get(), holder, qty: qty.get(), note: note.value })); if (r) finish(m, `${edit ? 'ویرایش شد' : 'ثبت شد'} (${r.no})`); };
-  const m = modal({ title: edit ? `ویرایش برگشت به تامین‌کننده ${edit.no}` : 'برگشت کالا به تامین‌کننده', body: h('div', { class: 'form' }, field('تاریخ', dateField(date, v => { date = v; })), field('چه کسی کالا را به تامین‌کننده پس داد؟ (از موجودی همین نفر کم می‌شود)', hold), field('کدام کالا؟', lot), field('تعداد', qty), prevE, field('دلیل', note), P('مبلغ به‌ازای قیمت خرید از بدهی تامین‌کننده کم می‌شود؛ اگر بدهی صفر شود، تامین‌کننده بدهکار ما می‌شود.')), footer: [btn] });
+  const m = modal({ title: edit ? `ویرایش برگشت به تامین‌کننده ${edit.no}` : 'برگشت کالا به تامین‌کننده', body: h('div', { class: 'form' }, field('تاریخ', dateField(date, v => { date = v; })), field('چه کسی کالا را به تامین‌کننده پس داد؟ (از موجودی همین نفر کم می‌شود)', hold), field('کدام کالا؟', lot), field('تعداد', qty), prevE, field('دلیل', note), P('مبلغ به‌ازای فی خریدِ همان کالا در فاکتور (بدون کم کردن تخفیف کل فاکتور) از بدهی تامین‌کننده کم می‌شود؛ اگر بدهی صفر شود، تامین‌کننده بدهکار ما می‌شود.')), footer: [btn] });
   if (edit) { lot.setOptions(opts()); lot.set(edit.lot_id); qty.set(edit.qty); note.value = edit.note || ''; hold.set(edit.holder); prev(); }
 }
 
