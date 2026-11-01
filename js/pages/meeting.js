@@ -20,6 +20,7 @@ function goalBlock(x) {
     h('div', { class: 'gh' }, h('b', null, x.p), h('span', null, `${fmt(Math.round(g.done))} از ${fmt(g.goal)} · ${fmt(g.pct)}٪ `, pill(g.pace.label, TONE[g.pace.key] || 'gray'))),
     h('div', { class: 'gbar mt-bar', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.min(100, g.pct), 'aria-label': `پیشرفت هدف ${x.p}` },
       h('i', { class: g.pct >= 100 ? 'done' : '', style: { width: Math.min(100, g.pct) + '%' } }), h('b', { class: 'mt-mark', style: { insetInlineStart: Math.min(100, g.elapsed) + '%' }, title: 'سهم گذشته‌ی ماه' })),
+    x.b && x.b.goal > 0 && x.b.total > 0 ? h('div', { class: 'gsub' }, `🎁 پاداش آشنایان تا الان: ${fmt(Math.round(x.b.total))} ریال`, x.b.isStar ? ' · ⭐ فروشنده‌ی برتر ماه' : '') : null,
     h('div', { class: 'gsub' }, `خط عمودی = ${fmt(g.elapsed)}٪ از ماه گذشته است؛ پیشرفت ${g.pct >= g.elapsed ? 'بالاتر' : 'پایین‌تر'} از این خط یعنی ${g.pct >= g.elapsed ? 'جلوتریم' : 'عقبیم'}.`));
 }
 

@@ -5,9 +5,9 @@ import { tok } from '../theme.js';
 import { categoryStats } from '../insights.js';
 import { analysisModal } from '../analysis.js';
 import { chips } from '../ui.js';
-import { dueBuckets, topCustomers, goalProgress, reorderSuggestions, dayCloseOpen, negativeAccounts, overdue, soon } from '../insights.js';
+import { bonusMonth, dueBuckets, topCustomers, goalProgress, reorderSuggestions, dayCloseOpen, negativeAccounts, overdue, soon } from '../insights.js';
 import { saleForm, purchaseForm } from '../forms_trade.js';
-import { returnForm, expenseForm, supplierPaymentForm, dayCloseForm, goalForm } from '../forms_misc.js';
+import { returnForm, expenseForm, supplierPaymentForm, dayCloseForm, goalForm, bonusForm } from '../forms_misc.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 export const sv = (tag, a = {}, ...k) => { const e = document.createElementNS(NS, tag); for (const x in a) e.setAttribute(x, a[x]); k.flat().forEach(c => c != null && e.append(c instanceof Node ? c : document.createTextNode(c))); return e; };
@@ -73,11 +73,22 @@ function goalRow(who) {
 }
 /* راهنما/فرمول پشت آیکون «؟»؛ با لمس یا نگه‌داشتن موس دیده می‌شود */
 export const tip = text => { const b = h('button', { type: 'button', class: 'qtip', 'aria-label': 'راهنما', title: text }, '؟'); const box = h('span', { class: 'qtip-box', hidden: true }, text); b.onclick = e => { e.stopPropagation(); box.hidden = !box.hidden; }; return h('span', { class: 'qtipw' }, b, box); };
+/** پاداش تا این لحظه‌ی یک نفر (پلکانی از سود وصول‌شده + ستاره‌ی ماه)؛ فقط وقتی پاداش روشن و هدف تعیین شده باشد */
+function bonusRow(who, B) {
+  const o = B[who], c = B.cfg; if (!c.on || !(o.goal > 0)) return null;
+  const tier = o.tier === 'above' ? `🎉 از هدف گذشته‌ای؛ برای فروش بالاتر از هدف ${fmt(c.above)}٪ از سود می‌گیری` : `تا هدف ${fmt(c.base)}٪ از سودِ وصول‌شده و بعد از هدف ${fmt(c.above)}٪`;
+  return h('div', { class: 'gsub bonusrow' }, h('b', null, '🎁 پاداش تا الان: ', h('span', { class: 'n' }, fmt(Math.round(o.total)) + ' ریال')), ' · ', tier,
+    o.isStar ? h('div', null, '⭐ فعلاً فروشنده‌ی برتر ماه هستی (۳٪ اضافه روی سودت)'.replace('۳', fmt(c.star))) : null,
+    o.excluded ? h('div', { class: 'hint' }, `${fmt(o.excluded)} فروش با حاشیه‌ی خیلی کم یا بی‌سود در هدف و پاداش حساب نشد.`) : null);
+}
 export function goalsCard(only) {
-  const mk = jmonthKey(todayISO());
-  return h('div', { class: 'card' }, h('div', { class: 'ct' }, `هدف فروش به آشنایان ${jmonthName(mk)}`, h('button', { type: 'button', class: 'mini', onclick: () => goalForm() }, 'تعیین هدف')),
-    ...(only ? [goalRow(only)] : [goalRow('مهسا'), goalRow('رعنا')]),
-    h('p', { class: 'hint' }, 'این هدف فقط فروش «آشنایان» را می‌شمارد. فروش پیج اینستاگرام هدف جدا دارد که هنوز تعیین نشده.'));
+  const mk = jmonthKey(todayISO()), admin = !!(S.me && S.me.role === 'admin'), B = bonusMonth(mk), who = only ? [only] : ['مهسا', 'رعنا'];
+  return h('div', { class: 'card' }, h('div', { class: 'ct' }, `هدف فروش به آشنایان ${jmonthName(mk)}`,
+      admin ? h('button', { type: 'button', class: 'mini', onclick: () => bonusForm() }, 'تنظیم پاداش') : null,
+      h('button', { type: 'button', class: 'mini', onclick: () => goalForm() }, 'تعیین هدف')),
+    ...who.flatMap(w => [goalRow(w), bonusRow(w, B)]).filter(Boolean),
+    h('p', { class: 'hint' }, 'این هدف فقط فروش «آشنایان» را می‌شمارد. فروش پیج اینستاگرام هدف جدا دارد که هنوز تعیین نشده.',
+      B.cfg.on ? ' پاداش از سودِ فروش وصول‌شده‌ی آشنایان است؛ فروش بی‌سود یا با تخفیفِ زیاد حساب نمی‌شود.' : ''));
 }
 export function reorderCard() {
   const rows = reorderSuggestions();

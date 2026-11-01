@@ -1,7 +1,7 @@
 // فرم‌های جانبی: دریافت، پرداخت، هزینه، انتقال، مرجوعی، جابجایی کالا، کالا/تامین‌کننده، ابطال
 import { h, fmt, todayISO, toast, sum, jstr, addDaysISO } from './util.js';
 import { S, rpc, bus, loadAll, customers, pref, setPref, businessAccounts, accBalance, EXPCATS, EXP_KIND_DEFAULT, holdKey, canVoid, canEdit, errText, catNames } from './store.js';
-import { willGoNegative } from './insights.js';
+import { willGoNegative, bonusCfg } from './insights.js';
 import { findDup } from './dup.js';
 import { jmonthKey, jmonthName } from './util.js';
 import { modal, field, chips, accountPicker, numField, intField, dateField, dueField, combo, run, confirmBox, promptBox, dl, pill, N } from './ui.js';
@@ -590,6 +590,26 @@ export function goalForm() {
   const m = modal({ title: 'هدف فروش به آشنایان ' + jmonthName(mk), body: h('div', { class: 'form' }, P('مبلغی که هر نفر می‌خواهد این ماه به آشنایان بفروشد (ریال)؛ فقط فروش با محل «آشنایان» حساب می‌شود. هر وقت خواستی دوباره عوضش کن.'), field('هدف مهسا', fm), field('هدف رعنا', fr)), footer: [btn] });
 }
 
+
+/* ----- تنظیم پاداش فروش به آشنایان (فقط مدیر) ----- */
+export function bonusForm() {
+  const c = bonusCfg();
+  const on = h('input', { type: 'checkbox', id: 'bn_on', checked: c.on ? true : null, style: { width: '22px', height: '22px' } });
+  const f1 = numField({ value: c.base, unit: '٪' }), f2 = numField({ value: c.above, unit: '٪' }), f3 = numField({ value: c.star, unit: '٪' }), f4 = numField({ value: c.minMk, unit: '٪' });
+  const btn = h('button', { class: 'btn primary lg', type: 'button' }, 'ذخیره');
+  btn.onclick = async () => {
+    const r = await run(btn, async () => {
+      let last; for (const [key, value] of [['bonus_on', on.checked ? 1 : 0], ['bonus_rate_base', f1.get()], ['bonus_rate_above', f2.get()], ['bonus_star_rate', f3.get()], ['bonus_min_markup', f4.get()]]) last = await rpc('save_setting', { key, value });
+      return last;
+    });
+    if (r) finish(m, 'تنظیم پاداش ذخیره شد ✔');
+  };
+  const m = modal({ title: 'پاداش فروش به آشنایان', body: h('div', { class: 'form' },
+    P('پاداش از «سودِ وصول‌شده‌ی» فروش به آشنایان حساب می‌شود و قبل از تقسیم ۵۰/۵۰ از سود کم می‌شود. هدف ماهانه‌ی هر نفر را از «تعیین هدف» می‌گذاری.'),
+    h('label', { for: 'bn_on', class: 'row', style: { display: 'flex', gap: '10px', alignItems: 'center' } }, on, h('b', null, 'پاداش روشن باشد')),
+    field('پاداش از سود، تا رسیدن به هدف', f1), field('پاداش از سود، بخشِ بالاتر از هدف', f2), field('پاداش اضافه‌ی «فروشنده‌ی برتر ماه»', f3),
+    field('حداقل حاشیه‌ی سود روی بها', f4), P('فروشی که حاشیه‌ی سودش از این کمتر باشد (تخفیف زیاد) در هدف و پاداش نمی‌آید. فروشنده‌ی برتر فقط وقتی انتخاب می‌شود که خودش به هدف رسیده و وصول‌شده‌ی فروشش از دیگری بیشتر باشد.')), footer: [btn] });
+}
 
 /* ----- ویرایش پرداخت / دریافت / هزینه / انتقال / جابجایی (ابطال نسخه‌ی قبلی + ثبت نسخه‌ی اصلاح‌شده؛ فقط حمیدرضا، مهسا و رعنا) ----- */
 export function editEntryForm(kind, row) {

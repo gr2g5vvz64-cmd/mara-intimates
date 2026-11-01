@@ -3,7 +3,7 @@
 import { S, activeSales } from './store.js';
 import { fmt, sum, todayISO, addDaysISO, jstr, jmonthName, jmonthKey } from './util.js';
 import { period, salesStats, flowStats, stockAge, receivableAge } from './analytics.js';
-import { goalProgress, GOAL_CHANNEL, monthElapsed, reorderSuggestions, overdue } from './insights.js';
+import { bonusMonth, bonusCfg, goalProgress, GOAL_CHANNEL, monthElapsed, reorderSuggestions, overdue } from './insights.js';
 
 export const PEOPLE = ['مهسا', 'رعنا'];
 export const WINDOWS = [{ v: 7, label: '۷ روز اخیر' }, { v: 14, label: '۱۴ روز اخیر (جلسه‌ی دو هفته‌ای)' }, { v: 30, label: '۳۰ روز اخیر' }];
@@ -38,9 +38,9 @@ export function buildMeeting(n = 14) {
   const F = flowStats(d => inR(d, P.from, P.to)), Fp = flowStats(d => inR(d, P.pFrom, P.pTo));
   const mk = jmonthKey(todayISO()), el = monthElapsed(mk);
   const people = PEOPLE.map(p => {
-    const c = personStats(p, P.from, P.to, first, lineSale), q = personStats(p, P.pFrom, P.pTo, first, lineSale), g = goalProgress(p, mk);
+    const c = personStats(p, P.from, P.to, first, lineSale), q = personStats(p, P.pFrom, P.pTo, first, lineSale), g = goalProgress(p, mk), b = bonusMonth(mk)[p];
     const need = g.goal > 0 ? Math.max(0, g.goal - g.done) : null;
-    return { p, c, q, g, need, perDay: need != null && g.left > 0 ? need / g.left : null, per14: need != null && g.left > 0 ? Math.min(need, need / g.left * 14) : need };
+    return { p, c, q, g, b, need, perDay: need != null && g.left > 0 ? need / g.left : null, per14: need != null && g.left > 0 ? Math.min(need, need / g.left * 14) : need };
   });
   const [A, B] = people;
   /* قاعده‌های «خوب / ضعیف» */
@@ -58,6 +58,7 @@ export function buildMeeting(n = 14) {
     if (dc != null && dc >= 15) good.push(`فروش نسبت به دوره‌ی قبل ${fmt(dc)}٪ بیشتر شد.`);
     if (dc != null && dc <= -25) weak.push(`فروش نسبت به دوره‌ی قبل ${fmt(-dc)}٪ کمتر شد.`);
     if (c.count === 0) weak.push('در این بازه هیچ فروشی ثبت نکرد.');
+    if (x.b && x.b.isStar) good.push('فروشنده‌ی برتر ماه تا این لحظه است ⭐');
     if (c.fresh >= 2) good.push(`${fmt(c.fresh)} مشتری جدید آورد.`);
     if (c.count > 0 && c.fresh === 0 && o.c.fresh > 0) weak.push(`مشتری جدید نداشت (${o.p} ${fmt(o.c.fresh)} مشتری جدید داشت).`);
     const da = chg(c.avg, q.avg);
@@ -101,6 +102,7 @@ export function meetingText(r) {
     const c = x.c, g = x.g;
     L.push(`— ${x.p}: فروش ${M(c.total)} (قبل ${M(x.q.total)}) · ${fmt(c.count)} فاکتور · میانگین ${M(c.avg)} · ${fmt(c.customers)} مشتری (${fmt(c.fresh)} جدید) · تخفیف ${fmt(Math.round(c.discPct))}٪ · بدون‌نام ${fmt(c.anon)} · نسیه معوق ${M(c.lateAmt)} · مرجوعی ${fmt(c.retCount)}`);
     L.push(`  هدف آشنایان ماه: ${g.goal ? `${M(g.done)} از ${M(g.goal)} (${fmt(g.pct)}٪ در ${fmt(g.elapsed)}٪ ماه؛ ${g.pace.label})` : 'تعیین نشده'}`);
+    { const o = x.b; if (bonusCfg().on && o && o.goal > 0) L.push(`  پاداش آشنایان تا الان: ${M(o.total)} (پلکانی ${M(o.base)}${o.isStar ? ' + فروشنده‌ی برتر ' + M(o.star) : ''})`); }
     L.push(`  خوب: ${x.good.join(' | ') || '—'}`, `  ضعیف: ${x.weak.join(' | ') || '—'}`);
   }
   L.push('', `مشکل‌های مشترک: ${r.issues.join(' | ') || 'ندارد'}`);

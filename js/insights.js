@@ -42,10 +42,37 @@ export function paceOf(pct, elapsed) {
   const r = pct / Math.max(1, elapsed);
   return r >= 1.15 ? { key: 'ahead', label: 'جلوتر از برنامه', ratio: r } : r >= 0.9 ? { key: 'on', label: 'در مسیر', ratio: r } : r >= 0.6 ? { key: 'slow', label: 'کمی عقب', ratio: r } : { key: 'behind', label: 'خیلی عقب', ratio: r };
 }
+/* ---------- پاداش فروش به آشنایان (همان منطق core/reports.py؛ تنظیم‌ها از app_settings) ---------- */
+export function bonusCfg() {
+  const g = (k, d) => { const r = (S.settings || []).find(x => x.key === k); return r && r.value != null ? Number(r.value) : d; };
+  return { on: g('bonus_on', 1) === 1, base: g('bonus_rate_base', 5), above: g('bonus_rate_above', 15), star: g('bonus_star_rate', 3), minMk: g('bonus_min_markup', 10) };
+}
+/** فروشِ آشنایانی که در هدف و پاداش می‌آید: سود مثبت و حاشیه‌ی روی بها حداقل تنظیم مدیر (فروش با تخفیف زیاد بیرون می‌ماند) */
+export const bonusEligible = (s, cfg = bonusCfg()) => s.total > 0 && s.profit > 0 && !(s.cogs > 0 && s.profit / s.cogs * 100 < cfg.minMk);
+export function bonusMonth(month = jmonthKey(todayISO())) {
+  const cfg = bonusCfg(), out = {};
+  for (const n of ['مهسا', 'رعنا']) {
+    const o = { name: n, sales: 0, collectedSales: 0, profitCollected: 0, goal: goalOf(n, month), base: 0, star: 0, total: 0, excluded: 0, isStar: false, tier: 'none', toGoal: 0 };
+    if (cfg.on) for (const s of activeSales().filter(x => x.seller === n && x.channel === GOAL_CHANNEL && jmonthKey(x.date) === month)) {
+      if (!bonusEligible(s, cfg)) { o.excluded++; continue; }
+      const frac = Math.min(1, ((s.received || 0) + (s.collected || 0) + (s.debt_cancel || 0)) / s.total);
+      o.sales += s.total; o.collectedSales += s.total * frac; o.profitCollected += s.profit * frac;
+    }
+    if (o.goal > 0 && o.sales > 0) { const sh = Math.min(o.sales, o.goal) / o.sales; o.base = o.profitCollected * (sh * cfg.base + (1 - sh) * cfg.above) / 100; }
+    o.tier = !cfg.on || !(o.goal > 0) ? 'none' : o.sales >= o.goal ? 'above' : 'base'; o.toGoal = Math.max(0, o.goal - o.sales);
+    out[n] = o;
+  }
+  const m = out['مهسا'], r = out['رعنا'], win = m.collectedSales > r.collectedSales ? m : r.collectedSales > m.collectedSales ? r : null;
+  if (cfg.on && win && win.goal > 0 && win.sales >= win.goal) { win.isStar = true; win.star = win.profitCollected * cfg.star / 100; }
+  for (const o of [m, r]) o.total = o.base + o.star;
+  out.cfg = cfg; return out;
+}
 export function goalProgress(owner, month = jmonthKey(todayISO())) {
-  const done = sum(activeSales().filter(s => s.seller === owner && s.channel === GOAL_CHANNEL && jmonthKey(s.date) === month), s => s.total), goal = goalOf(owner, month);
+  const cfg = bonusCfg(), all = activeSales().filter(s => s.seller === owner && s.channel === GOAL_CHANNEL && jmonthKey(s.date) === month);
+  const ok = cfg.on ? all.filter(s => bonusEligible(s, cfg)) : all, goal = goalOf(owner, month);
+  const done = sum(ok, s => s.total), excluded = all.length - ok.length;
   const pct = goal > 0 ? Math.min(999, Math.round(done / goal * 100)) : null, el = monthElapsed(month);
-  return { owner, month, goal, done, pct, elapsed: el.pct, left: el.left, pace: paceOf(pct, el.pct) };
+  return { owner, month, goal, done, pct, elapsed: el.pct, left: el.left, pace: paceOf(pct, el.pct), excluded };
 }
 
 /* ---------- پیشنهاد خرید مجدد ---------- */

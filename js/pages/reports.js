@@ -96,13 +96,13 @@ export function settlePage() {
     const s = d.settlement, P = s.people;
     const cell = (label, fn, tone) => ({ label, fn, tone });
     const rows = [
-      ['فروش این ماه', x => N(x.sales_total)], ['تعداد فاکتور این ماه', x => fmt(x.sales_count)], ['کسر انبارگردانی از سود (کسری واقعی)', x => N(-(x.charge || 0), (x.charge || 0) > 0 ? 'neg' : '')], ['سهم از سود خالص این ماه (۵۰٪)', x => N(x.profit_share, x.profit_share < 0 ? 'neg' : 'pos')],
+      ['فروش این ماه', x => N(x.sales_total)], ['تعداد فاکتور این ماه', x => fmt(x.sales_count)], ...(s.bonus_pool > 0 ? [['🎁 پاداش فروش آشنایان (از سود کم شده)', x => N((x.bonus || {}).total || 0, 'pos')], ['⭐ فروشنده‌ی برتر ماه', x => (x.bonus && x.bonus.is_star ? '⭐ بله' : '—')]] : []), ['کسر انبارگردانی از سود (کسری واقعی)', x => N(-(x.charge || 0), (x.charge || 0) > 0 ? 'neg' : '')], ['سهم از سود خالص این ماه (۵۰٪)', x => N(x.profit_share, x.profit_share < 0 ? 'neg' : 'pos')],
       ['سرمایه‌ی وارد‌شده تا امروز', x => N(x.capital)], ['پول نقد و بانک دست او', x => N(x.cash + x.bank)], ['جنس دست او (قیمت تمام‌شده)', x => N(x.stock_value)],
       ['جیب شخصی (مانده)', x => N(x.pocket)], ['سهم او از سود کل تا امروز', x => N(x.profit_share_total)], ['برداشت سود این ماه', x => N(x.payout_month)], ['برداشت سود تا امروز', x => N(x.payout_total)]
     ].map(([label, fn]) => ({ label, a: fn(P[0]), b: fn(P[1]) }));
     box.replaceChildren(...[
       d.locked ? h('div', { class: 'alert info' }, '🔒 این ماه بسته شده است.') : null,
-      h('div', { class: 'kpis' }, kpi('سود خالص ' + jmonthName(month), N(s.net_profit, s.net_profit < 0 ? 'neg' : 'pos')), kpi('سهم هر نفر (۵۰٪)', N(s.half)),
+      h('div', { class: 'kpis' }, kpi('سود خالص ' + jmonthName(month), N(s.net_profit, s.net_profit < 0 ? 'neg' : 'pos')), kpi(s.bonus_pool > 0 ? 'سهم پایه‌ی هر نفر (۵۰٪)' : 'سهم هر نفر (۵۰٪)', N(s.half), s.bonus_pool > 0 ? { sub: 'بعد از کسر پاداش‌ها (' + fmt(Math.round(s.bonus_pool)) + ' ریال)' } : undefined),
         kpi('ارزش خالص کسب‌وکار', N(s.net_worth), { sub: 'نقد و بانک + انبار + طلب − بدهی' }), kpi('اختلاف سرمایه‌ی دو نفر', N(Math.abs(s.capital_diff)), { tone: Math.abs(s.capital_diff) > 1000 ? 'warn' : 'ok' })),
       s.equalize
         ? h('div', { class: 'alert warn' }, `⚖️ برای برابر شدن سرمایه: ${s.equalize.from} مبلغ ${fmt(Math.round(s.equalize.amount / 10))} تومان (${fmt(Math.round(s.equalize.amount))} ریال) به حساب شخصی ${s.equalize.to} واریز کند و بعد در «مالی › انتقال سرمایه» ثبت شود.`)
