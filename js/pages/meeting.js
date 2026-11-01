@@ -3,6 +3,7 @@ import { h, fmt, jstr, jlong, todayISO, toast } from '../util.js';
 import { N, pill, chips, dtable } from '../ui.js';
 import { head, btn } from './common.js';
 import { buildMeeting, meetingText, WINDOWS, chg } from '../meeting.js';
+import { profitWordShort } from '../analytics.js';
 
 let winN = 14;
 const TONE = { done: 'green', ahead: 'green', on: 'green', slow: 'amber', behind: 'red' };
@@ -37,7 +38,7 @@ export function render() {
       row('نسیه‌ی سررسیدگذشته', c => c.lateAmt, false), row('مرجوعی', c => c.retCount, false, v => fmt(v))
     ];
     const team = [
-      ['فروش', r.cur.sales, r.prev.sales, true], ['سود خالص', r.cur.profit, r.prev.profit, true], ['تعداد فاکتور', r.cur.count, r.prev.count, true],
+      ['فروش', r.cur.sales, r.prev.sales, true], [profitWordShort(), r.cur.profit, r.prev.profit, true], ['تعداد فاکتور', r.cur.count, r.prev.count, true],
       ['خرید', r.F.bought, r.Fp.bought, true], ['پول دریافتی', r.F.received, r.Fp.received, true], ['فروش پیج اینستاگرام (هدف جدا دارد)', r.insta.cur, r.insta.prev, true]
     ];
     body.replaceChildren(
@@ -45,10 +46,10 @@ export function render() {
 
       h('h3', { class: 'sec' }, '۱ · خلاصه‌ی کل'),
       dtable([{ label: 'شاخص', main: true, render: x => x[0] }, { label: 'این دوره', cls: 'num', render: x => (x[0] === 'تعداد فاکتور' ? fmt(x[1]) : N(x[1])) },
-        { label: 'دوره‌ی قبل', cls: 'num', hm: true, render: x => (x[0] === 'تعداد فاکتور' ? fmt(x[2]) : N(x[2])) }, { label: 'تغییر', cls: 'num', render: x => dl(x[1], x[2], x[3]) }], team),
+        { label: 'دوره‌ی قبل', cls: 'num', hm: true, render: x => (x[0] === 'تعداد فاکتور' ? fmt(x[2]) : N(x[2])) }, { label: 'تغییر', cls: 'num', render: x => (r.cur.count >= 10 && r.prev.count >= 10 ? dl(x[1], x[2], x[3]) : h('span', { class: 'hint', title: 'درصد تغییر وقتی نشان داده می‌شود که هر دو بازه حداقل ۱۰ فاکتور داشته باشند' }, 'فاکتور کم')) }], team),
 
       h('h3', { class: 'sec' }, `۲ · هدف فروش به آشنایان ${r.monthName}`),
-      h('div', { class: 'card' }, ...r.people.map(goalBlock), h('p', { class: 'hint' }, 'فقط فروش با محل «آشنایان» به هدف حساب می‌شود. وضعیت = پیشرفت هدف نسبت به سهم گذشته‌ی ماه: ۵۰٪ هدف در ۵۰٪ ماه یعنی «در مسیر»، بالاتر یعنی «جلوتر» و ۱۰٪ هدف در ۵۰٪ ماه یعنی «خیلی عقب».')),
+      h('div', { class: 'card' }, ...r.people.map(goalBlock), r.crossMonth ? h('p', { class: 'hint' }, `⚠️ این بازه از ماه قبل شروع می‌شود؛ هدف فقط فروش آشنایان از ${jstr(r.monthStart)} تا امروز را می‌شمارد (مهسا ${fmt(Math.round(A.c.beforeMonth))} و رعنا ${fmt(Math.round(B.c.beforeMonth))} ریال از فروش آشنایان این بازه قبل از آن بوده است).`) : null, h('p', { class: 'hint' }, 'فقط فروش با محل «آشنایان» به هدف حساب می‌شود. وضعیت = پیشرفت هدف نسبت به سهم گذشته‌ی ماه: ۵۰٪ هدف در ۵۰٪ ماه یعنی «در مسیر»، بالاتر یعنی «جلوتر» و ۱۰٪ هدف در ۵۰٪ ماه یعنی «خیلی عقب».')),
 
       h('h3', { class: 'sec' }, '۳ · مقایسه‌ی مهسا و رعنا'),
       dtable([{ label: 'شاخص', main: true, render: x => x.label }, { label: 'مهسا', cls: 'num', render: x => x.fm(x.a) }, { label: 'رعنا', cls: 'num', render: x => x.fm(x.b) }], cmp),

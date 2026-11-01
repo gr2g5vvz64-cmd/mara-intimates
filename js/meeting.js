@@ -2,7 +2,9 @@
 // هدف فعلی فقط برای فروش به «آشنایان» است؛ پیج اینستاگرام هدف جدا دارد (هنوز تعیین نشده) و فقط عددش نشان داده می‌شود.
 import { S, activeSales } from './store.js';
 import { fmt, sum, todayISO, addDaysISO, jstr, jmonthName, jmonthKey } from './util.js';
-import { period, salesStats, flowStats, stockAge, receivableAge } from './analytics.js';
+import { period, salesStats, flowStats, stockAge, receivableAge, bizDays, profitWordShort, STALE_MID, STALE_OLD } from './analytics.js';
+import { GATES, enoughForPct } from './gates.js';
+import { bonusRulesText } from './indicators.js';
 import { bonusMonth, bonusCfg, goalProgress, GOAL_CHANNEL, monthElapsed, reorderSuggestions, overdue } from './insights.js';
 
 export const PEOPLE = ['مهسا', 'رعنا'];
@@ -16,6 +18,8 @@ function firstDates() {
   for (const s of activeSales()) if (s.customer_id) { const x = f.get(s.customer_id); if (!x || s.date < x) f.set(s.customer_id, s.date); }
   return f;
 }
+/** اولین روز ماه شمسی جاری */
+function monthStartISO() { const mk = jmonthKey(todayISO()); let d = todayISO(); while (jmonthKey(addDaysISO(d, -1)) === mk) d = addDaysISO(d, -1); return d; }
 function personStats(p, a, b, first, lineSale) {
   const ss = activeSales().filter(s => s.seller === p && inR(s.date, a, b));
   const total = sum(ss, s => s.total), disc = sum(ss, s => s.discount || 0), gross = total + disc;
@@ -26,7 +30,7 @@ function personStats(p, a, b, first, lineSale) {
   const ch = {}; for (const s of ss) ch[s.channel] = (ch[s.channel] || 0) + s.total;
   return {
     total, count: ss.length, avg: ss.length ? total / ss.length : 0, profit: sum(ss, s => s.profit),
-    customers: ids.size, fresh: [...ids].filter(id => first.get(id) >= a).length,
+    beforeMonth: sum(ss.filter(s => s.channel === GOAL_CHANNEL && s.date < monthStartISO()), s => s.total), customers: ids.size, fresh: [...ids].filter(id => first.get(id) >= a).length,
     disc, discPct: gross > 0 ? disc / gross * 100 : 0, anon: ss.filter(s => !s.customer_id).length,
     retCount: ret.length, owed: sum(mine, s => s.outstanding), lateCount: late.length, lateAmt: sum(late, s => s.outstanding), channels: ch
   };
@@ -54,14 +58,14 @@ export function buildMeeting(n = 14) {
       else if (g.pace.key === 'slow') weak.push(`کمی از هدف عقب است: ${t}.`);
       else weak.push(`از هدف خیلی عقب است: ${t}. تا پایان ماه روزی ${M(x.perDay || 0)} ریال فروش به آشنایان لازم است.`);
     } else weak.push('هدف فروش آشنایان این ماه برایش تعیین نشده.');
-    const dc = chg(c.total, q.total);
+    const pctOk = enoughForPct(c.count, q.count, GATES.pctInvoicesPerson), dc = pctOk ? chg(c.total, q.total) : null;
     if (dc != null && dc >= 15) good.push(`فروش نسبت به دوره‌ی قبل ${fmt(dc)}٪ بیشتر شد.`);
     if (dc != null && dc <= -25) weak.push(`فروش نسبت به دوره‌ی قبل ${fmt(-dc)}٪ کمتر شد.`);
     if (c.count === 0) weak.push('در این بازه هیچ فروشی ثبت نکرد.');
     if (x.b && x.b.isStar) good.push('فروشنده‌ی برتر ماه تا این لحظه است ⭐');
     if (c.fresh >= 2) good.push(`${fmt(c.fresh)} مشتری جدید آورد.`);
     if (c.count > 0 && c.fresh === 0 && o.c.fresh > 0) weak.push(`مشتری جدید نداشت (${o.p} ${fmt(o.c.fresh)} مشتری جدید داشت).`);
-    const da = chg(c.avg, q.avg);
+    const da = pctOk ? chg(c.avg, q.avg) : null;
     if (da != null && da <= -20 && c.count >= 2) weak.push(`میانگین هر فاکتور ${fmt(-da)}٪ کمتر شد.`);
     if (da != null && da >= 20 && c.count >= 2) good.push(`میانگین هر فاکتور ${fmt(da)}٪ بیشتر شد.`);
     if (c.discPct >= 8) weak.push(`تخفیف زیاد داده شده: ${fmt(Math.round(c.discPct))}٪ فروش (${M(c.disc)} ریال).`);
@@ -73,7 +77,7 @@ export function buildMeeting(n = 14) {
   }
   /* مشکل‌های مشترک: کالا و پول */
   const issues = [], SA = stockAge(), RA = receivableAge(), ro = reorderSuggestions(), od = overdue('payable'), orr = overdue('receivable');
-  if (SA.old > 0) issues.push(`کالایی که بیش از ۳۰ روز از خریدش گذشته و هنوز مانده: ${M(SA.old)} ریال پول گیر کرده؛ برای فروش آن برنامه بگذاریم.`);
+  if (SA.old > 0) issues.push(`کالایی که بیش از ${fmt(STALE_OLD)} روز از خریدش گذشته و هنوز مانده: ${M(SA.old)} ریال پول گیر کرده؛ برای فروش آن برنامه بگذاریم.`);
   if (ro.length) issues.push(`${fmt(ro.length)} کالای پرفروش رو به اتمام است: ${ro.slice(0, 4).map(r => r.item.name).join('، ')}.`);
   if (RA.c > 0) issues.push(`طلب‌های بالای ۸ روز: ${M(RA.c)} ریال هنوز وصول نشده.`);
   if (orr.length) issues.push(`${fmt(orr.length)} طلب از مشتریان سررسیدش گذشته.`);
@@ -87,7 +91,8 @@ export function buildMeeting(n = 14) {
   if (people.some(x => x.g.goal > 0 && ['slow', 'behind'].includes(x.g.pace.key))) agenda.push('برنامه‌ی جبران هدف آشنایان تا پایان ماه (چه کسانی را باید دوباره دید؟)');
   agenda.push('هدف فروش پیج اینستاگرام برای دو هفته‌ی بعد (هنوز تعیین نشده)');
   if (issues.length) agenda.push('تصمیم درباره‌ی موجودی راکد، کالای رو به اتمام و طلب‌های معوق');
-  return { P, n, cur, prev, F, Fp, insta, people, issues, agenda, month: mk, monthName: jmonthName(mk), elapsed: el, from: P.from, to: P.to };
+  const crossMonth = P.from < monthStartISO();
+  return { P, n, cur, crossMonth, monthStart: monthStartISO(), prev, F, Fp, insta, people, issues, agenda, month: mk, monthName: jmonthName(mk), elapsed: el, from: P.from, to: P.to };
 }
 
 /** متنی که می‌شود در چت Claude گذاشت تا تحلیل کامل‌تر و پیشنهاد برای جلسه بنویسد */
@@ -96,16 +101,17 @@ export function meetingText(r) {
   L.push(`گزارش جلسه‌ی ${r.n} روزه مارا اینتیمیتس: ${jstr(r.from)} تا ${jstr(r.to)}`);
   L.push(`از Claude می‌خواهم: بر پایه‌ی همین عددها یک متن کوتاه و محترمانه برای جلسه با مهسا و رعنا بنویسد (کجا خوب بودیم، کجا ضعیف، علت‌های محتمل، پیشنهاد مشخص برای دو هفته‌ی بعد برای هر نفر).`);
   L.push('هدف فعلی فقط برای فروش به «آشنایان» است؛ هدف پیج اینستاگرام هنوز تعیین نشده.', '');
-  L.push(`کل: فروش ${M(r.cur.sales)} (قبل ${M(r.prev.sales)}) · سود خالص ${M(r.cur.profit)} (قبل ${M(r.prev.profit)}) · فاکتور ${fmt(r.cur.count)} · خرید ${M(r.F.bought)} · دریافتی ${M(r.F.received)}`);
+  L.push(`کل: فروش ${M(r.cur.sales)} (قبل ${M(r.prev.sales)}) · ${profitWordShort()} ${M(r.cur.profit)} (قبل ${M(r.prev.profit)}) · فاکتور ${fmt(r.cur.count)} · خرید ${M(r.F.bought)} · دریافتی ${M(r.F.received)}`);
   L.push(`فروش پیج اینستاگرام در این بازه ${M(r.insta.cur)} (قبل ${M(r.insta.prev)})`, '');
   for (const x of r.people) {
     const c = x.c, g = x.g;
     L.push(`— ${x.p}: فروش ${M(c.total)} (قبل ${M(x.q.total)}) · ${fmt(c.count)} فاکتور · میانگین ${M(c.avg)} · ${fmt(c.customers)} مشتری (${fmt(c.fresh)} جدید) · تخفیف ${fmt(Math.round(c.discPct))}٪ · بدون‌نام ${fmt(c.anon)} · نسیه معوق ${M(c.lateAmt)} · مرجوعی ${fmt(c.retCount)}`);
-    L.push(`  هدف آشنایان ماه: ${g.goal ? `${M(g.done)} از ${M(g.goal)} (${fmt(g.pct)}٪ در ${fmt(g.elapsed)}٪ ماه؛ ${g.pace.label})` : 'تعیین نشده'}`);
+    L.push(`  هدف آشنایان ماه (فقط از ${jstr(r.monthStart)} تا امروز می‌شمارد): ${g.goal ? `${M(g.done)} از ${M(g.goal)} (${fmt(g.pct)}٪ در ${fmt(g.elapsed)}٪ ماه؛ ${g.pace.label})` : 'تعیین نشده'}${r.crossMonth ? ` — توجه: بازه‌ی گزارش از ماه قبل شروع می‌شود؛ از فروش آشنایان این بازه ${M(c.beforeMonth)} مربوط به قبل از ${jstr(r.monthStart)} است و در هدف نمی‌آید` : ''}`);
     { const o = x.b; if (bonusCfg().on && o && o.goal > 0) L.push(`  پاداش آشنایان تا الان: ${M(o.total)} (پلکانی ${M(o.base)}${o.isStar ? ' + فروشنده‌ی برتر ' + M(o.star) : ''})`); }
     L.push(`  خوب: ${x.good.join(' | ') || '—'}`, `  ضعیف: ${x.weak.join(' | ') || '—'}`);
   }
-  L.push('', `مشکل‌های مشترک: ${r.issues.join(' | ') || 'ندارد'}`);
+  L.push('', bonusRulesText(), `مشکل‌های مشترک: ${r.issues.join(' | ') || 'ندارد'}`);
+  if (bizDays() < 30) L.push(`هشدار داده‌ی کم: فقط ${fmt(bizDays())} روز از شروع فعالیت گذشته؛ مقایسه‌ی درصدی و رتبه‌بندی نفرات را مبنای تصمیم بزرگ نکنید.`);
   return L.join('\n');
 }
 export { GOAL_CHANNEL, addDaysISO };

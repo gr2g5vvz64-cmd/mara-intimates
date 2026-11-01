@@ -9,8 +9,9 @@ const R = async (fn, p) => (await post(tok, '/api/rpc/' + fn + '/', p));
 const iso = k => new Date(Date.now() - k * 864e5).toISOString().slice(0, 10);
 const t0 = await D(); const sup = t0.suppliers[0].id, ac = t0.accounts.find(a => a.name === 'حساب مهسا').id;
 const mk = async n => (await R('save_item', { name: n, category: 'شورت' })).data.result.id;
-const A = await mk('مشاور پرفروش'), B = await mk('مشاور تک‌فروش'), C = await mk('مشاور راکد');
+const A = await mk('مشاور پرفروش'), B = await mk('مشاور تک‌فروش'), C = await mk('مشاور راکد'), OLD = await mk('مشاور راکد قدیمی');
 await R('create_purchase', { supplier_id: sup, ship_cost: 0, payments: [], lines: [{ item_id: A, qty: 8, unit_price: 100000, hold_m: 8, hold_r: 0 }, { item_id: B, qty: 5, unit_price: 100000, hold_m: 5, hold_r: 0 }, { item_id: C, qty: 6, unit_price: 100000, hold_m: 6, hold_r: 0 }] });
+await R('create_purchase', { supplier_id: sup, date: iso(40), ship_cost: 0, payments: [], lines: [{ item_id: OLD, qty: 4, unit_price: 100000, hold_m: 4, hold_r: 0 }] });
 const sale = (item, k, cust) => R('create_sale', { date: iso(k), seller: 'مهسا', channel: 'آشنایان', customer: cust, received: 150000, account_id: ac, lines: [{ item_id: item, qty: 1, unit_price: 150000 }] });
 for (const [k, c] of [[1, 'ا۱'], [2, 'ب۱'], [3, 'ا۱'], [4, 'ب۱'], [5, 'ا۱'], [6, 'ب۱']]) await sale(A, k, 'مشتری ' + c);
 await sale(B, 3, 'مشتری ا۱');
@@ -22,12 +23,14 @@ try {
   ok(tabs.some(x => x.includes('مشاور خرید')) && tabs.some(x => x.includes('گزارش جلسه')), 'تب‌های تحلیل: ' + tabs.map(x => x.trim()).join(' | '));
   const body = await page.locator('#view').innerText();
   ok(/بخرید/.test(body) && body.includes('مشاور پرفروش'), 'کالای پرفروش در لیست «بخرید» است');
-  const buyRow = page.locator('tbody tr', { hasText: 'مشاور پرفروش' }).first();
+  const buyRow = page.locator('tbody tr', { hasText: 'مشاور پرفروش' }).filter({ has: page.locator('button', { hasText: 'ثبت خرید' }) }).first();
   ok(/بخرید|تمام/.test(await buyRow.innerText()) && /عدد/.test(await buyRow.innerText()), 'مقدار پیشنهادی خرید نوشته شده: ' + (await buyRow.innerText()).replace(/\s+/g, ' ').slice(0, 100));
   const buySec = (await page.locator('#view h3', { hasText: 'بخرید' }).first().evaluate(h => { let t = ''; let n = h.nextElementSibling; while (n && n.tagName !== 'H3') { t += n.innerText + '\n'; n = n.nextElementSibling; } return t; }));
   ok(!buySec.includes('مشاور تک‌فروش') && !buySec.includes('مشاور راکد'), 'کالای تک‌فروش و راکد در لیست «بخرید» نیستند');
   const avoidSec = (await page.locator('#view h3', { hasText: 'خرید نکنید' }).first().evaluate(h => { let t = ''; let n = h.nextElementSibling; while (n && n.tagName !== 'H3') { t += n.innerText + '\n'; n = n.nextElementSibling; } return t; }));
-  ok(avoidSec.includes('مشاور راکد'), 'کالای راکد در «خرید نکنید» است');
+  ok(avoidSec.includes('مشاور راکد قدیمی') && !avoidSec.includes('مشاور راکد ·') , 'کالای قدیمیِ فروش‌نرفته در «خرید نکنید» است');
+  ok(/هنوز زود است/.test(await page.locator('#view').innerText()), 'کالای تازه‌وارد در «هنوز زود است» است، نه «خرید نکنید»');
+  ok(/تصمیم خرید به تفکیک مدل/.test(body) && /① تقاضا/.test(body) && /② موجودی/.test(body) && /③ تصمیم/.test(body), 'جدول مدل‌ها سه بخش دارد (تقاضا، موجودی، تصمیم)');
   // ثبت خرید از روی پیشنهاد: فرم با کالا و تعداد پر می‌شود و نظر مشاور دیده می‌شود
   await buyRow.locator('button', { hasText: 'ثبت خرید' }).click(); await M.waitFor(); await sleep(900);
   ok((await M.locator('.pgrow').first().locator('.c-name input').inputValue()).includes('مشاور پرفروش'), 'فرم خرید با کالای پیشنهادی باز شد');
@@ -35,7 +38,7 @@ try {
   await page.keyboard.press('Escape'); await sleep(300);
   // خرید یک کالای راکد: هشدار «خرید نکن» در فرم خرید
   await page.evaluate(() => { location.hash = '#/purchases'; }); await sleep(500); await page.click('text=＋ خرید جدید'); await M.waitFor();
-  await M.locator('.pgrow').first().locator('.c-name input').fill('مشاور راکد'); await sleep(200); await page.locator('.cmb-list:not([hidden]) .cmb-o').first().click(); await sleep(1200);
+  await M.locator('.pgrow').first().locator('.c-name input').fill('مشاور راکد قدیمی'); await sleep(200); await page.locator('.cmb-list:not([hidden]) .cmb-o').first().click(); await sleep(1200);
   ok(await M.locator('.advbox.avoid:visible').count() === 1, 'هشدار «خرید نکن» برای کالای راکد در فرم خرید');
   await page.keyboard.press('Escape'); await sleep(300);
   // تب گزارش جلسه

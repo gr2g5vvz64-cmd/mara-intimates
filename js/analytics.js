@@ -76,7 +76,7 @@ export function supplierTable(a, b) {
 export function concentration(rows, grand) {
   const r = rows.filter(x => x.rangeTotal > 0); if (r.length < 3) return null;
   const k = Math.max(1, Math.round(r.length * 0.2)), top = sum(r.slice(0, k), x => x.rangeTotal), tot = grand > 0 ? grand : sum(r, x => x.rangeTotal);
-  return { k, n: r.length, share: Math.round(top / tot * 100) };
+  return { k, n: r.length, share: Math.round(top / tot * 100), names: r.slice(0, k).map(x => ({ name: x.name, total: x.rangeTotal })) };
 }
 
 /** خرید، فروش و پول دریافتی؛ ok(d) تعیین می‌کند تاریخ داخل بازه است.
@@ -120,10 +120,12 @@ export const rangeOfMonthKey = key => {
 };
 export { pct };
 
-/** پول گیر کرده در کالای مانده و سن طلب‌ها */
+/** آستانه‌های «کالای مانده»: برای لباس زیر ۴۵ روز = کم‌گردش، ۶۰ روز = مانده (قبلاً ۱۴ و ۳۰ روز بود که برای شروع کار زود بود) */
+export const STALE_MID = 45, STALE_OLD = 60;
+/** پول گیر کرده در کالای مانده: new = کمتر از ۴۵ روز، mid = ۴۵ تا ۶۰ روز، old = بیش از ۶۰ روز */
 export function stockAge() {
   const t = Date.parse(todayISO() + 'T00:00:00Z'), by = new Map();
-  for (const l of S.lots) if (!l.voided && l.rem > 0) { const age = Math.round((t - Date.parse(l.date + 'T00:00:00Z')) / 864e5), k = age >= 30 ? 'old' : age >= 14 ? 'mid' : 'new'; by.set(k, (by.get(k) || 0) + l.rem * l.landed_unit); }
+  for (const l of S.lots) if (!l.voided && l.rem > 0) { const age = Math.round((t - Date.parse(l.date + 'T00:00:00Z')) / 864e5), k = age >= STALE_OLD ? 'old' : age >= STALE_MID ? 'mid' : 'new'; by.set(k, (by.get(k) || 0) + l.rem * l.landed_unit); }
   return { old: by.get('old') || 0, mid: by.get('mid') || 0, new: by.get('new') || 0 };
 }
 export function receivableAge() {
@@ -143,11 +145,32 @@ export function payableBreakdown() {
   const v = S.vSup || [], gross = sum(v.filter(x => x.balance > 0.5), x => x.balance), credit = sum(v.filter(x => x.balance < -0.5), x => -x.balance);
   return { gross, credit, net: gross - credit };
 }
-/** موجودی انبار معادل چند ماه فروش است (بر پایه‌ی بهای تمام‌شده‌ی ۳۰ روز اخیر، بدون مرجوعی) */
-export function stockMonths() {
-  const to = todayISO(), from = addDaysISO(to, -29), ok = new Set(activeSales().filter(s => s.date >= from && s.date <= to).map(s => s.id));
-  let cogs = 0; for (const l of S.saleLines) if (ok.has(l.sale_id)) cogs += Math.max(0, l.qty - (l.returned_qty || 0)) * l.unit_cost;
-  const val = (S.totals || {}).stock_value || 0, days = Math.min(30, bizDays());
-  const monthly = days > 0 ? cogs / days * 30 : 0;
-  return { value: val, monthly, months: monthly > 0 ? val / monthly : null };
+/** هزینه‌ی (بهای تمام‌شده‌ی) کالای فروخته‌شده از یک تاریخ تا امروز، بدون مرجوعی */
+export function cogsSince(from) {
+  const ok = new Set(activeSales().filter(s => s.date >= from).map(s => s.id));
+  let c = 0; for (const l of S.saleLines) if (ok.has(l.sale_id)) c += Math.max(0, l.qty - (l.returned_qty || 0)) * l.unit_cost;
+  return c;
 }
+/** موجودی انبار معادل چند ماه فروش است. سه عدد جدا می‌دهد تا برچسب و فرمول یکی باشد:
+    months30 = بر پایه‌ی بهای تمام‌شده‌ی واقعی ۳۰ روز اخیر (بدون برون‌یابی)؛ months7 = اگر ریتم ۷ روز اخیر ادامه یابد؛
+    monthsProj = اگر فعالیت کمتر از ۳۰ روز است و ریتم روزهای فعالیت به ۳۰ روز تعمیم یابد. `months` همان months30 است (برای هشدارها). */
+export function stockMonths() {
+  const to = todayISO(), val = (S.totals || {}).stock_value || 0, days = bizDays();
+  const c30 = cogsSince(addDaysISO(to, -29)), c7 = cogsSince(addDaysISO(to, -6));
+  const months30 = c30 > 0 ? val / c30 : null, months7 = c7 > 0 ? val / (c7 * 30 / 7) : null;
+  const monthsProj = days < 30 && c30 > 0 ? val / (c30 / days * 30) : null;
+  return { value: val, cogs30: c30, cogs7: c7, months: months30, months30, months7, monthsProj, days, young: days < 30, monthly: c30 };
+}
+/** متن روشن برای «موجودی معادل چند ماه فروش» (هم‌خوان با فرمول) */
+export function stockCoverText(sm = stockMonths()) {
+  if (sm.months30 == null) return 'نامشخص (فروشی ثبت نشده)';
+  const f = v => v.toFixed(1), parts = [`${f(sm.months30)} ماه بر پایه‌ی بهای تمام‌شده‌ی واقعی ۳۰ روز اخیر`];
+  if (sm.monthsProj != null) parts.push(`${f(sm.monthsProj)} ماه اگر ریتم ${sm.days} روز فعالیت ادامه یابد`);
+  if (sm.months7 != null) parts.push(`${f(sm.months7)} ماه اگر ریتم ۷ روز اخیر ادامه یابد`);
+  return parts.join(' · ');
+}
+
+/** «سود خالص» وقتی هیچ هزینه‌ی عمومی ثبت نشده، در واقع سود پیش از هزینه‌هاست؛ اسم را درست می‌گذاریم */
+export function noExpensesYet() { return !(S.expenses || []).some(e => !e.voided); }
+export function profitWord() { return noExpensesYet() ? 'سود ناخالص (هزینه‌ای ثبت نشده)' : 'سود خالص'; }
+export const profitWordShort = () => (noExpensesYet() ? 'سود ناخالص' : 'سود خالص');

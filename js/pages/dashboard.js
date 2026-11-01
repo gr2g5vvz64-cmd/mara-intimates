@@ -2,6 +2,7 @@ import { h, fmt, jlong, jstr, jmonthKey, jmonthName, todayISO, lastMonths, sum, 
 import { S, monthly, itemProfit, businessAccounts, accBalance, activeSales } from '../store.js';
 import { N, pill, kpi, tabsBar } from '../ui.js';
 import { tok } from '../theme.js';
+import { profitWordShort, noExpensesYet } from '../analytics.js';
 import { categoryStats } from '../insights.js';
 import { analysisModal } from '../analysis.js';
 import { chips } from '../ui.js';
@@ -179,7 +180,7 @@ export function legacyRender() {
 
   const kpisEl =
     h('div', { class: 'kpis' }, kpi('فروش امروز', N(sToday), { sub: 'ریال' }), kpi('سود فروش‌های امروز', N(pToday), { sub: 'ریال (قبل از هزینه‌ها)', tone: pToday < 0 ? 'neg' : 'pos' }),
-      kpi('فروش این ماه', N(M.sales), { sub: 'ریال' }), kpi('سود خالص این ماه', N(M.profit), { sub: 'ریال (بعد از هزینه‌ها)', tone: M.profit < 0 ? 'neg' : 'pos' }),
+      kpi('فروش این ماه', N(M.sales), { sub: 'ریال' }), kpi(profitWordShort() + ' این ماه', N(M.profit), { sub: noExpensesYet() ? 'ریال (هنوز هزینه‌ای ثبت نشده)' : 'ریال (بعد از هزینه‌ها)', tone: M.profit < 0 ? 'neg' : 'pos' }),
       kpi('سود کل', N(T.profit || 0), { sub: 'ریال (بعد از هزینه‌ها)', tone: (T.profit || 0) < 0 ? 'neg' : 'pos' }));
   const allView = () => [partnersCard(act, today, mk), goalsCard(), categoryProfitCard(), reorderCard(),
     h('div', { class: 'grid2' }, dueChart(), topCustomersCard()),

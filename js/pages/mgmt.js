@@ -2,7 +2,7 @@
 import { h, fmt, todayISO, addDaysISO, sum, lastMonths, jmonthKey, jmonthName } from '../util.js';
 import { S, activeSales, businessAccounts, accBalance } from '../store.js';
 import { N, kpi, chips, dtable, pill, tabsBar } from '../ui.js';
-import { period, salesStats, buyerStats, flowStats, sellerStats, stockAge, receivableAge, dataStart, buyerTable, concentration, grandTotal } from '../analytics.js';
+import { period, salesStats, buyerStats, flowStats, sellerStats, stockAge, receivableAge, dataStart, buyerTable, concentration, grandTotal, profitWordShort, STALE_OLD } from '../analytics.js';
 import { head } from './common.js';
 
 const RG = [{ v: 30, label: '۳۰ روز اخیر' }, { v: 90, label: '۳ ماه اخیر' }, { v: 365, label: 'یک سال' }, { v: 0, label: 'از روز اول' }];
@@ -43,7 +43,7 @@ function insights(c) {
   if (c.zero.length) add('bad', `${fmt(c.zero.length)} کالایی که این ماه فروش داشته الان تمام شده: ${c.zero.slice(0, 3).map(i => i.name).join('، ')}${c.zero.length > 3 ? ' …' : ''}`, '#/stock');
   else if (c.low.length) add('warn', `${fmt(c.low.length)} کالای پرفروش به حداقل موجودی رسیده؛ زمان سفارش است.`, '#/stock');
   if (c.deadVal > 0 && c.stockVal > 0 && c.deadVal / c.stockVal >= 0.2) add('warn', `${R1(c.deadVal / c.stockVal * 100)}٪ از ارزش انبار (${fmt(Math.round(c.deadVal))} ریال) کالایی است که ۳۰ روز اخیر فروش نداشته؛ تخفیف یا تبلیغ فکر کن.`, '#/stock');
-  if (c.cur.margin < 0) add('bad', 'سود خالص این بازه منفی است (هزینه‌ها از سود فروش بیشتر بوده).', '#/pnl');
+  if (c.cur.margin < 0) add('bad', profitWordShort() + ' این بازه منفی است (هزینه‌ها از سود فروش بیشتر بوده).', '#/pnl');
   if (c.conc && c.conc.share >= 70) add('warn', `${c.conc.share}٪ فروش به ${fmt(c.conc.k)} خریدار بزرگ وابسته است؛ ریسک وابستگی.`, '#/customers');
   const open = S.monthlyCounts.filter(m => m.status === 'open');
   if (open.length) add('warn', `انبارگردانی ${open.map(m => m.title).join(' و ')} هنوز بسته نشده.`, '#/monthcount');
@@ -68,8 +68,8 @@ function kpiView(rg) {
         kpi('ارزش کسب‌وکار', N(c.worth), { sub: `${fmt(Math.round(c.worth - c.cap))} نسبت به سرمایه` })),
       sec('۲ · فروش و سودآوری', `(${RG.find(r => r.v === rg).label})`,
         kpi('فروش', N(c.cur.sales), { sub: c.prev ? dlt(c.cur.sales, c.prev.sales) : `${fmt(c.cur.count)} فاکتور` }),
-        kpi('سود خالص', N(c.cur.profit), { tone: pos(c.cur.profit), sub: c.prev ? dlt(c.cur.profit, c.prev.profit) : '' }),
-        kpi('حاشیهٔ سود خالص', h('span', { class: 'n' }, R1(c.cur.margin) + '٪'), { sub: 'از هر ۱۰۰ تومان فروش، چند تومان سود می‌ماند' }),
+        kpi(profitWordShort(), N(c.cur.profit), { tone: pos(c.cur.profit), sub: c.prev ? dlt(c.cur.profit, c.prev.profit) : '' }),
+        kpi('حاشیهٔ ' + profitWordShort(), h('span', { class: 'n' }, R1(c.cur.margin) + '٪'), { sub: 'از هر ۱۰۰ تومان فروش، چند تومان سود می‌ماند' }),
         kpi('حاشیهٔ سود ناخالص', h('span', { class: 'n' }, c.cur.sales > 0 ? R1(c.cur.gross / c.cur.sales * 100) + '٪' : '—'), { sub: 'پیش از هزینه‌ها' }),
         kpi('هزینه به فروش', h('span', { class: 'n' }, c.cur.sales > 0 ? R1(c.cur.expenses / c.cur.sales * 100) + '٪' : '—'), { sub: `${fmt(Math.round(c.cur.expenses))} ریال هزینه` }),
         kpi('تخفیف داده‌شده', h('span', { class: 'n' }, c.gross > 0 ? R1(c.disc / c.gross * 100) + '٪' : '—'), { sub: `${fmt(Math.round(c.disc))} ریال` }),
@@ -85,7 +85,7 @@ function kpiView(rg) {
         kpi('گردش موجودی', h('span', { class: 'n' }, c.turn == null ? '—' : R1(c.turn) + ' بار'), { sub: 'بهای فروش‌رفته ÷ ارزش انبار در این بازه' }),
         kpi('انبار برای چند روز؟', h('span', { class: 'n' }, c.cover == null ? '—' : fmt(Math.round(c.cover)) + ' روز'), { sub: 'با سرعت فروش همین بازه' }),
         kpi('کالای راکد (۳۰ روز بی‌فروش)', N(c.deadVal), { sub: c.stockVal > 0 ? `${R1(c.deadVal / c.stockVal * 100)}٪ انبار` : '', tone: c.deadVal > 0 ? 'neg' : '' }),
-        kpi('انبار بالای ۳۰ روز مانده', N(c.sa.old)), kpi('پرفروش‌های تمام‌شده / رو به اتمام', h('span', { class: 'n' }, `${fmt(c.zero.length)} / ${fmt(c.low.length)}`))),
+        kpi(`انبار بالای ${fmt(STALE_OLD)} روز مانده`, N(c.sa.old)), kpi('پرفروش‌های تمام‌شده / رو به اتمام', h('span', { class: 'n' }, `${fmt(c.zero.length)} / ${fmt(c.low.length)}`))),
       sec('۵ · مشتری و کانال', `(${RG.find(r => r.v === rg).label})`,
         kpi('خریدار فعال', h('span', { class: 'n' }, fmt(c.B.active)), { sub: `${fmt(c.B.fresh)} نفر جدید` }), kpi('خریدار تکراری', h('span', { class: 'n' }, c.B.repeat + '٪'), { sub: 'از خریداران فعال' }),
         kpi('وابستگی به خریداران بزرگ', h('span', { class: 'n' }, c.conc ? c.conc.share + '٪' : '—'), { sub: c.conc ? `${fmt(c.conc.k)} نفر از ${fmt(c.conc.n)}` : 'خریدار کافی نیست' }),

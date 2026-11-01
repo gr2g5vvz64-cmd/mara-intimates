@@ -1,7 +1,8 @@
 // «بسته‌ی بررسی» برای دادن به هوش مصنوعی‌های دیگر: داشبورد + تحلیل عملکرد + بررسی اشتباهات + مشاور خرید + گزارش جلسه
 import { jstr, todayISO, fmt, toast, sum, addDaysISO } from './util.js';
 import { S, activeSales } from './store.js';
-import { payableBreakdown, stockMonths, bizDays } from './analytics.js';
+import { payableBreakdown, stockMonths, stockCoverText, bizDays, noExpensesYet } from './analytics.js';
+import { indicatorsText, bonusRulesText } from './indicators.js';
 import { buildReport, reportText } from './report.js';
 import { analyze } from './analysis.js';
 import { loadAdvisor, adviceDigest } from './advisor.js';
@@ -12,10 +13,11 @@ const RULES = `قواعد کسب‌وکار (برای اینکه بررسی‌ک
 • MARA INTIMATES: فروش لباس زیر و جوراب زنانه از راه اینستاگرام و آشنایان؛ سه شریک/نقش: مدیر (حمیدرضا)، دو شریک فروشنده (مهسا و رعنا).
 • قیمت تمام‌شده‌ی کالا به روش FIFO و شامل هزینه‌های رسیدن به انبار (landed cost) است.
 • هیچ چیز پاک نمی‌شود؛ فقط ابطال می‌شود و تاریخچه می‌ماند.
-• سود خالص بین دو شریک ۵۰/۵۰ تقسیم می‌شود؛ سرمایه‌ی دو شریک با هم برابرسازی می‌شود. برداشت سود/سرمایه فقط با مدیر است.
+• سود قابل تقسیم (پس از کسر هزینه‌ها و پاداش آشنایان) بین دو شریک ۵۰/۵۰ تقسیم می‌شود؛ سرمایه‌ی دو شریک با هم برابرسازی می‌شود. برداشت سود/سرمایه فقط با مدیر است.
 • شروع فعالیت: مهر ۱۴۰۵؛ بنابراین داده‌ی کم و دوره‌ی کوتاه است و نتیجه‌گیری‌های آماری باید محتاطانه باشد.
 • هدف فروش ماهانه فعلاً فقط برای فروش به «آشنایان» است؛ فروش پیج اینستاگرام هدف جدا دارد (هنوز تعیین نشده).
-• مبلغ‌ها به ریال است.`;
+• مبلغ‌ها به ریال است.
+• هر شاخصی که داده‌ی کافی ندارد یا نشان داده نمی‌شود یا کنارش نوشته «بعد از N روز قابل اندازه‌گیری است»؛ آن‌ها را مبنای نتیجه‌گیری نکن.`;
 const ASK = `از تو (هوش مصنوعی بررسی‌کننده) می‌خواهم:
 ۱) عددها و نتیجه‌گیری‌های بالا را بخوان و هر جا ناسازگاری، خطای محاسبه‌ای یا ادعای بی‌پشتوانه دیدی دقیق بگو (با اشاره به همان بخش).
 ۲) توصیه‌های «مشاور خرید» و «تحلیل عملکرد» را نقد کن: کدام منطقی است، کدام خطرناک یا زود است؟ آستانه‌ها (حداقل فروش، تعداد روز و مشتری) را قضاوت کن.
@@ -33,7 +35,8 @@ export async function buildAiPack({ anon = false } = {}) {
   L.push(`تعداد کالای موجود: ${fmt(act.length)} · جمع تعداد: ${fmt(act.reduce((a, i) => a + i.rem, 0))}`);
   const pb = payableBreakdown(), sm = stockMonths();
   L.push(`بدهی کل به تامین‌کنندگان: ${M(pb.gross)} · اعتبار نزد تامین‌کنندگان: ${M(pb.credit)} · بدهی خالص (در داشبورد): ${M(pb.net)}`);
-  L.push(`موجودی انبار معادل ${sm.months == null ? '—' : sm.months.toFixed(1)} ماه فروش (بهای تمام‌شده‌ی ۳۰ روز اخیر) · روزهای فعالیت تا امروز: ${fmt(bizDays())}`);
+  L.push(`موجودی انبار معادل: ${stockCoverText(sm)} · روزهای فعالیت تا امروز: ${fmt(bizDays())}${noExpensesYet() ? ' · هنوز هیچ هزینه‌ی عمومی ثبت نشده (سود نشان‌داده‌شده پیش از هزینه‌هاست)' : ''}`);
+  L.push(bonusRulesText());
   const from30 = addDaysISO(todayISO(), -29), s30 = activeSales().filter(s => s.date >= from30);
   L.push('', 'فروش ۳۰ روز اخیر به تفکیک فروشنده و کانال (ریال؛ سود = پس از مرجوعی، پیش از هزینه‌های عمومی):');
   const cell = new Map(); for (const x of s30) { const k = `${x.seller || '—'} · ${x.channel || '—'}`, o = cell.get(k) || { n: 0, t: 0, p: 0 }; o.n++; o.t += x.total; o.p += x.profit || 0; cell.set(k, o); }
@@ -43,11 +46,13 @@ export async function buildAiPack({ anon = false } = {}) {
   rets.forEach(r => L.push(`  • ${S.I[r.item_id] ? S.I[r.item_id].name : '—'} ×${fmt(r.qty)} · ${r.condition || ''} · علت: ${r.reason || 'ثبت نشده'} · اثر روی سود ${M(r.profit_effect || 0)}`));
   for (const n of [7, 30]) { L.push('', `=== ۲) تحلیل عملکرد ${fmt(n)} روز اخیر ===`); try { L.push(reportText(buildReport(n))); } catch (e) { L.push('(خطا در ساخت گزارش: ' + e.message + ')'); } }
   L.push('', '=== ۳) بررسی اشتباهات (تحلیل خودکار برنامه) ===');
-  try { const { findings, ok } = analyze(); findings.forEach(f => L.push(`• [${f.lvl}] ${f.title}: ${f.detail}${f.fix ? ' ← ' + f.fix : ''}`)); L.push(`سالم: ${ok.join(' | ') || '—'}`); } catch (e) { L.push('(خطا: ' + e.message + ')'); }
+  try { const { findings, ok, pending } = analyze(); findings.forEach(f => L.push(`• [${f.lvl}] ${f.title}: ${f.detail}${f.fix ? ' ← ' + f.fix : ''}`)); L.push(`سالم: ${ok.join(' | ') || '—'}`); if (pending.length) L.push(`هنوز قابل سنجش نیست: ${pending.map(x => `${x.title} (${x.note})`).join(' | ')}`); } catch (e) { L.push('(خطا: ' + e.message + ')'); }
   L.push('', '=== ۴) مشاور خرید (۳۰ روز) ===');
   try { L.push(adviceDigest(await loadAdvisor(30, true))); } catch (e) { L.push('(مشاور در دسترس نبود: ' + e.message + ')'); }
   L.push('', '=== ۵) گزارش جلسه‌ی ۱۴ روزه ===');
   try { L.push(meetingText(buildMeeting(14))); } catch (e) { L.push('(خطا: ' + e.message + ')'); }
+  L.push('', '=== ۶) شاخص‌های تکمیلی ===');
+  try { L.push(indicatorsText()); } catch (e) { L.push('(خطا: ' + e.message + ')'); }
   L.push('', '=== درخواست از بررسی‌کننده ===', ASK);
   let t = L.join('\n');
   if (anon) {   // نام مشتری و تامین‌کننده را بی‌نام می‌کند

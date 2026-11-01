@@ -16,14 +16,18 @@ export async function adviceFor(itemId) {
 }
 export const VERDICT = {
   urgent: ['red', '🔴 تمام شده؛ بخرید'], buy: ['green', '🛒 بخرید'], hold: ['amber', '⚠️ سود کم'], ok: ['blue', '✅ موجودی کافی'],
-  weak: ['gray', 'فروش کم'], avoid: ['red', '⛔ فعلاً نخر']
+  weak: ['gray', 'فروش کم'], avoid: ['red', '⛔ فعلاً نخر'], wait: ['gray', '⏳ هنوز زود است'], size: ['amber', '🧩 سایز/رنگ ناقص']
 };
+/** وضعیت تصمیم خرید در سطح «مدل» */
+export const MODEL_STATUS = { rebuy: 'green', limited: 'amber', hold: 'amber', enough: 'blue', wait: 'gray', stop: 'red' };
 export function adviceText(o) {
   if (!o) return '';
   if (o.verdict === 'urgent' || o.verdict === 'buy') return `🛒 مشاور: خوب فروش می‌رود؛ پیشنهاد خرید ${o.buy_qty} عدد. ${o.reason}`;
   if (o.verdict === 'avoid') return `⛔ مشاور: فعلاً نخر. ${o.reason}`;
   if (o.verdict === 'hold') return `⚠️ مشاور: ${o.reason}`;
   if (o.verdict === 'weak') return `ℹ️ مشاور: ${o.reason}`;
+  if (o.verdict === 'wait') return `⏳ مشاور: ${o.reason}`;
+  if (o.verdict === 'size') return `🧩 مشاور: ${o.reason}`;
   return `✅ مشاور: ${o.reason}`;
 }
 export function adviceDigest(r) {
@@ -34,5 +38,11 @@ export function adviceDigest(r) {
   sec('پرفروش با سود کم:', g('hold'), o => `${o.name}: سود ${o.margin}٪`);
   sec('خرید نکنید:', g('avoid'), o => `${o.name}: ${o.reason}`);
   sec('فروش کم (پیشنهاد نمی‌دهم):', g('weak'), o => `${o.name}: ${o.sold} عدد`);
+  sec('سایز/رنگ ناقص (مدل پرفروش است، این ترکیب نه):', g('size'), o => o.name);
+  if (g('wait').length) L.push('', `هنوز زود است: ${g('wait').length} کالا (تازه وارد شده‌اند؛ تا ${r.grace_days} روز بعد از ورود «نخر» نمی‌گویم).`);
+  if (r.models && r.models.length) {
+    L.push('', 'تصمیم خرید به تفکیک مدل (تقاضا ← موجودی ← تصمیم):');
+    r.models.filter(m => ['rebuy', 'limited', 'hold', 'stop'].includes(m.decision.status)).forEach(m => L.push(`• ${m.model}: فروش ${m.demand.sold} عدد، ${m.demand.customers} مشتری (${m.demand.tier_label}) | موجودی ${m.stock.rem}${m.stock.cover_days != null ? `، برای حدود ${m.stock.cover_days} روز` : ''} | ${m.decision.label}${m.decision.buy_qty ? ` ${m.decision.buy_qty} عدد` : ''}: ${m.decision.reason}`));
+  }
   return L.join('\n');
 }

@@ -2,7 +2,8 @@
 import { h, fmt, jstr, todayISO, addDaysISO, sum } from './util.js';
 import { S, activeSales, businessAccounts, accBalance } from './store.js';
 import { pendingCount, blockedCount } from './outbox.js';
-import { stockMonths, bizDays } from './analytics.js';
+import { stockMonths, stockCoverText, bizDays, noExpensesYet, STALE_MID, STALE_OLD, profitWordShort } from './analytics.js';
+import { jmonthKey } from './util.js';
 import { modal, pill } from './ui.js';
 import { toast } from './util.js';
 
@@ -12,7 +13,8 @@ const by = (arr, f = x => x.created_by) => [...new Set(arr.map(f).filter(Boolean
 
 /** خروجی: [{ lvl: 'err'|'warn'|'info', title, detail, who: [نام‌ها], fix, href }]  +  ok: فهرست بررسی‌های سالم */
 export function analyze() {
-  const F = [], OK = [], T = S.totals || {}, today = todayISO(), act = activeSales();
+  const F = [], OK = [], PENDING = [], T = S.totals || {}, today = todayISO(), act = activeSales(), BD = bizDays();
+  const later = (title, note) => PENDING.push({ title, note });
   const add = (lvl, title, detail, o = {}) => F.push({ lvl, title, detail, who: o.who || [], fix: o.fix || '', href: o.href || '' });
   const check = (okText, bad) => { if (bad) return; OK.push(okText); };
 
@@ -67,12 +69,16 @@ export function analyze() {
   if (negStock.length) add('err', 'موجودی منفی', names(negStock, l => `${l.item} (${l.lot_no})`), { fix: 'نباید رخ دهد؛ فوراً «تشخیص مشکل» را ببین.', href: '#/stock' });
   const ages = new Map();
   for (const l of S.lots) if (!l.voided && l.rem > 0) { const a = days(l.date), c = ages.get(l.item); if (!c || a > c.age) ages.set(l.item, { age: a }); }
-  const old30 = [...ages].filter(([, a]) => a.age >= 30), old14 = [...ages].filter(([, a]) => a.age >= 14 && a.age < 30);
-  if (old30.length) add('warn', 'کالایی که بیش از یک ماه از خریدش گذشته و مانده', old30.map(([k, a]) => `${k} (${a.age} روز)`).join(' · '), { fix: 'تخفیف، پست استوری یا پیشنهاد ویژه برای فروش.', href: '#/stock' });
-  if (old14.length) add('info', 'کالایی که بیش از دو هفته از خریدش گذشته و مانده', old14.map(([k, a]) => `${k} (${a.age} روز)`).join(' · '), { href: '#/stock' });
-  const low = S.stock.filter(i => i.active && i.rem > 0 && i.rem <= i.min_stock);
-  if (low.length) add('info', 'کم‌موجودی', low.map(i => `${i.name} (${i.rem})`).join(' · '), { href: '#/stock' });
-  check('موجودی منفی و کالای راکد (بیش از ۳۰ روز) نداریم', negStock.length || old30.length);
+  const old60 = [...ages].filter(([, a]) => a.age >= STALE_OLD), old45 = [...ages].filter(([, a]) => a.age >= STALE_MID && a.age < STALE_OLD);
+  if (old60.length) add('warn', `کالایی که بیش از ${fmt(STALE_OLD)} روز از خریدش گذشته و مانده`, old60.map(([k, a]) => `${k} (${a.age} روز)`).join(' · '), { fix: 'پیشنهاد هدفمند، پست استوری یا برگشت به تامین‌کننده.', href: '#/stock' });
+  if (old45.length) add('info', `کالای کم‌گردش (بیش از ${fmt(STALE_MID)} روز مانده)`, old45.map(([k, a]) => `${k} (${a.age} روز)`).join(' · '), { href: '#/stock' });
+  // کم‌موجودی: فقط کالایی که فروش داشته؛ کالای بی‌فروش کم‌موجود، «خرید فوری» نیست
+  const soldRecent = new Set(S.saleLines.filter(l => { const s = S.SALE[l.sale_id]; return s && !s.voided && s.date >= addDaysISO(today, -30); }).map(l => l.item_id));
+  const lowAll = S.stock.filter(i => i.active && i.rem > 0 && i.rem <= i.min_stock), low = lowAll.filter(i => soldRecent.has(i.id)), lowQuiet = lowAll.length - low.length;
+  if (low.length) add('info', 'کم‌موجودیِ کالای فروش‌رفته', low.map(i => `${i.name} (${i.rem})`).join(' · ') + (lowQuiet ? ` — و ${fmt(lowQuiet)} کالای کم‌موجود که در ۳۰ روز اخیر فروش نداشته (خرید فوری لازم نیست؛ تصمیم خرید با «مشاور خرید» است)` : ''), { href: '#/stock' });
+  else if (lowQuiet) add('info', 'کم‌موجودی بدون فروش', `${fmt(lowQuiet)} کالا کم‌موجود است ولی در ۳۰ روز اخیر فروش نداشته؛ خرید فوری لازم نیست (تصمیم خرید با «مشاور خرید» است).`, { href: '#/analysis' });
+  check('موجودی منفی نداریم', negStock.length);
+  if (BD >= STALE_MID) check(`کالای راکد (بیش از ${fmt(STALE_OLD)} روز) نداریم`, old60.length); else later('کالای راکد / کم‌گردش', `هنوز قابل سنجش نیست؛ ${fmt(STALE_MID)} روز بعد از شروع فعالیت قابل اندازه‌گیری و استناد است (الان ${fmt(BD)} روز).`);
 
   // ۹) بستن روز
   const last = S.dayCloses.slice().sort((a, b) => (a.date < b.date ? 1 : -1))[0];
@@ -88,15 +94,21 @@ export function analyze() {
   const cm = T.capital_m || 0, cr = T.capital_r || 0;
   if (cm < 0 || cr < 0) add('err', 'سرمایه‌ی منفی برای یک شریک', `مهسا ${fmt(cm)} · رعنا ${fmt(cr)}`, { fix: 'برداشت‌ها بیشتر از سرمایه ثبت شده؛ صحت برداشت‌ها را بررسی کن.', href: '#/finance' });
   const dif = Math.abs(cm - cr);
-  if (cm + cr > 0 && dif > Math.max(1000000, (cm + cr) * 0.05)) add('info', 'سرمایه‌ی دو شریک برابر نیست', `مهسا ${fmt(cm)} · رعنا ${fmt(cr)} (تفاوت ${fmt(dif)})`, { fix: 'اگر قرار است برابر باشد: مالی ← «انتقال سرمایه» ← «برابر کردن سهم‌ها».', href: '#/finance' });
+  if (cm + cr > 0 && dif > Math.max(1000000, (cm + cr) * 0.05)) add('info', 'سرمایه‌ی دو شریک برابر نیست', `مهسا ${fmt(cm)} · رعنا ${fmt(cr)} (تفاوت ${fmt(dif)})`, { fix: `اگر قرار است برابر باشد: انتقال لازم نصف تفاوت است یعنی ${fmt(Math.round(dif / 2))} ریال از ${cm > cr ? 'مهسا به رعنا' : 'رعنا به مهسا'} (نه کل تفاوت). قبل از انتقال مطمئن شوید این ارقام «سرمایه‌ی پرداخت‌شده» اند، نه مانده‌ی حساب شریک پس از برداشت و سودهای قبلی. مسیر: مالی ← «انتقال سرمایه» ← «برابر کردن سهم‌ها».`, href: '#/finance' });
 
   // ۱۱) ثبت‌های دیرهنگام و احتمال دوباره‌کاری
   const late = act.filter(s => s.created_at && days(s.created_at) < 30 && (Date.parse(String(s.created_at).slice(0, 10)) - Date.parse(s.date)) / 864e5 > 3);
   if (late.length) add('info', 'فروش با تاریخ خیلی قبل‌تر از ثبت', names(late, s => s.no), { who: by(late), fix: 'اگر تاریخ را اشتباه زده‌اند، ویرایش کنند.', href: '#/sales' });
+  const shifted = late.filter(s => jmonthKey(s.date) !== jmonthKey(String(s.created_at).slice(0, 10)));
+  if (shifted.length) add('warn', 'فروش با تاریخ ماه قبل ثبت شده (هدف و پاداش دو ماه را عوض می‌کند)', `${names(shifted, s => `${s.no} (${jstr(s.date)})`)} — تاریخ فاکتور در ماهی است که ثبتش در ماه دیگر انجام شده؛ هدف ماهانه و پاداش آن دو ماه را جابه‌جا می‌کند.`, { who: by(shifted), fix: 'اگر تاریخ درست است مشکلی نیست؛ اگر اشتباه است ویرایش کنند. اگر ماه قبل بسته شده، تغییر تاریخ باید با مدیر باشد.', href: '#/sales' });
   const seen = new Map(), dup = [];
   for (const s of act) { const k = `${s.customer}|${s.date}|${s.total}`; if (seen.has(k)) dup.push([seen.get(k), s]); else seen.set(k, s); }
   if (dup.length) add('warn', 'احتمال ثبت دوباره‌ی یک فروش', dup.map(([a, b]) => `${a.no} و ${b.no}`).join(' · '), { who: by(dup.map(d => d[1])), fix: 'اگر تکراری است، یکی را «ابطال» کنند.', href: '#/sales' });
   check('فروش تکراری مشکوک نداریم', dup.length);
+
+  // هزینه‌ی عمومی ثبت‌نشده: سود «خالص» در واقع ناخالص است
+  if (noExpensesYet() && act.length && BD >= 14) add('warn', 'هیچ هزینه‌ی عمومی ثبت نشده', `از شروع فعالیت ${fmt(BD)} روز گذشته ولی هزینه‌ای (بسته‌بندی، ارسال، تبلیغ، کارمزد، رفت‌وآمد…) ثبت نشده؛ بنابراین ${profitWordShort()} با «سود واقعی» برابر نیست و سود قابل تقسیم بیشتر از واقع نشان داده می‌شود.`, { who: ['مهسا', 'رعنا'], fix: 'هزینه‌های هر روز در «هزینه‌ها» ثبت شود (حتی کوچک).', href: '#/expenses' });
+  check('هزینه‌های عمومی ثبت می‌شوند', noExpensesYet() && act.length && BD >= 14);
 
   // ۱۲) سیستم و ثبت‌های ارسال‌نشده
   const pend = pendingCount(), blk = blockedCount();
@@ -105,11 +117,12 @@ export function analyze() {
   if (S.diagErrors > 0) add('warn', 'خطاهای سیستمی ثبت شده', `${S.diagErrors} خطا در تشخیص مشکل.`, { href: '#/diag' });
   check('هیچ ثبت ارسال‌نشده یا خطای سیستمی نداریم', blk || pend || S.diagErrors > 0);
   const sm = stockMonths();
-  if (sm.months != null && sm.months >= 2) add(sm.months >= 3 ? 'warn' : 'info', 'سرمایه‌ی زیادی در انبار خوابیده', `موجودی انبار ${fmt(Math.round(sm.value))} ریال است و با سرعت فروش ۳۰ روز اخیر معادل حدود ${sm.months.toFixed(1)} ماه فروش می‌شود${bizDays() < 60 ? ' (فعالیت تازه است؛ تقریبی)' : ''}.`, { fix: 'فعلاً خرید جدید نکنید و کالای کم‌گردش را با پیشنهاد هدفمند بفروشید؛ جزئیات در «مشاور خرید».', href: '#/analysis' });
+  if (sm.months30 != null && sm.months30 >= 2) add(sm.months30 >= 3 ? 'warn' : 'info', 'سرمایه‌ی زیادی در انبار خوابیده', `موجودی انبار ${fmt(Math.round(sm.value))} ریال است و معادل ${stockCoverText(sm)} می‌شود${BD < 60 ? ' (فعالیت تازه است؛ تقریبی)' : ''}.`, { fix: 'فعلاً خرید جدید نکنید و کالای کم‌گردش را با پیشنهاد هدفمند بفروشید؛ جزئیات در «مشاور خرید».', href: '#/analysis' });
+  if (BD < 30) later('موجودی چند ماه فروش است (دقیق)', `بعد از ۳۰ روز فعالیت عدد ۳۰ روزه کامل می‌شود (الان ${fmt(BD)} روز)؛ تا آن موقع سه عدد با ریتم‌های مختلف نشان داده می‌شود و هیچ‌کدام قطعی نیست.`);
 
   const order = { err: 0, warn: 1, info: 2 };
   F.sort((a, b) => order[a.lvl] - order[b.lvl]);
-  return { findings: F, ok: OK };
+  return { findings: F, ok: OK, pending: PENDING };
 }
 
 /** متن آماده‌ی پیام برای مهسا و رعنا */
@@ -122,7 +135,7 @@ export function messageFor(findings, who) {
 const LV = { err: ['red', '🔴 مشکل'], warn: ['amber', '🟡 هشدار'], info: ['gray', 'ℹ️ نکته'] };
 export function analysisModal() {
   if (!S.me || S.me.role !== 'admin') return toast('تحلیل فقط برای مدیر است', 'err');
-  const { findings, ok } = analyze();
+  const { findings, ok, pending } = analyze();
   const nErr = findings.filter(f => f.lvl === 'err').length, nWarn = findings.filter(f => f.lvl === 'warn').length;
   const verdict = nErr ? h('div', { class: 'alert red' }, `🔴 ${nErr} مشکل جدی و ${nWarn} هشدار پیدا شد. در زیر نوشته شده به چه کسی بگویی چه چیزی را اصلاح کند.`)
     : nWarn ? h('div', { class: 'alert amber' }, `🟡 مشکل جدی نیست، ولی ${nWarn} هشدار داریم.`) : h('div', { class: 'alert ok' }, '✅ همه‌چیز سالم است؛ مشکل یا هشداری پیدا نشد.');
@@ -136,6 +149,7 @@ export function analysisModal() {
   const body = h('div', null, verdict, ...findings.map(card),
     findings.length ? h('div', { class: 'row', style: 'gap:8px;flex-wrap:wrap;margin:10px 0' }, msgBtn('مهسا'), msgBtn('رعنا')) : null,
     h('h3', { class: 'sec' }, `✅ سالم (${ok.length})`), h('ul', { class: 'hint' }, ok.map(t => h('li', null, t))),
+    pending.length ? h('div', null, h('h3', { class: 'sec' }, `⏳ هنوز قابل سنجش نیست (${pending.length})`), h('ul', { class: 'hint' }, pending.map(x => h('li', null, h('b', null, x.title + ': '), x.note)))) : null,
     h('p', { class: 'hint' }, 'این تحلیل فقط می‌خواند و چیزی را تغییر نمی‌دهد. هر بار دکمه را بزنی از روی آخرین داده‌ها دوباره حساب می‌شود.'));
   const m = modal({ title: 'تحلیل سلامت سیستم', body, wide: true });
   return m;

@@ -8,6 +8,9 @@ import { saleDetail, purchaseDetail } from './trade.js';
 import { buildReport, reportText, PERIODS } from '../report.js';
 import { errText } from '../store.js';
 import { advisorTab } from './advisor.js';
+import { buildIndicators } from '../indicators.js';
+import { analysisSettingsForm, pageStatsForm } from '../forms_misc.js';
+import { profitWordShort } from '../analytics.js';
 
 const LV = { error: ['red', '🔴 خطا'], warn: ['amber', '🟠 هشدار'], info: ['gray', '🔵 توضیح'] };
 const PAGE = { lot: '#/stock', item: '#/items', account: '#/finance', payment: '#/pay', collection: '#/customers', return: '#/returns' };
@@ -51,6 +54,20 @@ function auditTab() {
   load(); return host;
 }
 
+/* ---------- تب شاخص‌ها: آماده‌ها با عدد؛ بقیه «در انتظار داده» با زمان قابل اندازه‌گیری ---------- */
+function indTab() {
+  const host = h('div', null), items = buildIndicators(), ready = items.filter(x => x.ready), wait = items.filter(x => !x.ready);
+  host.append(
+    h('div', { class: 'row no-print', style: 'gap:8px;flex-wrap:wrap;margin:8px 0' },
+      h('button', { type: 'button', class: 'btn gold', onclick: () => pageStatsForm() }, '📝 ثبت آمار هفتگی پیج'),
+      h('button', { type: 'button', class: 'btn ghost', onclick: () => analysisSettingsForm() }, '⚙️ تنظیمات تحلیل (زمان تأمین، هدف پیج)')),
+    ...ready.map(x => h('div', { class: 'card', style: 'margin:8px 0' }, h('div', { class: 'ct' }, x.title), h('p', { style: 'margin:4px 0;font-weight:700' }, x.value), x.detail ? h('p', { class: 'hint', style: 'margin:2px 0' }, x.detail) : null, x.note ? h('p', { class: 'hint', style: 'margin:2px 0;color:var(--amber, #d9a21b)' }, '⚠️ ' + x.note) : null)),
+    wait.length ? h('div', { class: 'card', style: 'margin:8px 0' }, h('div', { class: 'ct' }, `⏳ در انتظار داده (${wait.length}) — هنوز قابل اندازه‌گیری و استناد نیست`),
+      h('ul', { class: 'plain' }, wait.map(x => h('li', { style: 'margin:6px 0' }, h('b', null, x.title + ': '), x.note)))) : null,
+    h('p', { class: 'hint' }, 'هر شاخص فقط وقتی عدد می‌دهد که داده‌ی کافی داشته باشد؛ در غیر این صورت اینجا نوشته می‌شود از چه زمانی قابل اتکاست. این صفحه فقط می‌خواند.'));
+  return host;
+}
+
 /* ---------- تب تحلیل عملکرد ---------- */
 function perfTab() {
   const host = h('div', null), body = h('div', null);
@@ -58,7 +75,7 @@ function perfTab() {
     const r = buildReport(periodN), k = r.kpi, d = (a, b) => (b > 0 ? `${a >= b ? '▲' : '▼'} ${Math.abs(Math.round((a - b) / b * 100))}٪` : '');
     const tone = t => (t === 'pos' ? 'color:var(--green)' : t === 'neg' ? 'color:var(--red)' : '');
     body.replaceChildren(
-      h('div', { class: 'kpis' }, kpi('فروش', Math.round(k.sales).toLocaleString('fa-IR'), { sub: d(k.sales, k.prevSales) }), kpi('سود خالص', Math.round(k.profit).toLocaleString('fa-IR'), { sub: d(k.profit, k.prevProfit), tone: k.profit < 0 ? 'neg' : 'pos' }),
+      h('div', { class: 'kpis' }, kpi('فروش', Math.round(k.sales).toLocaleString('fa-IR'), { sub: d(k.sales, k.prevSales) }), kpi(profitWordShort(), Math.round(k.profit).toLocaleString('fa-IR'), { sub: d(k.profit, k.prevProfit), tone: k.profit < 0 ? 'neg' : 'pos' }),
         kpi('درصد سود', h('span', { class: 'n' }, k.margin.toFixed(1) + '٪'), { sub: `قبل: ${k.prevMargin.toFixed(1)}٪` }), kpi('فاکتور', h('span', { class: 'n' }, k.count.toLocaleString('fa-IR')), { sub: `قبل: ${k.prevCount.toLocaleString('fa-IR')}` })),
       ...r.sections.map(s => h('div', { class: 'card', style: 'margin:8px 0' }, h('div', { class: 'ct' }, s.title), h('ul', { class: 'plain' }, s.rows.map(x => h('li', { style: 'margin:6px 0;' + tone(x.tone) }, x.text))))),
       r.advice.length ? h('div', { class: 'card', style: 'margin:8px 0;border-color:var(--green)' }, h('div', { class: 'ct' }, '✅ پیشنهادهای عملی'), h('ol', null, r.advice.map(a => h('li', { style: 'margin:6px 0' }, a)))) : null,
@@ -73,8 +90,8 @@ function perfTab() {
 export function render() {
   if (!S.me || S.me.role !== 'admin') return h('div', { class: 'card' }, 'این صفحه فقط برای مدیر است.');
   const host = h('div', null), body = h('div', null);
-  const pick = () => (tab === 'audit' ? auditTab() : tab === 'perf' ? perfTab() : advisorTab());
+  const pick = () => (tab === 'audit' ? auditTab() : tab === 'perf' ? perfTab() : tab === 'ind' ? indTab() : advisorTab());
   const draw = () => { body.replaceChildren(pick()); host.querySelector('.tabs') && host.querySelector('.tabs').replaceWith(bar()); };
-  const bar = () => tabsBar([{ id: 'advisor', label: '🧭 مشاور خرید' }, { id: 'perf', label: '📈 تحلیل عملکرد' }, { id: 'audit', label: '🔍 بررسی اشتباهات' }, { id: 'meeting', label: '🧑‍💼 گزارش جلسه‌ی دو هفته‌ای' }], tab, t => { if (t === 'meeting') { location.hash = '#/meeting'; return; } tab = t; draw(); });
+  const bar = () => tabsBar([{ id: 'advisor', label: '🧭 مشاور خرید' }, { id: 'perf', label: '📈 تحلیل عملکرد' }, { id: 'ind', label: '📊 شاخص‌ها' }, { id: 'audit', label: '🔍 بررسی اشتباهات' }, { id: 'meeting', label: '🧑‍💼 گزارش جلسه‌ی دو هفته‌ای' }], tab, t => { if (t === 'meeting') { location.hash = '#/meeting'; return; } tab = t; draw(); });
   host.append(head('تحلیل', [btn('📤 خروجی برای بررسی هوش مصنوعی', async e => { const b = e.currentTarget; b.disabled = true; try { await copyAiPack(); } catch (er) { toast(errText(er), 'err'); } finally { b.disabled = false; } }, 'ghost'), btn('📤 همان، بدون نام مشتری', async e => { const b = e.currentTarget; b.disabled = true; try { await copyAiPack(true); } catch (er) { toast(errText(er), 'err'); } finally { b.disabled = false; } }, 'ghost')], `${jlong(todayISO())} · فقط مدیر`), bar(), body); body.append(pick()); return host;
 }

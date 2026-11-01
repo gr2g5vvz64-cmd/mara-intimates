@@ -1,6 +1,6 @@
 // فرم‌های جانبی: دریافت، پرداخت، هزینه، انتقال، مرجوعی، جابجایی کالا، کالا/تامین‌کننده، ابطال
 import { h, fmt, todayISO, toast, sum, jstr, addDaysISO } from './util.js';
-import { S, rpc, bus, loadAll, customers, pref, setPref, businessAccounts, accBalance, EXPCATS, EXP_KIND_DEFAULT, holdKey, canVoid, canEdit, errText, catNames } from './store.js';
+import { S, rpc, settingNum, bus, loadAll, customers, pref, setPref, businessAccounts, accBalance, EXPCATS, EXP_KIND_DEFAULT, holdKey, canVoid, canEdit, errText, catNames } from './store.js';
 import { willGoNegative, bonusCfg } from './insights.js';
 import { findDup } from './dup.js';
 import { jmonthKey, jmonthName } from './util.js';
@@ -609,6 +609,39 @@ export function bonusForm() {
     h('label', { for: 'bn_on', class: 'row', style: { display: 'flex', gap: '10px', alignItems: 'center' } }, on, h('b', null, 'پاداش روشن باشد')),
     field('پاداش از سود، تا رسیدن به هدف', f1), field('پاداش از سود، بخشِ بالاتر از هدف', f2), field('پاداش اضافه‌ی «فروشنده‌ی برتر ماه»', f3),
     field('حداقل حاشیه‌ی سود روی بها', f4), P('فروشی که حاشیه‌ی سودش از این کمتر باشد (تخفیف زیاد) در هدف و پاداش نمی‌آید. فروشنده‌ی برتر فقط وقتی انتخاب می‌شود که خودش به هدف رسیده و وصول‌شده‌ی فروشش از دیگری بیشتر باشد.')), footer: [btn] });
+}
+
+/* ----- تنظیمات تحلیل (فقط مدیر): زمان تأمین، روز اطمینان، هدف ماهانه‌ی پیج ----- */
+export function analysisSettingsForm() {
+  const f1 = numField({ value: settingNum('lead_days', 35), unit: 'روز' }), f2 = numField({ value: settingNum('safety_days', 10), unit: 'روز' }), f3 = numField({ value: settingNum('page_goal', 0) || '' });
+  const btn = h('button', { class: 'btn primary lg', type: 'button' }, 'ذخیره');
+  btn.onclick = async () => {
+    const r = await run(btn, async () => { let last; for (const [key, value] of [['lead_days', f1.get() || 35], ['safety_days', f2.get() === '' ? 10 : f2.get()], ['page_goal', f3.get() || 0]]) last = await rpc('save_setting', { key, value }); return last; });
+    if (r) finish(m, 'تنظیمات ذخیره شد ✔');
+  };
+  const m = modal({ title: 'تنظیمات تحلیل', body: h('div', { class: 'form' },
+    P('«نقطه‌ی سفارش» = فروش روزانه × (زمان تأمین + روز اطمینان). زمان تأمین یعنی از سفارش به چین/تایوان تا رسیدن کالا به انبار.'),
+    field('زمان تأمین کالا (روز)', f1), field('روز اطمینان (موجودی احتیاطی)', f2),
+    field('هدف فروش ماهانه‌ی پیج اینستاگرام (ریال؛ خالی = تعیین نشده)', f3), P('هدف پیج را بعد از دو هفته ثبت آمار دایرکت و دیدن ریتم واقعی تعیین کنید؛ هدف آشنایان جداست.'), btn) });
+}
+
+/* ----- آمار هفتگی پیج (دایرکت، درخواست قیمت، بازدید) ----- */
+export function pageStatsForm() {
+  const day = new Date(todayISO() + 'T00:00:00Z').getUTCDay(), sat = addDaysISO(todayISO(), -((day + 1) % 7));
+  let week = sat;
+  const cur = () => (S.pageStats || []).find(x => x.week_start === week) || {};
+  const f1 = numField({ value: cur().dms ?? '', unit: 'نفر' }), f2 = numField({ value: cur().price_asks ?? '', unit: 'نفر' }), f3 = numField({ value: cur().visits ?? '', unit: 'بازدید' });
+  const note = h('input', { class: 'inp', placeholder: 'توضیح (اختیاری)', value: cur().note || '' });
+  const dateCtl = dateField(week, v => { week = v; });
+  const btn = h('button', { class: 'btn primary lg', type: 'button' }, 'ثبت آمار هفته');
+  btn.onclick = async () => {
+    if (!has(f1) && !has(f2) && !has(f3)) return toast('حداقل یکی از عددها را بنویس', 'err');
+    const r = await run(btn, () => rpc('save_page_stats', { week_start: week, dms: has(f1) ? f1.get() : 0, price_asks: has(f2) ? f2.get() : 0, visits: has(f3) ? f3.get() : 0, note: note.value }));
+    if (r) finish(m, 'آمار پیج ثبت شد ✔');
+  };
+  const m = modal({ title: 'آمار هفتگی پیج اینستاگرام', body: h('div', { class: 'form' },
+    P('هر هفته از «اینسایت» اینستاگرام و دایرکت بنویسید. با این عددها «نرخ تبدیل دایرکت به خرید» حساب می‌شود. اگر همان هفته را دوباره ثبت کنید، جایگزین می‌شود.'),
+    field('یک روز از آن هفته (پیش‌فرض: شنبه‌ی این هفته)', dateCtl), field('تعداد دایرکت (پیام) در این هفته', f1), field('چند نفرشان قیمت پرسیدند', f2), field('بازدید از پروفایل', f3), note, btn) });
 }
 
 /* ----- ویرایش پرداخت / دریافت / هزینه / انتقال / جابجایی (ابطال نسخه‌ی قبلی + ثبت نسخه‌ی اصلاح‌شده؛ فقط حمیدرضا، مهسا و رعنا) ----- */
