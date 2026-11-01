@@ -27,7 +27,7 @@ export function sales(query) {
     tbl.replaceChildren(dtable([
       { k: 'no', label: 'شماره', main: true, render: r => h('span', null, r.no, ' ', r.voided ? pill('باطل', 'red') : null) },
       { label: 'تاریخ', render: r => jstr(r.date) }, { k: 'seller', label: 'فروشنده' }, { k: 'channel', label: 'محل فروش', hm: true },
-      { label: 'خریدار', render: r => (r.customer ? h('span', null, r.customer, ' ', canEdit() && !r.voided ? h('a', { href: '#', class: 'hint', title: 'تغییر خریدار', onclick: e => { e.preventDefault(); e.stopPropagation(); setBuyerForm(r); } }, '✏️') : null) : (r.voided ? pill('بدون خریدار', 'red') : h('span', null, pill('بدون خریدار', 'red'), ' ', canEdit() ? btn('ثبت نام', e => { e.stopPropagation(); setBuyerForm(r); }, 'gold sm') : null))) }, { label: 'کالاها', cls: 'wrap', render: r => r.items_text },
+      { label: 'خریدار', render: r => (r.customer ? h('span', null, r.customer) : (r.voided ? pill('بدون خریدار', 'red') : h('span', null, pill('بدون خریدار', 'red'), ' ', canEdit() ? btn('ثبت نام', e => { e.stopPropagation(); setBuyerForm(r); }, 'gold sm') : null))) }, { label: 'کالاها', cls: 'wrap', render: r => r.items_text },
       { label: 'جمع فروش', cls: 'num', render: r => N(r.total) }, { label: 'دریافتی', cls: 'num', hm: true, render: r => N(r.received + r.collected) },
       { label: 'نسیه‌ی باز', cls: 'num', render: r => (r.outstanding > 0 && !r.voided ? pill(fmt(r.outstanding), 'amber') : '') },
       { label: 'سررسید', render: r => (r.outstanding > 0 && !r.voided ? dueCell(r.due_date) : '') },
