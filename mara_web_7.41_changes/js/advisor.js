@@ -1,0 +1,48 @@
+// مشاور خرید (فقط مدیر): داده از سرور می‌آید (/api/advisor/) تا متن بات و برنامه یکی باشد
+import { api, S } from './store.js';
+
+const cache = new Map();
+export const isAdminUser = () => !!(S.me && S.me.role === 'admin');
+export async function loadAdvisor(days = 30, fresh = false) {
+  const c = cache.get(days);
+  if (!fresh && c && Date.now() - c.t < 5 * 60000) return c.d;
+  const d = (await api('/api/advisor/?days=' + days)).data;
+  cache.set(days, { t: Date.now(), d }); return d;
+}
+/** برای فرم خرید: نظر مشاور درباره‌ی یک کالا (null اگر چیزی برای گفتن نیست) */
+export async function adviceFor(itemId) {
+  if (!isAdminUser()) return null;
+  try { const d = await loadAdvisor(30); const o = d.items.find(x => x.id === itemId); return o && o.verdict !== 'none' ? o : null; } catch { return null; }
+}
+export const VERDICT = {
+  urgent: ['red', '🔴 تمام شده؛ بخرید'], buy: ['green', '🛒 بخرید'], hold: ['amber', '⚠️ سود کم'], ok: ['blue', '✅ موجودی کافی'],
+  weak: ['gray', 'فروش کم'], avoid: ['red', '⛔ فعلاً نخر'], wait: ['gray', '⏳ هنوز زود است'], size: ['amber', '🧩 سایز/رنگ ناقص']
+};
+/** وضعیت تصمیم خرید در سطح «مدل» */
+export const MODEL_STATUS = { rebuy: 'green', limited: 'amber', hold: 'amber', enough: 'blue', wait: 'gray', stop: 'red' };
+export function adviceText(o) {
+  if (!o) return '';
+  if (o.verdict === 'urgent' || o.verdict === 'buy') return `🛒 مشاور: خوب فروش می‌رود؛ پیشنهاد خرید ${o.buy_qty} عدد. ${o.reason}`;
+  if (o.verdict === 'avoid') return `⛔ مشاور: فعلاً نخر. ${o.reason}`;
+  if (o.verdict === 'hold') return `⚠️ مشاور: ${o.reason}`;
+  if (o.verdict === 'weak') return `ℹ️ مشاور: ${o.reason}`;
+  if (o.verdict === 'wait') return `⏳ مشاور: ${o.reason}`;
+  if (o.verdict === 'size') return `🧩 مشاور: ${o.reason}`;
+  return `✅ مشاور: ${o.reason}`;
+}
+export function adviceDigest(r) {
+  const it = r.items, g = k => it.filter(o => o.verdict === k);
+  const L = [`مشاور خرید MARA — ${r.days} روز اخیر (تا ${r.today})${r.age_days ? ` · ${r.age_days} روز از اولین فروش گذشته${r.age_days < 45 ? ' (داده کم؛ همه‌ی پیشنهادها «اطمینان کم» و فقط راهنما)' : ''}` : ''}`, `قاعده: پرفروش = حداقل ${r.thresholds.min_qty} عدد، در حداقل ${r.thresholds.min_days} روز مختلف، برای حداقل ${r.thresholds.min_cust} مشتری.`];
+  const sec = (t, arr, f) => { if (arr.length) { L.push('', t); arr.forEach(o => L.push('• ' + f(o))); } };
+  sec('بخرید:', [...g('urgent'), ...g('buy')], o => `${o.name}: موجودی ${o.rem}، فروش ${o.sold}، مشتری ${o.customers}، هفته‌ای ${o.per_week} ← ${o.buy_qty} عدد`);
+  sec('پرفروش با سود کم:', g('hold'), o => `${o.name}: سود ${o.margin}٪`);
+  sec('خرید نکنید:', g('avoid'), o => `${o.name}: ${o.reason}`);
+  sec('فروش کم (پیشنهاد نمی‌دهم):', g('weak'), o => `${o.name}: ${o.sold} عدد`);
+  sec('سایز/رنگ ناقص (مدل پرفروش است، این ترکیب نه):', g('size'), o => o.name);
+  if (g('wait').length) L.push('', `هنوز زود است: ${g('wait').length} کالا (تازه وارد شده‌اند؛ تا ${r.grace_days} روز بعد از ورود «نخر» نمی‌گویم).`);
+  if (r.models && r.models.length) {
+    L.push('', 'تصمیم خرید به تفکیک مدل (تقاضا ← موجودی ← تصمیم):');
+    r.models.filter(m => ['rebuy', 'limited', 'hold', 'stop'].includes(m.decision.status)).forEach(m => L.push(`• ${m.model}: فروش ${m.demand.sold} عدد، ${m.demand.customers} مشتری (${m.demand.tier_label}) | موجودی ${m.stock.rem}${m.stock.cover_days != null ? `، برای حدود ${m.stock.cover_days} روز` : ''} | ${m.decision.label}${m.decision.buy_qty ? ` ${m.decision.buy_qty} عدد` : ''}: ${m.decision.reason}`));
+  }
+  return L.join('\n');
+}

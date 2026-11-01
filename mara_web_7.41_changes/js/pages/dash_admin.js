@@ -1,0 +1,152 @@
+import { ex } from '../explain.js';
+// داشبورد تحلیلی مدیر: شاخص‌ها با مقایسه‌ی بازه‌ی قبل، آدم‌ها (خریداران/تامین‌کنندگان)، روندها، نمودارها، سلامت سیستم
+import { h, fmt, jlong, jstr, todayISO, sum } from '../util.js';
+import { S, businessAccounts, accBalance } from '../store.js';
+import { N, pill, kpi, chips, dtable } from '../ui.js';
+import { tok } from '../theme.js';
+import { RANGES, period, salesStats, buyerStats, supplierStats, buyerTable, supplierTable, concentration, grandTotal, anonStats, flowStats, sellerStats, monthTrend, weekTrend, peopleTrend, rangeOfMonthKey, pct, stockAge, receivableAge, payableBreakdown, STALE_MID, STALE_OLD } from '../analytics.js';
+import { analyze } from '../analysis.js';
+import { goalProgress, bonusMonth } from '../insights.js';
+import { goalForm, bonusForm } from '../forms_misc.js';
+import { healthCard, salesLineCard, donutCard, activityCard, adminHero, sparkline, dailySeries } from '../dash_widgets.js';
+import { capitalCard, chequeCard, sv, mil, tip, hbars, dueChart, categoryProfitCard, reorderCard } from './dashboard.js';
+
+let rangeN = 30, trendKind = 'week', tableTab = 'buyers', tableSort = 'range';
+
+/* نمودار ستونیِ چندسری: data = [{label, a, b}] ؛ series = [{key,label,color}] */
+function groupedBars(title, sub, data, series, fmtv = mil) {
+  const max = Math.max(1, ...data.flatMap(d => series.map(s => Math.max(0, d[s.key] || 0))));
+  const W = 560, H = 230, pb = 40, pt = 20, gap = (W - 20) / data.length, bw = Math.min(26, (gap - 8) / series.length);
+  const svg = sv('svg', { viewBox: `0 0 ${W} ${H}`, class: 'chart', role: 'img', 'aria-label': title });
+  svg.append(sv('title', {}, title));
+  data.forEach((d, i) => {
+    const cx = W - 10 - gap * (i + .5);
+    series.forEach((s, j) => {
+      const v = d[s.key] || 0, hh = Math.max(v < 0 ? 4 : 1, (H - pb - pt) * Math.max(0, v) / max), x = cx + (j - series.length / 2) * (bw + 2) + 1;
+      svg.append(sv('rect', { x, y: H - pb - hh, width: bw, height: hh, rx: 4, fill: v < 0 ? tok('--red') : s.color }));
+      svg.append(sv('text', { x: x + bw / 2, y: H - pb - hh - 4, 'text-anchor': 'middle', class: 'cv' }, fmtv(v)));
+    });
+    svg.append(sv('text', { x: cx, y: H - 16, 'text-anchor': 'middle', class: 'cl' }, d.label.includes('-') ? d.label.split('-')[1] : d.label));
+  });
+  svg.append(sv('line', { x1: 6, x2: W - 6, y1: H - pb, y2: H - pb, stroke: tok('--line') }));
+  return h('div', { class: 'card' }, h('div', { class: 'ct' }, title, sub ? h('small', null, ' ' + sub) : null),
+    h('div', { class: 'legend' }, ...series.flatMap(s => [h('i', { class: 'sw', style: `background:${s.color}` }), s.label])), svg);
+}
+
+const delta = (cur, prev, goodUp = true) => {
+  const p = pct(cur, prev); if (p == null) return { sub: 'بازه‌ی قبل: —', tone: '' };
+  const up = p >= 0; return { sub: `${up ? '▲' : '▼'} ${Math.abs(p)}٪ نسبت به بازه‌ی قبل`, tone: (up === goodUp) ? 'pos' : 'neg' };
+};
+const mini = (label, v, sub) => h('div', { class: 'kpi' }, h('div', { class: 'k-l' }, label), h('div', { class: 'k-v' }, v), sub ? h('div', { class: 'k-s' }, sub) : null);
+
+function tables(P) {
+  const host = h('div', { class: 'card' });
+  const draw = () => {
+    const isB = tableTab === 'buyers', rows = (isB ? buyerTable(P.from, P.to) : supplierTable(P.from, P.to));
+    const key = { range: r => r.rangeTotal, all: r => r.total, count: r => r.count, last: r => r.last, owed: r => (r.owed ?? r.debt ?? 0) };
+    rows.sort((a, b) => { const f = key[tableSort] || key.range, x = f(a), y = f(b); return x < y ? 1 : x > y ? -1 : 0; });
+    const cols = [
+      { label: isB ? 'خریدار' : 'تامین‌کننده', main: true, render: r => r.name },
+      { label: 'در این بازه', cls: 'num', render: r => (r.rangeTotal ? N(r.rangeTotal) : '') }, { label: 'تعداد فاکتور', cls: 'num', hm: true, render: r => r.rangeCount || '' },
+      { label: 'سهم', cls: 'num', hm: true, render: r => (r.share ? r.share.toFixed(1) + '٪' : '') },
+      { label: 'جمع از ابتدا', cls: 'num', hm: true, render: r => N(r.total) }, { label: 'آخرین', hm: true, render: r => jstr(r.last) },
+      { label: isB ? 'مانده‌ی نسیه' : 'بدهی ما', cls: 'num', render: r => { const v = isB ? r.owed : r.debt; return v > 0.5 ? pill(fmt(v), 'amber') : ''; } }];
+    host.replaceChildren(h('div', { class: 'ct' }, 'گزارش کامل ', h('small', null, `(${P.label})`)),
+      chips([{ v: 'buyers', label: `خریداران (${buyerTable(P.from, P.to).length})` }, { v: 'sup', label: `تامین‌کنندگان (${supplierTable(P.from, P.to).length})` }], tableTab, v => { tableTab = v; draw(); }, { label: 'گزارش' }),
+      chips([{ v: 'range', label: 'بیشترین در بازه' }, { v: 'all', label: 'بیشترین از ابتدا' }, { v: 'count', label: 'بیشترین تعداد' }, { v: 'last', label: 'جدیدترین' }, { v: 'owed', label: isB ? 'بیشترین نسیه' : 'بیشترین بدهی' }], tableSort, v => { tableSort = v; draw(); }, { label: 'مرتب‌سازی' }),
+      dtable(cols, rows, { empty: 'موردی نیست' }));
+  };
+  draw(); return host;
+}
+
+export function adminDashboard() {
+  const host = h('div', { class: 'dash' }), body = h('div', { class: 'dbody' });
+  const today = todayISO();
+  const draw = () => {
+    const P = period(rangeN), label = RANGES.find(r => r.v === rangeN).label; P.label = label;
+    const cur = salesStats(P.from, P.to), prev = salesStats(P.pFrom, P.pTo);
+    const B = buyerStats(P.from, P.to), Bp = buyerStats(P.pFrom, P.pTo), SU = supplierStats(P.from, P.to), SUp = supplierStats(P.pFrom, P.pTo);
+    const T = S.totals || {};
+
+    const kp = h('div', { class: 'kpis' },
+      kpi('فروش', ex(N(cur.sales), 'sales'), { ...delta(cur.sales, prev.sales), spark: sparkline(dailySeries(14, 'total'), delta(cur.sales, prev.sales).tone) }), kpi('سود خالص', ex(N(cur.profit), 'dprofit'), { ...delta(cur.profit, prev.profit), tone: cur.profit < 0 ? 'neg' : 'pos', spark: sparkline(dailySeries(14, 'profit'), cur.profit < 0 ? 'neg' : 'pos') }),
+      kpi('درصد سود', h('span', { class: 'n' }, cur.margin.toFixed(1) + '٪'), { sub: `قبل: ${prev.margin.toFixed(1)}٪` }),
+      kpi('تعداد فاکتور', h('span', { class: 'n' }, fmt(cur.count)), { ...delta(cur.count, prev.count) }), kpi('میانگین هر فاکتور', N(cur.avg), { ...delta(cur.avg, prev.avg) }));
+
+    const F = flowStats(d => d >= P.from && d <= P.to), Fp = flowStats(d => d >= P.pFrom && d <= P.pTo);
+    const allCash = F.sold > 0 && Math.abs(F.received - F.sold) < 1 && F.owed < 1 && F.later < 1;   // فروش ۱۰۰٪ نقد: «فروختیم / دریافت کردیم / مانده» یک چیزند
+    const fk = [mini('خریدیم', N(F.bought), `${fmt(F.boughtN)} فاکتور · قبل: ${fmt(Math.round(Fp.bought))}`)];
+    if (allCash) fk.push(mini('فروختیم (همه نقد دریافت شد)', N(F.sold), `${fmt(F.soldN)} فاکتور · قبل: ${fmt(Math.round(Fp.sold))}`));
+    else {
+      fk.push(mini('فروختیم', N(F.sold), `${fmt(F.soldN)} فاکتور · قبل: ${fmt(Math.round(Fp.sold))}`), mini('دریافت کردیم', N(F.received), `هنگام فروش ${fmt(Math.round(F.atSale))} + وصول نسیه ${fmt(Math.round(F.later))}`));
+      if (F.owed > 0) fk.push(mini('مانده‌ی نسیه‌ی فروش‌های این بازه', N(F.owed), F.sold > 0 ? `${Math.round(F.owed / F.sold * 100)}٪ فروش بازه` : ''));
+    }
+    const flow = h('div', { class: 'card' }, h('div', { class: 'ct' }, '🔁 خرید و فروش ', h('small', null, `(${label})`), tip('دریافتی = پولی که هنگام فروش گرفتیم + نسیه‌هایی که در همین بازه وصول شد (حتی اگر فاکتورش قدیمی باشد).')),
+      h('div', { class: 'kpis' }, ...fk));
+
+    const people = h('div', { class: 'grid2' },
+      h('div', { class: 'card' }, h('div', { class: 'ct' }, '👥 خریداران ', h('small', null, `(${label})`)),
+        h('div', { class: 'kpis' }, mini('کل خریداران ما', fmt(B.total), 'از ابتدا'),
+          ...(B.active && B.active === B.fresh ? [mini('خریدار این بازه', fmt(B.active) + ' نفر', 'همه‌شان جدید بودند')] : [mini('خریدار فعال', fmt(B.active), `قبل: ${fmt(Bp.active)}`), mini('خریدار جدید', fmt(B.fresh), `قبل: ${fmt(Bp.fresh)}`)]),
+          ...(B.repeat > 0 ? [mini('مشتری تکراری', B.repeat + '٪', 'از فعال‌ها')] : [])),
+        B.active ? null : h('p', { class: 'hint' }, `در ${label} فروشی نداشتیم.`)),
+      h('div', { class: 'card' }, h('div', { class: 'ct' }, '🏭 تامین‌کنندگان ', h('small', null, `(${label})`)),
+        h('div', { class: 'kpis' }, mini('کل تامین‌کنندگان', fmt(SU.total), 'فعال'),
+          ...(SU.active && SU.active === SU.fresh ? [mini('تامین‌کننده‌ی این بازه', fmt(SU.active) + ' نفر', 'همه‌شان جدید بودند')] : [mini('از چند نفر خریدیم', fmt(SU.active), `قبل: ${fmt(SUp.active)}`), mini('تامین‌کننده‌ی جدید', fmt(SU.fresh), `قبل: ${fmt(SUp.fresh)}`)]),
+          mini('جمع خرید', N(SU.spent), `${fmt(SU.count)} فاکتور`)),
+        SU.active ? null : h('p', { class: 'hint' }, `در ${label} خریدی نداشتیم.`)));
+
+    /* روند هفتگی / ماهانه */
+    const tr0 = trendKind === 'week' ? weekTrend() : monthTrend();
+    const firstData = tr0.findIndex(x => (x.sales || 0) || (x.bought || 0) || (x.received || 0) || (x.profit || 0));
+    const tr = firstData > 0 ? tr0.slice(Math.min(firstData, tr0.length - 1)) : tr0;   // هفته/ماه‌های خالیِ قبل از شروع کار نشان داده نمی‌شود
+    const pt = peopleTrend(tr, x => (trendKind === 'week' ? [x.a, x.b] : rangeOfMonthKey(x.key)));
+    const trendCards = h('div', { class: 'grid2' },
+      groupedBars(`فروش و سود ${trendKind === 'week' ? 'هفتگی' : 'ماهانه'}`, '(میلیون ریال)', tr, [{ key: 'sales', label: 'فروش', color: tok('--gold') }, { key: 'profit', label: 'سود خالص', color: tok('--green') }]),
+      groupedBars(`خرید، فروش و دریافتی ${trendKind === 'week' ? 'هفتگی' : 'ماهانه'}`, '(میلیون ریال)', tr, [{ key: 'bought', label: 'خرید', color: tok('--blue') || '#4a78c9' }, { key: 'sales', label: 'فروش', color: tok('--gold') }, { key: 'received', label: 'دریافتی', color: tok('--green') }]),
+      groupedBars(`خریداران و تامین‌کنندگان ${trendKind === 'week' ? 'هفتگی' : 'ماهانه'}`, '(نفر)', tr.map((x, i) => ({ label: x.label, ...pt[i] })), [{ key: 'active', label: 'خریدار فعال', color: tok('--gold') }, { key: 'fresh', label: 'خریدار جدید', color: tok('--green') }, { key: 'sup', label: 'تامین‌کننده‌ی فعال', color: tok('--blue') || '#4a78c9' }], v => String(v)));
+
+    /* برترین‌ها */
+    const bt = buyerTable(P.from, P.to).filter(r => r.rangeTotal > 0), st = supplierTable(P.from, P.to).filter(r => r.rangeTotal > 0), conc = concentration(bt, grandTotal(P.from, P.to)), an = anonStats(P.from, P.to);
+    const tops = h('div', { class: 'grid2' },
+      h('div', null, hbars(`خریداران برتر (${label})`, bt.slice(0, 8).map(r => ({ l: `${r.name} · ${r.share.toFixed(0)}٪`, v: r.rangeTotal }))),
+        an.count ? h('p', { class: 'hint' }, `⚠️ ${fmt(an.count)} فاکتور بدون نام خریدار: ${fmt(Math.round(an.total))} ریال (${an.share.toFixed(0)}٪ فروش). سهم‌ها روی کل فروش حساب شده؛ نام خریدار را در فاکتور بنویس.`) : null),
+      hbars(`تامین‌کنندگان برتر (${label}) · مبلغ خرید`, st.slice(0, 8).map(r => ({ l: `${r.name} · ${r.share.toFixed(0)}٪`, v: r.rangeTotal })), 'var(--blue)'));
+
+    /* فروشنده‌ها و کانال‌ها */
+    const chan = [...new Map(cur.rows.map(s => [s.channel, 0])).keys()].map(c => ({ l: c, v: sum(cur.rows.filter(s => s.channel === c), s => s.total) })).sort((a, b) => b.v - a.v);
+    const SS = ['مهسا', 'رعنا'].map(p => sellerStats(P.from, P.to, p)), BM = bonusMonth();
+    const sellerCard = h('div', { class: 'card' }, h('div', { class: 'ct' }, '🧑‍💼 فروشنده‌ها و هدف فروش به آشنایان ', h('small', null, `(${label})`), tip('مشتری = تعداد نفرهای متفاوت (هر نفر یک بار شمرده می‌شود). «جدید» یعنی اولین خریدش از کل فروشگاه در همین بازه است. هدف و تحقق فقط فروش «آشنایان» همین ماه را می‌شمارد؛ فروش پیج اینستاگرام هدف جدا دارد.'),
+      h('button', { type: 'button', class: 'mini', onclick: () => bonusForm() }, 'تنظیم پاداش'), h('button', { type: 'button', class: 'mini', onclick: () => goalForm() }, 'تعیین هدف')),
+      dtable([{ label: 'فروشنده', main: true, render: x => x.seller }, { label: 'فروش', cls: 'num', render: x => N(x.total) }, { label: 'فاکتور', cls: 'num', render: x => h('span', null, fmt(x.count), x.anon ? h('small', { class: 'muted' }, ` · ${fmt(x.anon)} بدون نام`) : null) },
+        { label: 'مشتری', cls: 'num', render: x => fmt(x.customers) }, { label: 'مشتری جدید', cls: 'num', render: x => (x.fresh ? pill(fmt(x.fresh), 'green') : '—') },
+        { label: 'هدف این ماه', cls: 'num', hm: true, render: x => { const g = goalProgress(x.seller); return g.goal ? N(g.goal) : '—'; } },
+        { label: 'تحقق (این ماه)', cls: 'num', render: x => { const g = goalProgress(x.seller); return g.goal ? h('span', null, pill(fmt(g.pct) + '٪', g.pct >= 100 ? 'green' : g.pct >= g.elapsed ? 'blue' : 'amber'), g.pace && g.pace.label ? h('small', null, ' ' + g.pace.label) : null) : '—'; } },
+        ...(BM.cfg.on ? [{ label: 'پاداش آشنایان این ماه', cls: 'num', render: x => { const o = BM[x.seller]; return o.goal > 0 ? h('span', null, N(Math.round(o.total), 'pos'), o.isStar ? h('small', null, ' ⭐ برتر ماه') : null) : '—'; } }] : [])], SS, { empty: '' }), h('p', { class: 'hint' }, `ستون‌های فروش، فاکتور و مشتری برای بازه‌ی «${label}» هستند؛ هدف، تحقق و پاداش همیشه برای ماه جاری (از اول ماه شمسی) حساب می‌شوند.`));
+    const mid = h('div', { class: 'grid2' }, categoryProfitCard(), h('div', null, sellerCard, hbars('فروش به تفکیک محل', chan)));
+
+    /* ثروت و سن‌ها */
+    const SA = stockAge(), RA = receivableAge();
+    const worth = h('div', { class: 'grid2' },
+      hbars('کل دارایی چطور ساخته شده', [{ l: 'حساب‌های کسب‌وکار', v: T.business_balance || 0 }, { l: 'ارزش موجودی', v: T.stock_value || 0 }, { l: 'طلب از مشتریان', v: T.receivable || 0 }, ...((T.payable || 0) > 0 ? [{ l: (() => { const pb = payableBreakdown(); return pb.credit > 0.5 ? `بدهی خالص به تامین‌کنندگان (−) = بدهی ${fmt(pb.gross)} − اعتبار ${fmt(pb.credit)}` : 'بدهی به تامین‌کنندگان (−)'; })(), v: -(T.payable || 0) }] : []), { l: `ارزش خالص = ${fmt(T.net_worth || 0)}`, v: T.net_worth || 0 }], 'var(--gold)'),
+      h('div', null, (RA.a + RA.b + RA.c) > 0.5 ? hbars('سن طلب‌ها (ریال)', [{ l: 'تا ۳ روز', v: RA.a }, { l: '۴ تا ۷ روز', v: RA.b }, { l: '۸ روز و بیشتر', v: RA.c }], 'var(--amber, #d9a21b)') : null,
+        (SA.new + SA.mid + SA.old) > 0.5 ? hbars('سن موجودی: پول گیر کرده (ریال)', [{ l: `کمتر از ${fmt(STALE_MID)} روز`, v: SA.new }, { l: `${fmt(STALE_MID)} تا ${fmt(STALE_OLD)} روز`, v: SA.mid }, { l: `بیش از ${fmt(STALE_OLD)} روز`, v: SA.old }], 'var(--red)') : null));
+
+    /* سلامت */
+    const A = analyze().findings, nE = A.filter(f => f.lvl === 'err').length, nW = A.filter(f => f.lvl === 'warn').length;
+    const health = h('div', { class: 'card' }, h('div', { class: 'ct' }, '🔍 سلامت سیستم ', h('button', { type: 'button', class: 'mini', onclick: () => { location.hash = '#/analysis'; } }, 'تحلیل کامل')),
+      nE || nW ? h('div', { class: 'alert ' + (nE ? 'red' : 'amber') }, `${nE ? '🔴 ' + nE + ' مشکل' : ''}${nE && nW ? ' · ' : ''}${nW ? '🟡 ' + nW + ' هشدار' : ''} — ${A.filter(f => f.lvl !== 'info').slice(0, 3).map(f => f.title).join('، ')}`)
+        : h('div', { class: 'alert ok' }, '✅ مشکل یا هشداری نیست.'));
+
+    body.replaceChildren(...[capitalCard(), chequeCard(), healthCard(), kp, h('div', { class: 'grid2' }, salesLineCard(), donutCard()), flow, people,
+      chips([{ v: 'week', label: 'هفتگی' }, { v: 'month', label: 'ماهانه' }], trendKind, v => { trendKind = v; draw(); }, { label: 'روند' }), trendCards,
+      tops, mid, worth, health, reorderCard(), dueChart(), activityCard(), tables(P)].filter(Boolean));
+  };
+  const rangeBar = chips(RANGES.map(r => ({ v: r.v, label: r.label })), rangeN, v => { rangeN = v; draw(); }, { label: 'بازه' });
+  const quick = (label, icon, cls, fn) => h('button', { type: 'button', class: 'qa ' + cls, onclick: fn }, h('span', { class: 'qi', 'aria-hidden': 'true' }, icon), label);
+  host.append(h('div', { class: 'hello' }, h('div', null, h('h1', null, `سلام ${S.me.name}`), h('p', { class: 'sub' }, jlong(today) + ' · داشبورد مدیریت')), h('img', { class: 'brand-mark', src: 'icons/logo-mark.jpg', alt: 'MR', width: 42, height: 42 })),
+    adminHero(),
+    h('div', { class: 'qas' }, quick('مشاور و تحلیل', '🧭', 'line', () => { location.hash = '#/analysis'; }), quick('گزارش جلسه', '🧑‍💼', 'line', () => { location.hash = '#/meeting'; })),
+    rangeBar, body);
+  draw(); return host;
+}
