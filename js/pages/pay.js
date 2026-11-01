@@ -3,6 +3,7 @@ import { overdue } from '../insights.js';
 import { S, canEdit } from '../store.js';
 import { dtable, N, pill, tabsBar, kpi } from '../ui.js';
 import { supplierPaymentForm, expenseForm, collectionForm, transferForm, returnForm, supplierReturnForm, voidEntry, editEntryForm } from '../forms_misc.js';
+import { returnBatchForm } from '../return_batch.js';
 import { head, btn, searchBox, match, sortNew, detail, stamp, accName as accName0, rowCls } from './common.js';
 const accName = id => (id ? accName0(id) : 'چک (بدون حساب)');
 
@@ -70,6 +71,6 @@ export function returns(kind = 'customer') {
       ['اثر بر سود', N(r.profit_effect, r.profit_effect < 0 ? 'neg' : 'pos')], r.note ? ['توضیح', r.note] : null], r) }));
   };
   draw();
-  return h('div', null, head(kind === 'customer' ? 'مرجوعی فروش' : 'مرجوعی خرید (برگشت به تامین‌کننده)', [kind === 'customer' ? btn('＋ مرجوعی از مشتری', () => returnForm()) : btn('＋ برگشت به تامین‌کننده', () => supplierReturnForm())], 'کالای سالم به موجودی برمی‌گردد؛ معیوب ضرر می‌شود؛ اگر به تامین‌کننده پس بدهیم، از بدهی او کم می‌شود.'),
+  return h('div', null, head(kind === 'customer' ? 'مرجوعی فروش' : 'مرجوعی خرید (برگشت به تامین‌کننده)', [kind === 'customer' ? btn('＋ مرجوعی از مشتری', () => returnBatchForm()) : btn('＋ برگشت به تامین‌کننده', () => supplierReturnForm())], 'کالای سالم به موجودی برمی‌گردد؛ معیوب ضرر می‌شود؛ اگر به تامین‌کننده پس بدهیم، از بدهی او کم می‌شود.'),
     h('div', { class: 'bar' }, searchBox(v => { q = v; draw(); })), tbl);
 }

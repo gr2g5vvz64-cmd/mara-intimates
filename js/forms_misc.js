@@ -700,14 +700,14 @@ export function editEntryForm(kind, row) {
 export function setBuyerForm(sale) {
   const opts = () => customers().map(c => { const b = S.vCus.find(x => x.id === c.id); return { v: c.id, label: c.name, sub: (c.phone || '') + (b && b.outstanding > 0 ? ' · بدهکار ' + fmt(b.outstanding) : '') }; });
   const customer = combo({
-    placeholder: 'نام خریدار را تایپ کن یا انتخاب کن (الزامی)', createLabel: 'مشتری جدید', options: opts(),
+    placeholder: 'نام خریدار را تایپ کن یا انتخاب کن (الزامی)', createLabel: 'مشتری جدید', options: opts(), value: sale.customer_id || null,
     onCreate: async name => { try { const r = await rpc('save_customer', { name }, { queue: false }); await loadAll(); customer.setOptions(opts()); customer.set(r.id); toast('مشتری اضافه شد'); return r.id; } catch (e) { toast(errText(e), 'err'); return null; } }
   });
-  const btn = h('button', { class: 'btn primary lg', type: 'button' }, 'ثبت نام خریدار');
+  const btn = h('button', { class: 'btn primary lg', type: 'button' }, sale.customer_id ? 'ذخیره‌ی خریدار جدید' : 'ثبت نام خریدار');
   btn.onclick = async () => {
     if (!customer.get()) { customer.input.focus(); return toast('نام خریدار را انتخاب کن یا بساز', 'err'); }
     const r = await run(btn, () => rpc('set_sale_customer', { id: sale.id, customer_id: customer.get() }, { queue: false }));
-    if (r) finish(m, 'نام خریدار ثبت شد ✔');
+    if (r) finish(m, sale.customer_id ? 'خریدار فاکتور عوض شد ✔' : 'نام خریدار ثبت شد ✔');
   };
-  const m = modal({ title: `خریدار فاکتور ${sale.no}`, body: h('div', { class: 'form' }, P(`فاکتور ${sale.no} (${jstr(sale.date)}، ${fmt(sale.total)} ریال) خریدار ندارد. نام را که ثبت کنی، فاکتور ابطال نمی‌شود و شماره و حساب‌ها همان می‌ماند؛ فقط اسم به آن اضافه می‌شود و در تاریخچه ثبت می‌شود.`), field('خریدار *', customer)), footer: [btn] });
+  const m = modal({ title: sale.customer_id ? `تغییر خریدار فاکتور ${sale.no}` : `خریدار فاکتور ${sale.no}`, body: h('div', { class: 'form' }, P((sale.customer_id ? `خریدار فعلی فاکتور ${sale.no}: «${sale.customer}». هر مشتریِ دیگر را انتخاب کن یا بساز؛ بدهی و دریافت‌های این فاکتور هم به مشتری جدید منتقل می‌شود. ` : '') + `فاکتور ${sale.no} (${jstr(sale.date)}، ${fmt(sale.total)} ریال)` + (sale.customer_id ? '' : ' خریدار ندارد.') + ' فاکتور ابطال نمی‌شود و شماره و حساب‌ها همان می‌ماند؛ فقط اسم خریدار عوض می‌شود و در تاریخچه ثبت می‌شود.'), field('خریدار *', customer)), footer: [btn] });
 }

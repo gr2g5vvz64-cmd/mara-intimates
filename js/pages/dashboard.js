@@ -1,4 +1,5 @@
 import { h, fmt, jlong, jstr, jmonthKey, jmonthName, todayISO, lastMonths, sum, groupBy, addDaysISO, toJ } from '../util.js';
+import { returnBatchForm } from '../return_batch.js';
 import { S, monthly, itemProfit, businessAccounts, accBalance, activeSales } from '../store.js';
 import { N, pill, kpi, tabsBar } from '../ui.js';
 import { tok } from '../theme.js';
@@ -239,7 +240,7 @@ export function legacyRender() {
   return h('div', { class: 'dash' },
     h('div', { class: 'hello' }, h('div', null, h('h1', null, `سلام ${S.me.name}`), h('p', { class: 'sub' }, jlong(today))), h('img', { class: 'brand-mark', src: 'icons/logo-mark.jpg', alt: 'MR', width: 42, height: 42 })),
     tabsHost,
-    h('div', { class: 'qas' }, quick('فروش جدید', '🛍', 'gold', () => saleForm()), quick('خرید جدید', '📦', 'dark', () => purchaseForm()), quick('مرجوعی', '↩', 'line', () => returnForm()), quick('پرداخت / هزینه', '💳', 'line', () => location.hash = '#/pay'), ...(S.me.role === 'admin' ? [quick('تحلیل', '🔍', 'gold', () => analysisModal())] : [])),
+    h('div', { class: 'qas' }, quick('فروش جدید', '🛍', 'gold', () => saleForm()), quick('خرید جدید', '📦', 'dark', () => purchaseForm()), quick('مرجوعی', '↩', 'line', () => returnBatchForm()), quick('پرداخت / هزینه', '💳', 'line', () => location.hash = '#/pay'), ...(S.me.role === 'admin' ? [quick('تحلیل', '🔍', 'gold', () => analysisModal())] : [])),
     body);
 }
 

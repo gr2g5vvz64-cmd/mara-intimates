@@ -21,7 +21,7 @@ export function render(query) {
       { label: 'جمع فروش', cls: 'num', hm: true, render: c => N(c.sales_total) }, { label: 'تسویه‌شده', cls: 'num', hm: true, render: c => N(c.settled) },
       { label: 'مانده‌ی بدهی', cls: 'num', render: c => (c.outstanding > 0.5 ? pill(fmt(c.outstanding), c.overdue_amount > 0 ? 'red' : 'amber') : pill('تسویه', 'green')) },
       { label: 'فروش باز', cls: 'num', render: c => c.open_count || '' }, { label: 'نزدیک‌ترین سررسید', render: c => (c.outstanding > 0.5 && c.next_due ? dueCell(c.next_due) : '') },
-      { label: '', render: c => (c.outstanding > 0.5 ? btn('دریافت', e => { e.stopPropagation(); collectCustomerForm(c.id); }, 'gold sm') : '') }
+      { label: '', render: c => h('span', null, c.outstanding > 0.5 ? btn('دریافت', e => { e.stopPropagation(); collectCustomerForm(c.id); }, 'gold sm') : null, ' ', canEdit() ? btn('✏️', e => { e.stopPropagation(); customerForm(S.CUS[c.id]); }, 'ghost sm') : null) }
     ], rows, { onRow: c => customerDetail(c.id), empty: onlyDebt ? 'مشتری بدهکاری نداریم 🎉' : 'هنوز مشتری ثبت نشده' }));
   };
   draw();

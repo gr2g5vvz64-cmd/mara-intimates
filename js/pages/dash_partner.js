@@ -1,6 +1,7 @@
 // داشبورد شریک (مهسا/رعنا): ساده، بدون نمودار، فقط کار روزانه و حساب خودِ همان نفر.
 // عملکرد و مانده‌ی شریک دیگر نمایش داده نمی‌شود؛ فقط تعداد اجناسِ دستِ او.
 import { h, fmt, jlong, jstr, todayISO, sum } from '../util.js';
+import { returnBatchForm } from '../return_batch.js';
 import { S, activeSales, accBalance } from '../store.js';
 import { N, pill } from '../ui.js';
 import { saleForm, purchaseForm } from '../forms_trade.js';
@@ -69,6 +70,6 @@ export function partnerDashboard(who) {
   return h('div', { class: 'dash partner' },
     h('div', { class: 'hello' }, h('div', null, h('h1', null, `سلام ${S.me.name}`), h('p', { class: 'sub' }, jlong(today) + (viewer ? ` · نمای ${me} (فقط مشاهده)` : ''))), h('img', { class: 'brand-mark', src: 'icons/logo-mark.jpg', alt: 'MR', width: 42, height: 42 })),
     partnerHero({ me, tasks, own, viewer }),
-    viewer ? null : h('div', { class: 'qas' }, qa('فروش جدید', '🛍', 'gold', () => saleForm()), qa('خرید جدید', '📦', 'dark', () => purchaseForm()), qa('مرجوعی', '↩️', 'line', () => returnForm()), qa('پرداخت / هزینه', '💸', 'line', () => expenseForm())),
+    viewer ? null : h('div', { class: 'qas' }, qa('فروش جدید', '🛍', 'gold', () => saleForm()), qa('خرید جدید', '📦', 'dark', () => purchaseForm()), qa('مرجوعی', '↩️', 'line', () => returnBatchForm()), qa('پرداخت / هزینه', '💸', 'line', () => expenseForm())),
     h('div', { class: 'dbody' }, capitalCard(), chequeCard(), todayCard, salesLineCard({ title: `فروش ${own}`, seller: me, note: 'فقط فروش خودت' }), taskCard, money, otherCard, lastCard));
 }
