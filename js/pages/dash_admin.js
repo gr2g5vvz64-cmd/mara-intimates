@@ -120,9 +120,9 @@ export function adminDashboard() {
       h('button', { type: 'button', class: 'mini', onclick: () => bonusForm() }, 'تنظیم پاداش'), h('button', { type: 'button', class: 'mini', onclick: () => goalForm() }, 'تعیین هدف')),
       dtable([{ label: 'فروشنده', main: true, render: x => x.seller }, { label: 'فروش', cls: 'num', render: x => N(x.total) }, { label: 'فاکتور', cls: 'num', render: x => h('span', null, fmt(x.count), x.anon ? h('small', { class: 'muted' }, ` · ${fmt(x.anon)} بدون نام`) : null) },
         { label: 'مشتری', cls: 'num', render: x => fmt(x.customers) }, { label: 'مشتری جدید', cls: 'num', render: x => (x.fresh ? pill(fmt(x.fresh), 'green') : '—') },
-        { label: 'هدف ماه', cls: 'num', hm: true, render: x => { const g = goalProgress(x.seller); return g.goal ? N(g.goal) : '—'; } },
-        { label: 'تحقق', cls: 'num', render: x => { const g = goalProgress(x.seller); return g.goal ? h('span', null, pill(fmt(g.pct) + '٪', g.pct >= 100 ? 'green' : g.pct >= g.elapsed ? 'blue' : 'amber'), g.pace && g.pace.label ? h('small', null, ' ' + g.pace.label) : null) : '—'; } },
-        ...(BM.cfg.on ? [{ label: 'پاداش آشنایان این ماه', cls: 'num', render: x => { const o = BM[x.seller]; return o.goal > 0 ? h('span', null, N(Math.round(o.total), 'pos'), o.isStar ? h('small', null, ' ⭐ برتر ماه') : null) : '—'; } }] : [])], SS, { empty: '' }));
+        { label: 'هدف این ماه', cls: 'num', hm: true, render: x => { const g = goalProgress(x.seller); return g.goal ? N(g.goal) : '—'; } },
+        { label: 'تحقق (این ماه)', cls: 'num', render: x => { const g = goalProgress(x.seller); return g.goal ? h('span', null, pill(fmt(g.pct) + '٪', g.pct >= 100 ? 'green' : g.pct >= g.elapsed ? 'blue' : 'amber'), g.pace && g.pace.label ? h('small', null, ' ' + g.pace.label) : null) : '—'; } },
+        ...(BM.cfg.on ? [{ label: 'پاداش آشنایان این ماه', cls: 'num', render: x => { const o = BM[x.seller]; return o.goal > 0 ? h('span', null, N(Math.round(o.total), 'pos'), o.isStar ? h('small', null, ' ⭐ برتر ماه') : null) : '—'; } }] : [])], SS, { empty: '' }), h('p', { class: 'hint' }, `ستون‌های فروش، فاکتور و مشتری برای بازه‌ی «${label}» هستند؛ هدف، تحقق و پاداش همیشه برای ماه جاری (از اول ماه شمسی) حساب می‌شوند.`));
     const mid = h('div', { class: 'grid2' }, categoryProfitCard(), h('div', null, sellerCard, hbars('فروش به تفکیک محل', chan)));
 
     /* ثروت و سن‌ها */

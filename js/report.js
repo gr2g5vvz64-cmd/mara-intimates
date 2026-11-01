@@ -110,7 +110,7 @@ export function buildReport(n) {
   if (bt[0] && bt[0].share >= 40) advice.push(`وابستگی به ${bt[0].name} زیاد است (${bt[0].share.toFixed(0)}٪)؛ خریداران تازه جذب کنید.`);
   if (ra.c > 0) advice.push(`${M(ra.c)} طلب بیش از ۸ روز مانده؛ همین امروز پیگیری کنید.`);
   const re = reorderSuggestions().slice(0, 3); if (re.length) advice.push('خرید مجدد: ' + re.map(r => `${r.item.name} (حدود ${fmt(r.buy)} عدد)`).join('، ') + ' رو به اتمام است.');
-  if (sa.old > 0) advice.push(`کالای بیش از ۳۰ روز مانده (${M(sa.old)}) را حراج کنید یا به تامین‌کننده برگردانید.`);
+  if (sa.old > 0) advice.push(`کالایی که بیش از ۳۰ روز از خریدش گذشته و مانده (${M(sa.old)}) را حراج کنید یا به تامین‌کننده برگردانید.`);
   if (cc.discPct > pc.discPct + 1 && cc.discPct > 5) advice.push('تخفیف‌ها بالا رفته؛ سقف تخفیف برای هر فاکتور تعیین کنید.');
   if (sm.months != null && sm.months >= 3) advice.push(`موجودی معادل ${sm.months.toFixed(1)} ماه فروش است؛ فعلاً خرید جدید نکنید و کالای کم‌گردش را با پیشنهاد هدفمند (نه تخفیف عمومی) بفروشید.`);
   if (thin && cur.count) advice.push(`داده هنوز کم است (${fmt(cur.count)} فاکتور در ${fmt(BD)} روز فعالیت)؛ این عددها را مبنای تصمیم بزرگ نکنید.`);

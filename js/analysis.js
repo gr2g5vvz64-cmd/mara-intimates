@@ -68,8 +68,8 @@ export function analyze() {
   const ages = new Map();
   for (const l of S.lots) if (!l.voided && l.rem > 0) { const a = days(l.date), c = ages.get(l.item); if (!c || a > c.age) ages.set(l.item, { age: a }); }
   const old30 = [...ages].filter(([, a]) => a.age >= 30), old14 = [...ages].filter(([, a]) => a.age >= 14 && a.age < 30);
-  if (old30.length) add('warn', 'کالای بیش از یک ماه مانده', old30.map(([k, a]) => `${k} (${a.age} روز)`).join(' · '), { fix: 'تخفیف، پست استوری یا پیشنهاد ویژه برای فروش.', href: '#/stock' });
-  if (old14.length) add('info', 'کالای بیش از دو هفته مانده', old14.map(([k, a]) => `${k} (${a.age} روز)`).join(' · '), { href: '#/stock' });
+  if (old30.length) add('warn', 'کالایی که بیش از یک ماه از خریدش گذشته و مانده', old30.map(([k, a]) => `${k} (${a.age} روز)`).join(' · '), { fix: 'تخفیف، پست استوری یا پیشنهاد ویژه برای فروش.', href: '#/stock' });
+  if (old14.length) add('info', 'کالایی که بیش از دو هفته از خریدش گذشته و مانده', old14.map(([k, a]) => `${k} (${a.age} روز)`).join(' · '), { href: '#/stock' });
   const low = S.stock.filter(i => i.active && i.rem > 0 && i.rem <= i.min_stock);
   if (low.length) add('info', 'کم‌موجودی', low.map(i => `${i.name} (${i.rem})`).join(' · '), { href: '#/stock' });
   check('موجودی منفی و کالای راکد (بیش از ۳۰ روز) نداریم', negStock.length || old30.length);

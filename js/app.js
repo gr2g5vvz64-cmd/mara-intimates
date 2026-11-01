@@ -16,6 +16,7 @@ import * as savelog from './pages/savelog.js';
 import * as calc from './pages/calc.js';
 import * as ana from './pages/analysis_page.js';
 import * as rep from './pages/reports.js';
+import * as pack from './pages/pack.js';
 import * as meet from './pages/meeting.js';
 import * as stk from './pages/stocktake.js';
 import * as mcn from './pages/monthcount.js';
@@ -47,6 +48,7 @@ const ROUTES = {
   mgmt: { t: 'گزارش مدیریتی', i: '📈', f: () => mgmt.render() },
   analysis: { t: 'تحلیل', i: '🔍', f: () => ana.render() },
   calc: { t: 'محاسبات و درصد سود', i: '％', f: () => calc.render() },
+  pack: { t: 'بسته‌ی گزارش ماهانه', i: '🗂', f: () => pack.render() },
   pnl: { t: 'صورت سود و زیان', i: '📒', f: () => rep.pnlPage() },
   meeting: { t: 'گزارش جلسه', i: '🧑‍💼', f: () => meet.render() },
   settle: { t: 'حساب‌وکتاب ماهانه', i: '🤝', f: () => rep.settlePage() },
@@ -87,7 +89,7 @@ function parseHash() {
 function route() {
   if (!view) return;
   let { path, q } = parseHash();
-  if ((path === 'diag' || path === 'mgmt' || path === 'analysis' || path === 'pnl' || path === 'meeting') && !(S.me && S.me.role === 'admin')) { path = ''; history.replaceState(null, '', '#/'); }
+  if ((path === 'diag' || path === 'mgmt' || path === 'analysis' || path === 'pnl' || path === 'pack' || path === 'meeting') && !(S.me && S.me.role === 'admin')) { path = ''; history.replaceState(null, '', '#/'); }
   if (path === 'settle' && (!S.me || S.me.role === 'viewer')) { path = ''; history.replaceState(null, '', '#/'); }
   const r = ROUTES[path] || ROUTES[''];
   const key = ROUTES[path] ? path : '';

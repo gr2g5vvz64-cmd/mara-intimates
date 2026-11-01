@@ -51,7 +51,7 @@ export function marginStatus() {
 }
 
 /* ---------- سلامت سرمایه ---------- */
-function healthData() {
+export function healthData() {
   const today = todayISO(), from = monthStart(), T = S.totals || {};
   const st = salesStats(from, today), rows = st.rows;
   const saleCosts = sum(rows, s => (s.courier || 0) + (s.pack || 0)), cogs = sum(rows, s => s.cogs || 0);
@@ -104,7 +104,7 @@ export function healthCard() {
     notes.length ? h('ul', { class: 'hc-notes' }, notes.map(n => h('li', null, n))) : null,
     h('div', { class: 'hc-grid' },
       h('div', { class: 'hc-col' }, h('div', { class: 'hc-t' }, '۱) سود: هدف در برابر واقعی'),
-        M.has ? [h('div', { class: 'hc-big' }, h('span', { class: 'n ' + (M.real < M.target - 1 ? 'neg' : 'pos') }, R1(M.real) + '٪'), h('small', null, ` واقعی · هدف ${R1(M.target)}٪ (روی بهای تمام‌شده)`)), ...catRows,
+        M.has ? [h('div', { class: 'hc-big' }, h('span', { class: 'n ' + (M.real < M.target - 1 ? 'neg' : 'pos') }, R1(M.real) + '٪'), h('small', null, ` واقعی · هدف ${R1(M.target)}٪ (روی بهای تمام‌شده) · یعنی حدود ${R1(M.real / (100 + M.real) * 100)}٪ از قیمت فروش`)), ...catRows,
           h('p', { class: 'hint' }, 'خط تیره = هدف. ۲۰٪ روی بهای تمام‌شده فقط حدود ۱۶٫۷٪ از قیمت فروش است.')] : h('p', { class: 'hint' }, 'هنوز فروشی با بهای تمام‌شده در این ماه نیست.')),
       h('div', { class: 'hc-col' }, h('div', { class: 'hc-t' }, '۲) سرمایه کجاست'),
         h('div', { class: 'hc-stack', role: 'img', 'aria-label': 'سهم انبار، طلب و پول حساب‌ها' }, capParts.map(([, v, c]) => h('div', { style: { width: (v / capTotal * 100) + '%', background: c } }))),

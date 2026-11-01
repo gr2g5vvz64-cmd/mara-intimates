@@ -73,7 +73,7 @@ export function buildMeeting(n = 14) {
   }
   /* مشکل‌های مشترک: کالا و پول */
   const issues = [], SA = stockAge(), RA = receivableAge(), ro = reorderSuggestions(), od = overdue('payable'), orr = overdue('receivable');
-  if (SA.old > 0) issues.push(`کالای بیش از ۳۰ روز مانده: ${M(SA.old)} ریال پول گیر کرده؛ برای فروش آن برنامه بگذاریم.`);
+  if (SA.old > 0) issues.push(`کالایی که بیش از ۳۰ روز از خریدش گذشته و هنوز مانده: ${M(SA.old)} ریال پول گیر کرده؛ برای فروش آن برنامه بگذاریم.`);
   if (ro.length) issues.push(`${fmt(ro.length)} کالای پرفروش رو به اتمام است: ${ro.slice(0, 4).map(r => r.item.name).join('، ')}.`);
   if (RA.c > 0) issues.push(`طلب‌های بالای ۸ روز: ${M(RA.c)} ریال هنوز وصول نشده.`);
   if (orr.length) issues.push(`${fmt(orr.length)} طلب از مشتریان سررسیدش گذشته.`);

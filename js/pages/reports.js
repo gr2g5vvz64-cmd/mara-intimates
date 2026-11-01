@@ -6,7 +6,7 @@ import { N, pill, kpi, dtable, run } from '../ui.js';
 import { head, btn } from './common.js';
 
 const cache = new Map();
-async function load(month) {
+export async function load(month) {
   if (cache.has(month)) return cache.get(month);
   const r = await api('/api/report/month/?month=' + encodeURIComponent(month));
   cache.set(month, r.data); return r.data;
@@ -25,14 +25,7 @@ const monthPicker = (cur, onPick) => {
 const wrapPage = (title, sub, month, onPick, extraActs, body) => h('div', { class: 'rep' },
   head(title, [monthPicker(month, onPick), ...extraActs, btn('🖨 چاپ / ذخیره‌ی PDF', () => window.print(), 'ghost')], sub), body);
 
-/* ================= صورت سود و زیان ================= */
-export function pnlPage() {
-  let month = jmonthKey(todayISO());
-  const box = h('div', null, h('div', { class: 'empty' }, 'در حال ساخت گزارش…'));
-  const root = h('div');
-  const draw = async () => {
-    box.replaceChildren(h('div', { class: 'empty' }, 'در حال ساخت گزارش…'));
-    let d; try { d = await load(month); } catch (e) { box.replaceChildren(h('div', { class: 'card' }, h('p', null, errText(e)))); return; }
+export function pnlBody(d, month) {
     const p = d.pnl, q = d.prev, s = d.settlement;
     const row = (label, cur, prev, { sign = '', bold = false, sub = false, neg = false } = {}) => ({ label, cur, prev, sign, bold, sub, neg });
     const lines = [
@@ -46,13 +39,13 @@ export function pnlPage() {
       ...(Math.abs(p.returns_effect) >= 1 || Math.abs(q.returns_effect) >= 1 ? [row('اثر مرجوعی‌ها', p.returns_effect, q.returns_effect, { sign: '±' })] : []),
       row('سود خالص ماه', p.net_profit, q.net_profit, { bold: true, sign: '=' })
     ];
-    box.replaceChildren(...[
+    return [
       d.locked ? h('div', { class: 'alert info' }, '🔒 این ماه بسته شده است؛ عددهای آن دیگر تغییر نمی‌کند.') : null,
       p.nameless.count ? h('div', { class: 'alert warn' }, `⚠️ ${fmt(p.nameless.count)} فاکتور بدون نام خریدار (${fmt(p.nameless.total)} ریال) هست؛ اسم خریدار را در «فاکتور فروش» ثبت کن.`) : null,
       h('div', { class: 'kpis' },
         kpi('فروش خالص', N(p.revenue), { sub: jmonthName(month) }), kpi('سود ناخالص', N(p.gross_profit), { sub: p.revenue ? fmt(Math.round(p.gross_profit / p.revenue * 100)) + '٪ فروش' : '' }),
         kpi('سود خالص', N(p.net_profit, p.net_profit < 0 ? 'neg' : 'pos'), { tone: p.net_profit < 0 ? 'neg' : 'ok', sub: p.margin_pct == null ? '' : 'حاشیه ' + fmt(Math.round(p.margin_pct)) + '٪' }),
-        kpi('سهم هر شریک (۵۰٪)', N(s.half), { sub: 'مهسا و رعنا' })),
+        kpi(s.bonus_pool > 0 ? 'سهم پایه‌ی هر شریک (۵۰٪)' : 'سهم هر شریک (۵۰٪)', N(s.half), { sub: s.bonus_pool > 0 ? 'بعد از کسر پاداش آشنایان' : 'مهسا و رعنا' })),
       h('h3', { class: 'sec' }, `صورت سود و زیان ${jmonthName(month)}`),
       dtable([
         { label: 'بند', main: true, render: r => h('span', { class: (r.bold ? 'b ' : '') + (r.sub ? 'subl' : '') }, r.sign ? h('span', { class: 'sg' }, r.sign + ' ') : null, r.label) },
@@ -72,7 +65,39 @@ export function pnlPage() {
       h('h3', { class: 'sec' }, 'خرید و وصول در همین ماه'),
       h('div', { class: 'kpis' }, kpi('خرید از تامین‌کننده', N(p.purchases.goods), { sub: fmt(p.purchases.count) + ' فاکتور خرید' }), kpi('پرداخت به تامین‌کننده', N(p.purchases.paid_to_suppliers)),
         kpi('دریافت نسیه از مشتری‌ها', N(p.collections)), kpi('میانگین هر فاکتور فروش', N(Math.round(p.avg_invoice)))),
-      h('p', { class: 'hint' }, 'سود خالص = فروش خالص − بهای تمام‌شده − پیک و بسته‌بندی − هزینه‌ها ± مرجوعی. جمع سود همه‌ی ماه‌ها دقیقاً با «سود کل» صفحه‌ی مالی برابر است.')].filter(Boolean));
+      h('p', { class: 'hint' }, 'سود خالص = فروش خالص − بهای تمام‌شده − پیک و بسته‌بندی − هزینه‌ها ± مرجوعی. جمع سود همه‌ی ماه‌ها دقیقاً با «سود کل» صفحه‌ی مالی برابر است.')].filter(Boolean);
+}
+
+export function settleBody(d, month) {
+    const s = d.settlement, P = s.people;
+    const cell = (label, fn, tone) => ({ label, fn, tone });
+    const rows = [
+      ['فروش این ماه', x => N(x.sales_total)], ['تعداد فاکتور این ماه', x => fmt(x.sales_count)], ...(s.bonus_pool > 0 ? [['🎁 پاداش فروش آشنایان (از سود کم شده)', x => N((x.bonus || {}).total || 0, 'pos')], ['⭐ فروشنده‌ی برتر ماه', x => (x.bonus && x.bonus.is_star ? '⭐ بله' : '—')]] : []), ['کسر انبارگردانی از سود (کسری واقعی)', x => N(-(x.charge || 0), (x.charge || 0) > 0 ? 'neg' : '')], ['سهم از سود خالص این ماه (۵۰٪)', x => N(x.profit_share, x.profit_share < 0 ? 'neg' : 'pos')],
+      ['سرمایه‌ی وارد‌شده تا امروز', x => N(x.capital)], ['پول نقد و بانک دست او', x => N(x.cash + x.bank)], ['جنس دست او (قیمت تمام‌شده)', x => N(x.stock_value)],
+      ['جیب شخصی (مانده)', x => N(x.pocket)], ['سهم او از سود کل تا امروز', x => N(x.profit_share_total)], ['برداشت سود این ماه', x => N(x.payout_month)], ['برداشت سود تا امروز', x => N(x.payout_total)]
+    ].map(([label, fn]) => ({ label, a: fn(P[0]), b: fn(P[1]) }));
+    return [
+      d.locked ? h('div', { class: 'alert info' }, '🔒 این ماه بسته شده است.') : null,
+      h('div', { class: 'kpis' }, kpi('سود خالص ' + jmonthName(month), N(s.net_profit, s.net_profit < 0 ? 'neg' : 'pos')), kpi(s.bonus_pool > 0 ? 'سهم پایه‌ی هر نفر (۵۰٪)' : 'سهم هر نفر (۵۰٪)', N(s.half), s.bonus_pool > 0 ? { sub: 'بعد از کسر پاداش‌ها (' + fmt(Math.round(s.bonus_pool)) + ' ریال)' } : undefined),
+        kpi('ارزش خالص کسب‌وکار', N(s.net_worth), { sub: 'نقد و بانک + انبار + طلب − بدهی' }), kpi('اختلاف سرمایه‌ی دو نفر', N(Math.abs(s.capital_diff)), { tone: Math.abs(s.capital_diff) > 1000 ? 'warn' : 'ok' })),
+      s.equalize
+        ? h('div', { class: 'alert warn' }, `⚖️ برای برابر شدن سرمایه: ${s.equalize.from} مبلغ ${fmt(Math.round(s.equalize.amount / 10))} تومان (${fmt(Math.round(s.equalize.amount))} ریال) به حساب شخصی ${s.equalize.to} واریز کند و بعد در «مالی › انتقال سرمایه» ثبت شود.`)
+        : h('div', { class: 'alert ok' }, '⚖️ سرمایه‌ی مهسا و رعنا برابر است.'),
+      h('h3', { class: 'sec' }, `حساب‌وکتاب ${jmonthName(month)}`),
+      dtable([{ label: 'بند', main: true, render: r => r.label }, { label: P[0].name, cls: 'num', render: r => r.a }, { label: P[1].name, cls: 'num', render: r => r.b }], rows),
+      h('div', { class: 'alert info' }, 'ℹ️ برداشت سود فعلاً بسته است تا کسب‌وکار قوی شود؛ سهم سود هر نفر در کسب‌وکار می‌ماند و جزو سرمایه‌ی او حساب می‌شود.'),
+      h('p', { class: 'hint' }, 'سرمایه، نقد، جنس و جیب‌ها «وضعیت امروز» هستند؛ فروش و سود، مربوط به همین ماه‌اند. هر شب گزارش روزانه و در آخر هر ماه این گزارش در ربات می‌آید.')].filter(Boolean);
+}
+
+/* ================= صورت سود و زیان ================= */
+export function pnlPage() {
+  let month = jmonthKey(todayISO());
+  const box = h('div', null, h('div', { class: 'empty' }, 'در حال ساخت گزارش…'));
+  const root = h('div');
+  const draw = async () => {
+    box.replaceChildren(h('div', { class: 'empty' }, 'در حال ساخت گزارش…'));
+    let d; try { d = await load(month); } catch (e) { box.replaceChildren(h('div', { class: 'card' }, h('p', null, errText(e)))); return; }
+    box.replaceChildren(...pnlBody(d, month));
   };
   const rebuild = () => { root.replaceChildren(wrapPage('صورت سود و زیان ماهانه', 'فقط برای مدیر. مقایسه با ماه قبل، فروشنده، محل فروش و پرسودترین کالاها.', month, v => { month = v; rebuild(); }, [sendBtn(() => month)], box)); draw(); };
   rebuild(); return root;
@@ -93,24 +118,7 @@ export function settlePage() {
   const draw = async () => {
     box.replaceChildren(h('div', { class: 'empty' }, 'در حال ساخت گزارش…'));
     let d; try { d = await load(month); } catch (e) { box.replaceChildren(h('div', { class: 'card' }, h('p', null, errText(e)))); return; }
-    const s = d.settlement, P = s.people;
-    const cell = (label, fn, tone) => ({ label, fn, tone });
-    const rows = [
-      ['فروش این ماه', x => N(x.sales_total)], ['تعداد فاکتور این ماه', x => fmt(x.sales_count)], ...(s.bonus_pool > 0 ? [['🎁 پاداش فروش آشنایان (از سود کم شده)', x => N((x.bonus || {}).total || 0, 'pos')], ['⭐ فروشنده‌ی برتر ماه', x => (x.bonus && x.bonus.is_star ? '⭐ بله' : '—')]] : []), ['کسر انبارگردانی از سود (کسری واقعی)', x => N(-(x.charge || 0), (x.charge || 0) > 0 ? 'neg' : '')], ['سهم از سود خالص این ماه (۵۰٪)', x => N(x.profit_share, x.profit_share < 0 ? 'neg' : 'pos')],
-      ['سرمایه‌ی وارد‌شده تا امروز', x => N(x.capital)], ['پول نقد و بانک دست او', x => N(x.cash + x.bank)], ['جنس دست او (قیمت تمام‌شده)', x => N(x.stock_value)],
-      ['جیب شخصی (مانده)', x => N(x.pocket)], ['سهم او از سود کل تا امروز', x => N(x.profit_share_total)], ['برداشت سود این ماه', x => N(x.payout_month)], ['برداشت سود تا امروز', x => N(x.payout_total)]
-    ].map(([label, fn]) => ({ label, a: fn(P[0]), b: fn(P[1]) }));
-    box.replaceChildren(...[
-      d.locked ? h('div', { class: 'alert info' }, '🔒 این ماه بسته شده است.') : null,
-      h('div', { class: 'kpis' }, kpi('سود خالص ' + jmonthName(month), N(s.net_profit, s.net_profit < 0 ? 'neg' : 'pos')), kpi(s.bonus_pool > 0 ? 'سهم پایه‌ی هر نفر (۵۰٪)' : 'سهم هر نفر (۵۰٪)', N(s.half), s.bonus_pool > 0 ? { sub: 'بعد از کسر پاداش‌ها (' + fmt(Math.round(s.bonus_pool)) + ' ریال)' } : undefined),
-        kpi('ارزش خالص کسب‌وکار', N(s.net_worth), { sub: 'نقد و بانک + انبار + طلب − بدهی' }), kpi('اختلاف سرمایه‌ی دو نفر', N(Math.abs(s.capital_diff)), { tone: Math.abs(s.capital_diff) > 1000 ? 'warn' : 'ok' })),
-      s.equalize
-        ? h('div', { class: 'alert warn' }, `⚖️ برای برابر شدن سرمایه: ${s.equalize.from} مبلغ ${fmt(Math.round(s.equalize.amount / 10))} تومان (${fmt(Math.round(s.equalize.amount))} ریال) به حساب شخصی ${s.equalize.to} واریز کند و بعد در «مالی › انتقال سرمایه» ثبت شود.`)
-        : h('div', { class: 'alert ok' }, '⚖️ سرمایه‌ی مهسا و رعنا برابر است.'),
-      h('h3', { class: 'sec' }, `حساب‌وکتاب ${jmonthName(month)}`),
-      dtable([{ label: 'بند', main: true, render: r => r.label }, { label: P[0].name, cls: 'num', render: r => r.a }, { label: P[1].name, cls: 'num', render: r => r.b }], rows),
-      h('div', { class: 'alert info' }, 'ℹ️ برداشت سود فعلاً بسته است تا کسب‌وکار قوی شود؛ سهم سود هر نفر در کسب‌وکار می‌ماند و جزو سرمایه‌ی او حساب می‌شود.'),
-      h('p', { class: 'hint' }, 'سرمایه، نقد، جنس و جیب‌ها «وضعیت امروز» هستند؛ فروش و سود، مربوط به همین ماه‌اند. هر شب گزارش روزانه و در آخر هر ماه این گزارش در ربات می‌آید.')].filter(Boolean));
+    box.replaceChildren(...settleBody(d, month));
   };
   const rebuild = () => { root.replaceChildren(wrapPage('حساب‌وکتاب ماهانه', 'سهم سود، سرمایه، جنس و پول دست مهسا و رعنا و مبلغ برابرسازی سرمایه.', month, v => { month = v; rebuild(); }, [sendBtn(() => month)], box)); draw(); };
   rebuild(); return root;

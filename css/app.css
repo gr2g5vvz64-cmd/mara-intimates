@@ -911,3 +911,7 @@ a.hchip:hover{background:#5d2e47}
 .fi.g{background:var(--green-bg);color:var(--green)}.fi.p{background:var(--tint);color:var(--gold-d)}.fi.r{background:var(--red-bg);color:var(--red)}.fi.y{background:var(--amber-bg);color:var(--amber)}
 .ft{flex:1;min-width:0}.ft b{display:block}.ft small{color:var(--brown)}.fa{flex:none}
 @media (max-width:640px){.hero2{padding:16px}.hero-h{font-size:18px}.hs{flex:1 1 130px}}
+/* بسته‌ی گزارش ماهانه (v7.38) */
+.pack-cover{margin:6px 0 14px}.pack-cover h1{margin:0 0 4px;font-size:22px}.pack-cover p{margin:0;color:var(--brown)}
+.pack-h{font-size:18px;margin:22px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--line)}
+@media print{.pack-sec{break-before:page}.pack-sec:first-of-type{break-before:auto}.pack .kpis,.pack table{break-inside:avoid}.pack-h{font-size:15px}}
