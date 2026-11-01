@@ -1,5 +1,5 @@
 // صورت‌حساب مشتری: «فاکتور یک فروش» یا «گردش حساب یک مشتری» به‌صورت عکس (PNG) با پیش‌نمایش؛
-// قابل ارسال از همان منوی اشتراک‌گذاری گوشی (واتساپ، اینستاگرام، تلگرام…)، ذخیره‌ی عکس و چاپ/PDF.
+// ذخیره‌ی عکس و چاپ/PDF.
 // هیچ بهای تمام‌شده، سود یا اطلاعات داخلی روی عکس نیست؛ فقط آنچه مشتری باید ببیند.
 import { h, fmt, jstr, toast } from './util.js';
 import { S } from './store.js';
@@ -136,18 +136,11 @@ export async function showStatement(spec) {
     const my = ++seq; status.textContent = 'در حال ساخت…';
     try {
       const cv = await drawStatement(spec, note.value.trim()); if (my !== seq) return; cvRef = cv;
-      blob = await new Promise(r => cv.toBlob(r, 'image/png')); img.src = URL.createObjectURL(blob); status.textContent = 'همین عکس ارسال می‌شود.';
+      blob = await new Promise(r => cv.toBlob(r, 'image/png')); img.src = URL.createObjectURL(blob); status.textContent = 'همین عکس ذخیره یا چاپ می‌شود.';
     } catch (e) { status.textContent = 'ساخت عکس ممکن نشد: ' + (e && e.message || e); }
   };
   let t; note.addEventListener('input', () => { setNote(note.value); clearTimeout(t); t = setTimeout(redraw, 350); });
   const fname = `${spec.kind === 'invoice' ? 'فاکتور-' + spec.no : 'صورت‌حساب-' + spec.buyer}.png`.replace(/\s+/g, '-');
-  const share = h('button', { class: 'btn primary', type: 'button' }, '📤 ارسال (واتساپ، اینستاگرام…)');
-  share.onclick = async () => {
-    if (!blob) return;
-    const file = new File([blob], fname, { type: 'image/png' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: spec.title + ' ' + spec.buyer }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
-    save.click(); toast('این دستگاه اشتراک‌گذاری مستقیم ندارد؛ عکس ذخیره شد، از گالری بفرست');
-  };
   const save = h('a', { class: 'btn ghost', download: fname, href: '#', role: 'button' }, '💾 ذخیره‌ی عکس');
   save.addEventListener('click', e => { if (!blob) { e.preventDefault(); return; } save.href = URL.createObjectURL(blob); });
   const pr = h('button', { class: 'btn ghost', type: 'button' }, '🖨 چاپ / PDF');
@@ -155,6 +148,6 @@ export async function showStatement(spec) {
     if (!blob) return; const w = window.open('', '_blank'); if (!w) return toast('اجازه‌ی باز شدن پنجره را بده', 'err');
     w.document.write(`<!doctype html><meta charset="utf-8"><title>${spec.title}</title><style>body{margin:0}img{width:100%}@page{margin:8mm}</style><img src="${URL.createObjectURL(blob)}" onload="setTimeout(()=>print(),150)">`); w.document.close();
   };
-  const m = modal({ title: `${spec.title}${spec.no ? ' ' + spec.no : ''} — پیش‌نمایش`, wide: true, body: h('div', { class: 'stm' }, field('توضیح پرداخت (روی عکس می‌آید)', note), status, h('div', { class: 'stm-wrap' }, img)), footer: [share, save, pr] });
+  const m = modal({ title: `${spec.title}${spec.no ? ' ' + spec.no : ''} — پیش‌نمایش`, wide: true, body: h('div', { class: 'stm' }, field('توضیح پرداخت (روی عکس می‌آید)', note), status, h('div', { class: 'stm-wrap' }, img)), footer: [save, pr] });
   redraw(); return m;
 }

@@ -1,4 +1,5 @@
 import { h, fmt, jstr } from '../util.js';
+import { supplierReturnBatchForm } from '../supplier_return_batch.js';
 import { S, canEdit } from '../store.js';
 import { dtable, N, pill, tabsBar, kpi } from '../ui.js';
 import { moveStockForm, supplierReturnForm, editEntryForm, voidEntry } from '../forms_misc.js';
@@ -93,7 +94,7 @@ export function render(query) {
     }
   };
   const tot = S.totals.stock_value || 0;
-  root.append(head('موجودی', [canEdit() ? btn('جابجایی', () => moveStockForm(), 'ghost') : null, btn('برگشت به تامین‌کننده', () => supplierReturnForm(), 'ghost'), btn('＋ خرید', () => purchaseForm(), 'primary')], 'فروش از قدیمی‌ترین دسته شروع می‌شود (FIFO) و با قیمت تمام‌شده‌ی همان دسته حساب می‌شود.'),
+  root.append(head('موجودی', [canEdit() ? btn('جابجایی', () => moveStockForm(), 'ghost') : null, btn('برگشت به تامین‌کننده', () => supplierReturnBatchForm(), 'ghost'), btn('＋ خرید', () => purchaseForm(), 'primary')], 'فروش از قدیمی‌ترین دسته شروع می‌شود (FIFO) و با قیمت تمام‌شده‌ی همان دسته حساب می‌شود.'),
     flowCard(), warehouseCard(), byCategoryCard(),
     h('div', { class: 'kpis' }, kpi('ارزش کل موجودی', N(tot), { sub: 'به قیمت تمام‌شده' }), kpi('تعداد کل', h('span', { class: 'n' }, fmt(S.stock.reduce((a, i) => a + i.rem, 0)))), kpi('کم‌موجودی', h('span', { class: 'n' }, T.filter(i => i.rem > 0 && i.rem <= i.min_stock).length), { tone: 'warn' })),
     h('div', { class: 'bar' }, searchBox(v => { q = v; limit = 30; draw(); }, 'جستجو با کد، نام، دسته، رنگ یا سایز…')),
