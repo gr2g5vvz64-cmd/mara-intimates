@@ -67,6 +67,12 @@ export function bonusMonth(month = jmonthKey(todayISO())) {
   for (const o of [m, r]) o.total = o.base + o.star;
   out.cfg = cfg; return out;
 }
+/** جمع پاداش همه‌ی ماه‌ها تا امروز برای هر نفر (برای جدول «سهم از سود» در صفحه‌ی مالی) */
+export function bonusLifetime() {
+  const keys = new Set(activeSales().filter(s => s.channel === GOAL_CHANNEL).map(s => jmonthKey(s.date))), t = { 'مهسا': 0, 'رعنا': 0 };
+  for (const k of keys) { const b = bonusMonth(k); t['مهسا'] += b['مهسا'].total; t['رعنا'] += b['رعنا'].total; }
+  return t;
+}
 export function goalProgress(owner, month = jmonthKey(todayISO())) {
   const cfg = bonusCfg(), all = activeSales().filter(s => s.seller === owner && s.channel === GOAL_CHANNEL && jmonthKey(s.date) === month);
   const ok = cfg.on ? all.filter(s => bonusEligible(s, cfg)) : all, goal = goalOf(owner, month);

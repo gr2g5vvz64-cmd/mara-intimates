@@ -2,7 +2,7 @@ import { h, fmt, jstr, jmonthName, sum, lastMonths, fromJ, jMonthLen, jmonthKey,
 import { S, businessAccounts, pockets, accBalance, monthly, rpc, bus, errText } from '../store.js';
 import { dtable, N, pill, kpi, confirmBox, promptBox } from '../ui.js';
 import { transferForm, capitalForm, collectionForm, dayCloseForm } from '../forms_misc.js';
-import { dayCloseOpen, negativeAccounts } from '../insights.js';
+import { dayCloseOpen, negativeAccounts, bonusLifetime } from '../insights.js';
 import { ex } from '../explain.js';
 import { head, btn } from './common.js';
 
@@ -11,7 +11,9 @@ export function render() {
   const capM = T.capital_m || 0, capR = T.capital_r || 0, capT = capM + capR, profit = T.profit || 0;
   const sh = (c) => (capT > 0 ? c / capT : 0);
   // سود بین مهسا و رعنا همیشه برابر (۵۰–۵۰) است؛ سرمایه فقط برای برابر کردن پول گذاشته‌شده است.
-  const part = (name, cap, payout, pocketId) => ({ name, cap, share: sh(cap), suggest: profit / 2, payout, left: profit / 2 - payout, pocketId });
+  // پاداش فروش آشنایان (پلکانی + فروشنده‌ی برتر) اول از سود کم می‌شود، بقیه ۵۰/۵۰ است
+  const BL = bonusLifetime(), pool = BL['مهسا'] + BL['رعنا'], baseHalf = (profit - pool) / 2;
+  const part = (name, cap, payout, pocketId) => ({ name, cap, share: sh(cap), base: baseHalf, bonus: BL[name] || 0, suggest: baseHalf + (BL[name] || 0), payout, left: baseHalf + (BL[name] || 0) - payout, pocketId });
   const capDiff = capM - capR, hiName = capDiff > 0 ? 'مهسا' : 'رعنا', loName = capDiff > 0 ? 'رعنا' : 'مهسا', eqAmt = Math.abs(capDiff) / 2;
   const rows = [part('مهسا', capM, T.payout_m || 0, pk.find(a => a.owner === 'مهسا')), part('رعنا', capR, T.payout_r || 0, pk.find(a => a.owner === 'رعنا'))];
   const ok = Math.abs(T.check_diff || 0) <= 1;
@@ -33,10 +35,10 @@ export function render() {
       h('div', { class: 'card' }, h('div', { class: 'ct' }, 'سود چطور ساخته شد'),
         R('جمع فروش', T.revenue, '', 'revenue'), R('− بهای تمام‌شده‌ی کالاهای فروخته‌شده', -T.cogs, '', 'cogs'), R('− پیک و بسته‌بندی فروش‌ها', -T.sale_costs, '', 'sale_costs'), R('− هزینه‌ها', -T.expenses, '', 'expenses'), R('± مرجوعی‌ها', T.returns_effect, '', 'returns'), R('سود کل', profit, 'bold', 'profit'),
         h('div', { class: 'checkline xpchk ' + (ok ? 'ok' : 'bad') }, ok ? '✓ کنترل حسابداری: کل دارایی − سرمایه + برداشت‌ها = سود. اختلاف صفر است.' : `⚠ اختلاف کنترلی: ${fmt(T.check_diff)} ریال. با حمیدرضا تماس بگیر.`))),
-    h('h3', { class: 'sec' }, 'سرمایه و سهم از سود (برابر)'),
+    h('h3', { class: 'sec' }, pool > 0 ? 'سرمایه و سهم از سود' : 'سرمایه و سهم از سود (برابر)'),
     dtable([
       { label: 'نفر', main: true, render: r => r.name }, { label: 'سرمایه‌ی گذاشته‌شده', cls: 'num', render: r => N(r.cap) }, { label: 'سهم از سرمایه', cls: 'num', render: r => h('span', { class: 'n' }, capT > 0 ? (r.share * 100).toFixed(1) + '%' : '') },
-      { label: 'سهم از سود (برابر ۵۰٪)', cls: 'num', render: r => ex(N(r.suggest), 'share', r) }, { label: 'برداشت‌شده تا حالا', cls: 'num', render: r => ex(N(r.payout), 'share', r) }, { label: 'باقی‌مانده برای برداشت', cls: 'num', render: r => ex(N(r.left), 'share', r) },
+      { label: pool > 0 ? 'سهم از سود (۵۰٪ + پاداش)' : 'سهم از سود (برابر ۵۰٪)', cls: 'num', render: r => ex(N(r.suggest), 'share', r) }, { label: 'برداشت‌شده تا حالا', cls: 'num', render: r => ex(N(r.payout), 'share', r) }, { label: 'باقی‌مانده برای برداشت', cls: 'num', render: r => ex(N(r.left), 'share', r) },
       { label: '', render: r => (S.me && S.me.role === 'admin' ? btn('ثبت برداشت', () => transferForm({ kind: 'profit_payout', to: r.pocketId && r.pocketId.id }), 'ghost sm') : '') }
     ], rows, { empty: '' }),
     h('p', { class: 'hint' }, 'سرمایه = پولی که هر نفر از جیب شخصی‌اش در کسب‌وکار گذاشته، منهای آنچه پس گرفته. سود همیشه برابر تقسیم می‌شود: سهم هر نفر ' + fmt(profit / 2) + ' ریال. اگر یکی بیشتر سرمایه گذاشته باشد، نفر دیگر با واریز نصفِ تفاوت به حساب شخصی او سرمایه را برابر می‌کند.'),

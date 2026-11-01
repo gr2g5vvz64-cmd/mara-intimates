@@ -44,6 +44,12 @@ try {
   await page.evaluate(() => { location.hash = '#/settle'; }); await sleep(1800);
   const st2 = await page.locator('#view').innerText();
   ok(st2.includes('پاداش فروش آشنایان') && st2.includes('فروشنده‌ی برتر ماه') && st2.includes('سهم پایه‌ی هر نفر'), 'حساب‌وکتاب ماهانه: ردیف پاداش و ستاره');
+  await page.reload(); await sleep(1500); await page.evaluate(() => { location.hash = '#/finance'; }); await sleep(1500);
+  const fin = page.locator('#view table').filter({ hasText: 'سهم از سود' }).first(); const ft = await fin.innerText();
+  ok(ft.includes('۵۰٪ + پاداش'), 'صفحه‌ی مالی: ستون سهم از سود با پاداش');
+  const shares = [];
+  for (const n of ['مهسا', 'رعنا']) { const cells = await fin.locator('tr', { hasText: n }).first().locator('td').allInnerTexts(); shares.push(Number(fa(cells[3]).replace(/[^\d]/g, ''))); }
+  ok(shares[0] > shares[1] && Math.abs(shares[0] - shares[1] - Math.round(sv['مهسا'].total - sv['رعنا'].total)) <= 2, `سهم‌ها دیگر برابر نیست (${shares.join(' / ')}) و اختلافشان همان اختلاف پاداش‌هاست`);
   // گزارش جلسه
   await page.evaluate(() => { location.hash = '#/meeting'; }); await sleep(1800);
   ok((await page.locator('#view').innerText()).includes('پاداش آشنایان تا الان'), 'گزارش جلسه پاداش را نشان می‌دهد');
