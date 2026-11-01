@@ -9,7 +9,7 @@ const NS = 'http://www.w3.org/2000/svg';
 const sv = (tag, a = {}, ...k) => { const e = document.createElementNS(NS, tag); for (const x in a) e.setAttribute(x, a[x]); k.flat().forEach(c => c != null && e.append(c instanceof Node ? c : document.createTextNode(String(c)))); return e; };
 const R1 = v => (Math.round(v * 10) / 10).toLocaleString('en-US');
 const dec = v => Number(v).toLocaleString('en-US', { maximumFractionDigits: 1 });
-export const money = v => (Math.abs(v) >= 1e6 ? `${dec(v / 1e6)} میلیون` : `${fmt(Math.round(v))} ریال`);
+export const money = v => (Math.abs(v) >= 1e6 ? `${dec(v / 1e6)} میلیون ریال` : `${fmt(Math.round(v))} ریال`);
 const isAdmin = () => !!(S.me && S.me.role === 'admin');
 const monthStart = () => { const t = todayISO(); return addDaysISO(t, -(toJ(t)[2] - 1)); };
 const sameDayIn = (d, a, b) => d >= a && d <= b;
@@ -82,7 +82,7 @@ export function healthCard() {
   const capParts = [['انبار', D.stock, 'var(--gold)'], ['طلب از مشتری', D.recv, 'var(--lux)'], ['پول حساب‌ها', D.cash, 'var(--green)']];
   const verdict = (() => {
     if (!st.count) return { tone: 'info', text: 'این ماه هنوز فروشی ثبت نشده.' };
-    const lines = [st.profit >= 0 ? `در سود هستید ✓ — ${money(st.profit)} سود از ${money(st.sales)} فروش این ماه` : `این ماه تا الان در ضرر هستید: ${money(-st.profit)} ریال کسری از ${money(st.sales)} فروش`];
+    const lines = [st.profit >= 0 ? `در سود هستید ✓ — ${money(st.profit)} سود از ${money(st.sales)} فروش این ماه` : `این ماه تا الان در ضرر هستید: ${money(-st.profit)} کسری از ${money(st.sales)} فروش`];
     if (D.be) lines.push(`فروش ${R1(st.sales / D.be)} برابر نقطه‌ی سربه‌سر است`);
     return { tone: st.profit >= 0 ? 'ok' : 'bad', text: lines.join(' · ') + '.' };
   })();
