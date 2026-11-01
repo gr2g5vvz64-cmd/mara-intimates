@@ -15,6 +15,7 @@ import * as diag from './pages/diag.js';
 import * as savelog from './pages/savelog.js';
 import * as calc from './pages/calc.js';
 import * as ana from './pages/analysis_page.js';
+import * as cmsg from './pages/custmsg.js';
 import * as rep from './pages/reports.js';
 import * as pack from './pages/pack.js';
 import * as meet from './pages/meeting.js';
@@ -47,6 +48,7 @@ const ROUTES = {
   help: { t: 'راهنما و پشتیبان', i: '?', f: () => help.render() },
   mgmt: { t: 'گزارش مدیریتی', i: '📈', f: () => mgmt.render() },
   analysis: { t: 'تحلیل', i: '🔍', f: () => ana.render() },
+  custmsg: { t: 'پیام به مشتری', i: '💌', f: () => cmsg.render() },
   calc: { t: 'محاسبات و درصد سود', i: '％', f: () => calc.render() },
   pack: { t: 'بسته‌ی گزارش ماهانه', i: '🗂', f: () => pack.render() },
   pnl: { t: 'صورت سود و زیان', i: '📒', f: () => rep.pnlPage() },
@@ -59,7 +61,7 @@ const ROUTES = {
 /* منوی کناری در پنج گروه (زیرمجموعه‌ها با کلیک روی عنوان باز و بسته می‌شوند) */
 const GROUPS = [
   { id: 'dash', t: 'داشبورد', i: '▦', kids: ['', 'mgmt', 'analysis', 'pnl', 'calc'] },
-  { id: 'sales', t: 'فروش', i: '🛍', kids: ['sales', 'customers', 'returns'] },
+  { id: 'sales', t: 'فروش', i: '🛍', kids: ['sales', 'customers', 'custmsg', 'returns'] },
   { id: 'buy', t: 'خرید', i: '📦', kids: ['purchases', 'suppliers', 'sreturns'] },
   { id: 'wh', t: 'انبار', i: '▤', kids: ['stock', 'monthcount', 'items'] },
   { id: 'money', t: 'مالی', i: '◎', kids: ['finance', 'pay', 'invoices', 'cheques', 'settle'] },
@@ -89,7 +91,7 @@ function parseHash() {
 function route() {
   if (!view) return;
   let { path, q } = parseHash();
-  if ((path === 'diag' || path === 'mgmt' || path === 'analysis' || path === 'pnl' || path === 'pack' || path === 'meeting') && !(S.me && S.me.role === 'admin')) { path = ''; history.replaceState(null, '', '#/'); }
+  if ((path === 'diag' || path === 'mgmt' || path === 'analysis' || path === 'pnl' || path === 'pack' || path === 'meeting' || path === 'custmsg') && !(S.me && S.me.role === 'admin')) { path = ''; history.replaceState(null, '', '#/'); }
   if (path === 'settle' && (!S.me || S.me.role === 'viewer')) { path = ''; history.replaceState(null, '', '#/'); }
   const r = ROUTES[path] || ROUTES[''];
   const key = ROUTES[path] ? path : '';
@@ -184,7 +186,7 @@ function shell() {
   const mk = (k, cls) => { const r = ROUTES[k]; const a = h('a', { href: '#/' + k, 'data-r': k, class: cls }, h('span', { class: 'ni', 'aria-hidden': 'true' }, r.i), h('b', { class: 'cnt zero', 'data-c': k, role: 'status' }, '۰'), h('span', { class: 'nt' }, navLabel(k, cls))); navEls.push(a); return a; };
   navEls = []; grpEls = [];
   const grp = (g, cls) => {
-    const kids = g.kids.filter(k => (k !== 'diag' && k !== 'calc' && k !== 'analysis' && k !== 'mgmt' && k !== 'pnl' && k !== 'meeting') || isAdmin()).filter(k => k !== 'settle' || (S.me && S.me.role !== 'viewer'));
+    const kids = g.kids.filter(k => (k !== 'diag' && k !== 'calc' && k !== 'analysis' && k !== 'mgmt' && k !== 'pnl' && k !== 'meeting' && k !== 'custmsg') || isAdmin()).filter(k => k !== 'settle' || (S.me && S.me.role !== 'viewer'));
     const cnt = h('b', { class: 'cnt amber', hidden: true, role: 'status' });
     const kidsEl = h('div', { class: 'gk', id: `gk-${cls}-${g.id}` }, kids.map(k => mk(k, cls)));
     const btn = h('button', { type: 'button', class: 'gh', 'aria-expanded': 'false', 'aria-controls': kidsEl.id, onclick: () => setGroup(g.id, !el.classList.contains('open')) },

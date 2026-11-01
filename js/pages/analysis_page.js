@@ -3,7 +3,7 @@ import { h, jlong, todayISO, toast } from '../util.js';
 import { S, api } from '../store.js';
 import { pill, kpi, chips, tabsBar } from '../ui.js';
 import { head, btn } from './common.js';
-import { copyAiPack } from '../aipack.js';
+import { copyAiPack, SECTIONS, ALL_IDS, buildSections, saveText } from '../aipack.js';
 import { saleDetail, purchaseDetail } from './trade.js';
 import { buildReport, reportText, PERIODS } from '../report.js';
 import { errText } from '../store.js';
@@ -68,6 +68,33 @@ function indTab() {
   return host;
 }
 
+/* ---------- تب خروجی: هر تحلیل جدا، یا «کل MARA» ---------- */
+function exportTab() {
+  const host = h('div', null), sel = new Set(ALL_IDS), anon = { v: false };
+  const run = async (ids, name, e) => {
+    const b = e.currentTarget; b.disabled = true;
+    try { const t = await buildSections(ids, { anon: anon.v }); try { await navigator.clipboard.writeText(t); toast('✅ کپی شد؛ در Claude، ChatGPT یا Gemini بچسبان'); } catch { toast('کپی نشد؛ فایل دانلود شد', 'err'); } saveText(t, `MARA-${name}${anon.v ? '-anon' : ''}-${stamp()}.txt`); }
+    catch (er) { toast(errText(er), 'err'); } finally { b.disabled = false; }
+  };
+  const draw = () => host.replaceChildren(
+    h('div', { class: 'card', style: 'margin:8px 0;border-color:var(--gold, #c9a227)' },
+      h('div', { class: 'ct' }, '🌐 کل MARA'),
+      h('p', { class: 'hint' }, 'همه‌ی تحلیل‌های پایین را (به‌جز سالانه) یک‌جا، با قواعد کسب‌وکار و درخواست از بررسی‌کننده، در یک متن می‌سازد و کپی و دانلود می‌کند.'),
+      h('label', { class: 'row', style: 'gap:6px;margin:6px 0' }, h('input', { type: 'checkbox', checked: anon.v, onchange: e => { anon.v = e.target.checked; } }), 'بدون نام مشتری و تامین‌کننده'),
+      h('button', { type: 'button', class: 'btn gold', onclick: e => run(ALL_IDS, 'all', e) }, '📦 خروجی کل MARA')),
+    h('div', { class: 'card', style: 'margin:8px 0' },
+      h('div', { class: 'ct' }, '🧩 انتخاب چند بخش'),
+      h('div', { class: 'row', style: 'gap:10px;flex-wrap:wrap' }, SECTIONS.map(s => h('label', { class: 'row', style: 'gap:4px' }, h('input', { type: 'checkbox', checked: sel.has(s.id), onchange: e => { e.target.checked ? sel.add(s.id) : sel.delete(s.id); } }), s.icon + ' ' + s.title))),
+      h('button', { type: 'button', class: 'btn ghost', style: 'margin-top:8px', onclick: e => { if (!sel.size) return toast('حداقل یک بخش را انتخاب کن', 'err'); run(SECTIONS.filter(s => sel.has(s.id)).map(s => s.id), 'selected', e); } }, '📤 خروجی بخش‌های انتخاب‌شده')),
+    ...SECTIONS.map(s => h('div', { class: 'card', style: 'margin:8px 0' },
+      h('div', { class: 'ct' }, s.icon + ' ' + s.title), h('p', { class: 'hint', style: 'margin:2px 0 6px' }, s.hint),
+      h('div', { class: 'row', style: 'gap:8px;flex-wrap:wrap' },
+        h('button', { type: 'button', class: 'btn ghost sm', onclick: e => run([s.id], s.id, e) }, '📤 خروجی همین تحلیل'),
+        h('button', { type: 'button', class: 'btn ghost sm', onclick: async e => { const b = e.currentTarget; b.disabled = true; try { const t = await buildSections([s.id], { anon: anon.v, ask: false }); const pre = h('pre', { class: 'hint', style: 'white-space:pre-wrap;margin-top:8px' }, t.slice(t.indexOf('\n=== ') + 1)); const card = b.closest('.card'); const old = card.querySelector('pre'); old ? old.remove() : card.append(pre); } finally { b.disabled = false; } } }, '👁 پیش‌نمایش')))),
+    h('p', { class: 'hint' }, 'هر خروجی هم کپی می‌شود و هم به‌صورت فایل متنی دانلود می‌شود. این صفحه فقط می‌خواند و چیزی را تغییر نمی‌دهد.'));
+  draw(); return host;
+}
+
 /* ---------- تب تحلیل عملکرد ---------- */
 function perfTab() {
   const host = h('div', null), body = h('div', null);
@@ -90,8 +117,8 @@ function perfTab() {
 export function render() {
   if (!S.me || S.me.role !== 'admin') return h('div', { class: 'card' }, 'این صفحه فقط برای مدیر است.');
   const host = h('div', null), body = h('div', null);
-  const pick = () => (tab === 'audit' ? auditTab() : tab === 'perf' ? perfTab() : tab === 'ind' ? indTab() : advisorTab());
+  const pick = () => (tab === 'audit' ? auditTab() : tab === 'perf' ? perfTab() : tab === 'ind' ? indTab() : tab === 'export' ? exportTab() : advisorTab());
   const draw = () => { body.replaceChildren(pick()); host.querySelector('.tabs') && host.querySelector('.tabs').replaceWith(bar()); };
-  const bar = () => tabsBar([{ id: 'advisor', label: '🧭 مشاور خرید' }, { id: 'perf', label: '📈 تحلیل عملکرد' }, { id: 'ind', label: '📊 شاخص‌ها' }, { id: 'audit', label: '🔍 بررسی اشتباهات' }, { id: 'meeting', label: '🧑‍💼 گزارش جلسه‌ی دو هفته‌ای' }], tab, t => { if (t === 'meeting') { location.hash = '#/meeting'; return; } tab = t; draw(); });
+  const bar = () => tabsBar([{ id: 'advisor', label: '🧭 مشاور خرید' }, { id: 'perf', label: '📈 تحلیل عملکرد' }, { id: 'ind', label: '📊 شاخص‌ها' }, { id: 'audit', label: '🔍 بررسی اشتباهات' }, { id: 'export', label: '📦 خروجی تحلیل‌ها' }, { id: 'meeting', label: '🧑‍💼 گزارش جلسه‌ی دو هفته‌ای' }], tab, t => { if (t === 'meeting') { location.hash = '#/meeting'; return; } tab = t; draw(); });
   host.append(head('تحلیل', [btn('📤 خروجی برای بررسی هوش مصنوعی', async e => { const b = e.currentTarget; b.disabled = true; try { await copyAiPack(); } catch (er) { toast(errText(er), 'err'); } finally { b.disabled = false; } }, 'ghost'), btn('📤 همان، بدون نام مشتری', async e => { const b = e.currentTarget; b.disabled = true; try { await copyAiPack(true); } catch (er) { toast(errText(er), 'err'); } finally { b.disabled = false; } }, 'ghost')], `${jlong(todayISO())} · فقط مدیر`), bar(), body); body.append(pick()); return host;
 }
