@@ -10,18 +10,18 @@ import { saleDetail } from './trade.js';
 import { topCustomersCard } from './dashboard.js';
 
 export function render(query) {
-  let q = '', onlyDebt = query.get('debt') !== '0', sortBy = 'debt', tbl = h('div');
+  let q = '', onlyDebt = query.get('debt') === '1', sortBy = 'debt', tbl = h('div');
   const debtors = S.vCus.filter(c => c.outstanding > 0.5);
   const total = sum(debtors, c => c.outstanding), over = sum(debtors, c => c.overdue_amount);
   const draw = () => {
-    const rows = S.vCus.filter(c => (!onlyDebt || c.outstanding > 0.5) && c.active !== false && match(q, c.name, c.phone, c.note))
+    const rows = S.vCus.filter(c => (!onlyDebt || c.outstanding > 0.5) && c.active !== false && match(q, c.name, c.phone, c.note, (S.CUS[c.id] || {}).address))
       .sort((a, b) => sortBy === 'buy' ? b.sales_total - a.sales_total || a.name.localeCompare(b.name, 'fa') : b.overdue_amount - a.overdue_amount || b.outstanding - a.outstanding || a.name.localeCompare(b.name, 'fa'));
     tbl.replaceChildren(dtable([
-      { label: 'مشتری', main: true, render: c => c.name }, { label: 'تلفن', render: c => h('span', { dir: 'ltr' }, c.phone || '') },
+      { label: 'مشتری', main: true, render: c => c.name }, { label: 'تلفن', render: c => (c.phone ? h('span', { dir: 'ltr' }, c.phone) : (canEdit() ? btn('＋ تلفن', e => { e.stopPropagation(); customerForm(S.CUS[c.id]); }, 'ghost sm') : '')) }, { label: 'نشانی', hm: true, render: c => (S.CUS[c.id] || {}).address || '' },
       { label: 'جمع فروش', cls: 'num', hm: true, render: c => N(c.sales_total) }, { label: 'تسویه‌شده', cls: 'num', hm: true, render: c => N(c.settled) },
       { label: 'مانده‌ی بدهی', cls: 'num', render: c => (c.outstanding > 0.5 ? pill(fmt(c.outstanding), c.overdue_amount > 0 ? 'red' : 'amber') : pill('تسویه', 'green')) },
       { label: 'فروش باز', cls: 'num', render: c => c.open_count || '' }, { label: 'نزدیک‌ترین سررسید', render: c => (c.outstanding > 0.5 && c.next_due ? dueCell(c.next_due) : '') },
-      { label: '', render: c => h('span', null, c.outstanding > 0.5 ? btn('دریافت', e => { e.stopPropagation(); collectCustomerForm(c.id); }, 'gold sm') : null, ' ', canEdit() ? btn('✏️', e => { e.stopPropagation(); customerForm(S.CUS[c.id]); }, 'ghost sm') : null) }
+      { label: '', render: c => h('span', null, c.outstanding > 0.5 ? btn('دریافت', e => { e.stopPropagation(); collectCustomerForm(c.id); }, 'gold sm') : null, ' ', canEdit() ? btn('ویرایش', e => { e.stopPropagation(); customerForm(S.CUS[c.id]); }, 'ghost sm') : null) }
     ], rows, { onRow: c => customerDetail(c.id), empty: onlyDebt ? 'مشتری بدهکاری نداریم 🎉' : 'هنوز مشتری ثبت نشده' }));
   };
   draw();
@@ -29,7 +29,7 @@ export function render(query) {
     'فروش نسیه که مشتری ۳ یا ۵ یا ۱۰ روز بعد می‌دهد: مانده، سررسید و تسویه‌ی کامل یا قسطی همین‌جاست.'),
     h('div', { class: 'kpis' }, kpi('جمع طلب ما از مشتریان', N(total), { sub: 'ریال', tone: total > 0 ? 'warn' : '' }), kpi('سررسید گذشته', N(over), { sub: 'ریال', tone: over > 0 ? 'neg' : '' }), kpi('مشتریان بدهکار', debtors.length, { sub: 'نفر' })),
     topCustomersCard(),
-    h('div', { class: 'bar' }, searchBox(v => { q = v; draw(); }, 'جستجو: نام یا تلفن…'),
+    h('div', { class: 'bar' }, searchBox(v => { q = v; draw(); }, 'جستجو: نام، تلفن یا نشانی…'),
       h('select', { class: 'sel', 'aria-label': 'مرتب‌سازی', onchange: e => { sortBy = e.target.value; draw(); } }, h('option', { value: 'debt' }, 'مرتب: بیشترین بدهی / سررسید'), h('option', { value: 'buy' }, 'مرتب: بیشترین خرید')),
       h('label', { class: 'chk' }, h('input', { type: 'checkbox', checked: onlyDebt || null, onchange: e => { onlyDebt = e.target.checked; draw(); } }), 'فقط بدهکارها')), tbl);
 }
@@ -47,13 +47,13 @@ export function customerDetail(id) {
   const open = sales.filter(s => s.outstanding > 0.5).sort((a, b2) => (a.date < b2.date ? -1 : 1));
   const m = detail({
     title: `صورت‌حساب ${c.name}`,
-    rows: [['مانده‌ی بدهی', b.outstanding > 0.5 ? N(b.outstanding, 'neg') : 'تسویه'], c.phone ? ['تلفن', h('span', { dir: 'ltr' }, c.phone)] : null, c.note ? ['یادداشت', c.note] : null,
+    rows: [['مانده‌ی بدهی', b.outstanding > 0.5 ? N(b.outstanding, 'neg') : 'تسویه'], c.phone ? ['تلفن', h('span', { dir: 'ltr' }, c.phone)] : null, c.address ? ['نشانی', c.address] : null, c.note ? ['یادداشت', c.note] : null,
       b.overdue_amount > 0 ? ['سررسید گذشته', N(b.overdue_amount, 'neg')] : null, ['جمع فروش به او', N(b.sales_total || 0)]],
     extra: [open.length ? [h('h3', { class: 'sec' }, 'فروش‌های باز (قدیمی‌ترین اول)'), dtable([
       { label: 'فروش', main: true, render: s => s.no }, { label: 'تاریخ', render: s => jstr(s.date) }, { label: 'مانده', cls: 'num', render: s => N(s.outstanding) },
       { label: 'سررسید', render: s => (s.due_date ? dueCell(s.due_date) : 'تعیین نشده') },
       { label: '', render: s => !canEdit() ? '' : btn('تغییر سررسید', e => { e.stopPropagation(); m.close(); setDueForm('sale', s); }, 'ghost sm') }], open, { onRow: s => { m.close(); saleDetail(s.id); } })] : null,
       h('h3', { class: 'sec' }, 'گردش حساب'), ledgerTable(ev, dtable, { plus: 'فروش (بدهکار شد)', minus: 'دریافت / کسر' })],
-    actions: [btn('🧾 صورت‌حساب برای ارسال', () => showStatement(customerSpec(id)), 'ghost'), b.outstanding > 0.5 ? btn('ثبت دریافت', () => { m.close(); collectCustomerForm(id); }, 'gold') : null, btn('فروش جدید به او', () => { m.close(); saleForm({ customer: id }); }, 'ghost'), btn('ویرایش مشتری', () => { m.close(); customerForm(c); }, 'ghost')]
+    actions: [canEdit() ? btn('✏️ ویرایش مشتری', () => { m.close(); customerForm(c); }) : null, btn('🧾 صورت‌حساب برای ارسال', () => showStatement(customerSpec(id)), 'ghost'), b.outstanding > 0.5 ? btn('ثبت دریافت', () => { m.close(); collectCustomerForm(id); }, 'gold') : null, btn('فروش جدید به او', () => { m.close(); saleForm({ customer: id }); }, 'ghost'), btn('ویرایش مشتری', () => { m.close(); customerForm(c); }, 'ghost')]
   });
 }
