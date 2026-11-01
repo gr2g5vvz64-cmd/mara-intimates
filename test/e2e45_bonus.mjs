@@ -47,6 +47,7 @@ try {
   await page.reload(); await sleep(1500); await page.evaluate(() => { location.hash = '#/finance'; }); await sleep(1500);
   const fin = page.locator('#view table').filter({ hasText: 'سهم از سود' }).first(); const ft = await fin.innerText();
   ok(ft.includes('۵۰٪ + پاداش'), 'صفحه‌ی مالی: ستون سهم از سود با پاداش');
+  ok((await page.locator('#view .hint').allInnerTexts()).join(' ').includes('سهم پایه‌ی هر نفر'), 'توضیح زیر جدول مالی هم پاداش را می‌گوید (نه «همیشه برابر»)');
   const shares = [];
   for (const n of ['مهسا', 'رعنا']) { const cells = await fin.locator('tr', { hasText: n }).first().locator('td').allInnerTexts(); shares.push(Number(fa(cells[3]).replace(/[^\d]/g, ''))); }
   ok(shares[0] > shares[1] && Math.abs(shares[0] - shares[1] - Math.round(sv['مهسا'].total - sv['رعنا'].total)) <= 2, `سهم‌ها دیگر برابر نیست (${shares.join(' / ')}) و اختلافشان همان اختلاف پاداش‌هاست`);
