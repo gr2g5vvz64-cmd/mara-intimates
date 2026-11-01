@@ -97,7 +97,7 @@ function route() {
   document.title = `${r.t} · MARA INTIMATES`;
   navEls.forEach(a => a.classList.toggle('on', a.dataset.r === nk));
   navEls.forEach(a => (a.dataset.r === nk ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
-  const gid = groupOf(nk); if (gid) setGroup(gid, true, false); grpEls.forEach(x => x.btn.classList.toggle('hon', x.g.id === gid));
+  const gid = groupOf(nk); grpEls.forEach(x => x.btn.classList.toggle('hon', x.g.id === gid));
   try { view.replaceChildren(r.f(q)); } catch (e) { console.error(e); reportError('E_UI_RENDER', e.message, 'ui.page.' + key, e.stack); view.replaceChildren(h('div', { class: 'card' }, h('h2', null, 'خطا در نمایش صفحه'), h('p', null, e.message), h('p', { class: 'hint' }, `کد: E_UI_RENDER · صفحه: ${key || 'خانه'} (به‌صورت خودکار برای مدیر ثبت شد)`))); }
   window.scrollTo(0, 0); paintCounts();
 }
@@ -206,7 +206,7 @@ function shell() {
     h('div', { class: 'content' }, h('div', { id: 'savebar', hidden: true, role: 'status', 'aria-live': 'polite' }), view), drawer,
     h('nav', { class: 'bottom', 'aria-label': 'ناوبری اصلی' }, BOTTOM.map(k => mk(k, 'bl'))),
     h('div', { class: 'progress' }));
-  const op = savedOpen(); GROUPS.forEach(g => setGroup(g.id, op.has(g.id), false));
+  GROUPS.forEach(g => setGroup(g.id, false, false));   // هر بار که برنامه باز می‌شود همه‌ی گروه‌ها بسته است؛ خودت هر کدام را باز می‌کنی
 }
 
 const brandBig = () => h('div', { class: 'brand big' }, h('img', { class: 'logo-full', src: 'icons/logo-full.jpg', alt: 'MARA INTIMATES', width: 360, height: 233 }));
