@@ -70,17 +70,16 @@ function indTab() {
 
 /* ---------- تب خروجی: هر تحلیل جدا، یا «کل MARA» ---------- */
 function exportTab() {
-  const host = h('div', null), sel = new Set(ALL_IDS), anon = { v: false };
+  const host = h('div', null), sel = new Set(ALL_IDS);
   const run = async (ids, name, e) => {
     const b = e.currentTarget; b.disabled = true;
-    try { const t = await buildSections(ids, { anon: anon.v }); try { await navigator.clipboard.writeText(t); toast('✅ کپی شد؛ در Claude، ChatGPT یا Gemini بچسبان'); } catch { toast('کپی نشد؛ فایل دانلود شد', 'err'); } saveText(t, `MARA-${name}${anon.v ? '-anon' : ''}-${stamp()}.txt`); }
+    try { const t = await buildSections(ids, { anon: false }); try { await navigator.clipboard.writeText(t); toast('✅ کپی شد؛ در Claude، ChatGPT یا Gemini بچسبان'); } catch { toast('کپی نشد؛ فایل دانلود شد', 'err'); } saveText(t, `MARA-${name}-${stamp()}.txt`); }
     catch (er) { toast(errText(er), 'err'); } finally { b.disabled = false; }
   };
   const draw = () => host.replaceChildren(
     h('div', { class: 'card', style: 'margin:8px 0;border-color:var(--gold, #c9a227)' },
       h('div', { class: 'ct' }, '🌐 کل MARA'),
       h('p', { class: 'hint' }, 'همه‌ی تحلیل‌های پایین را (به‌جز سالانه) یک‌جا، با قواعد کسب‌وکار و درخواست از بررسی‌کننده، در یک متن می‌سازد و کپی و دانلود می‌کند.'),
-      h('label', { class: 'row', style: 'gap:6px;margin:6px 0' }, h('input', { type: 'checkbox', checked: anon.v, onchange: e => { anon.v = e.target.checked; } }), 'بدون نام مشتری و تامین‌کننده'),
       h('button', { type: 'button', class: 'btn gold', onclick: e => run(ALL_IDS, 'all', e) }, '📦 خروجی کل MARA')),
     h('div', { class: 'card', style: 'margin:8px 0' },
       h('div', { class: 'ct' }, '🧩 انتخاب چند بخش'),
@@ -90,7 +89,7 @@ function exportTab() {
       h('div', { class: 'ct' }, s.icon + ' ' + s.title), h('p', { class: 'hint', style: 'margin:2px 0 6px' }, s.hint),
       h('div', { class: 'row', style: 'gap:8px;flex-wrap:wrap' },
         h('button', { type: 'button', class: 'btn ghost sm', onclick: e => run([s.id], s.id, e) }, '📤 خروجی همین تحلیل'),
-        h('button', { type: 'button', class: 'btn ghost sm', onclick: async e => { const b = e.currentTarget; b.disabled = true; try { const t = await buildSections([s.id], { anon: anon.v, ask: false }); const pre = h('pre', { class: 'hint', style: 'white-space:pre-wrap;margin-top:8px' }, t.slice(t.indexOf('\n=== ') + 1)); const card = b.closest('.card'); const old = card.querySelector('pre'); old ? old.remove() : card.append(pre); } finally { b.disabled = false; } } }, '👁 پیش‌نمایش')))),
+        h('button', { type: 'button', class: 'btn ghost sm', onclick: async e => { const b = e.currentTarget; b.disabled = true; try { const t = await buildSections([s.id], { anon: false, ask: false }); const pre = h('pre', { class: 'hint', style: 'white-space:pre-wrap;margin-top:8px' }, t.slice(t.indexOf('\n=== ') + 1)); const card = b.closest('.card'); const old = card.querySelector('pre'); old ? old.remove() : card.append(pre); } finally { b.disabled = false; } } }, '👁 پیش‌نمایش')))),
     h('p', { class: 'hint' }, 'هر خروجی هم کپی می‌شود و هم به‌صورت فایل متنی دانلود می‌شود. این صفحه فقط می‌خواند و چیزی را تغییر نمی‌دهد.'));
   draw(); return host;
 }
@@ -120,5 +119,5 @@ export function render() {
   const pick = () => (tab === 'audit' ? auditTab() : tab === 'perf' ? perfTab() : tab === 'ind' ? indTab() : tab === 'export' ? exportTab() : advisorTab());
   const draw = () => { body.replaceChildren(pick()); host.querySelector('.tabs') && host.querySelector('.tabs').replaceWith(bar()); };
   const bar = () => tabsBar([{ id: 'advisor', label: '🧭 مشاور خرید' }, { id: 'perf', label: '📈 تحلیل عملکرد' }, { id: 'ind', label: '📊 شاخص‌ها' }, { id: 'audit', label: '🔍 بررسی اشتباهات' }, { id: 'export', label: '📦 خروجی تحلیل‌ها' }, { id: 'meeting', label: '🧑‍💼 گزارش جلسه‌ی دو هفته‌ای' }], tab, t => { if (t === 'meeting') { location.hash = '#/meeting'; return; } tab = t; draw(); });
-  host.append(head('تحلیل', [btn('📤 خروجی برای بررسی هوش مصنوعی', async e => { const b = e.currentTarget; b.disabled = true; try { await copyAiPack(); } catch (er) { toast(errText(er), 'err'); } finally { b.disabled = false; } }, 'ghost'), btn('📤 همان، بدون نام مشتری', async e => { const b = e.currentTarget; b.disabled = true; try { await copyAiPack(true); } catch (er) { toast(errText(er), 'err'); } finally { b.disabled = false; } }, 'ghost')], `${jlong(todayISO())} · فقط مدیر`), bar(), body); body.append(pick()); return host;
+  host.append(head('تحلیل', [btn('📤 خروجی برای بررسی هوش مصنوعی', async e => { const b = e.currentTarget; b.disabled = true; try { await copyAiPack(); } catch (er) { toast(errText(er), 'err'); } finally { b.disabled = false; } }, 'ghost')], `${jlong(todayISO())} · فقط مدیر`), bar(), body); body.append(pick()); return host;
 }
