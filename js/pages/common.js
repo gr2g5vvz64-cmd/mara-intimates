@@ -36,6 +36,8 @@ export function detail({ title, rows, extra = [], actions = [], land = false }) 
   const dl = h('dl', { class: 'dl' }, rows.filter(Boolean).map(([k, v]) => [h('dt', null, k), h('dd', null, v)]));
   // land: پنجره‌ی افقی؛ ستون کناری = مشخصات + extra[0] (مثلاً فاکتورهای باز)، ستون اصلی = بقیه (گردش حساب)
   if (land) return modal({ title, wide: true, cls: 'land', body: h('div', { class: 'detail land-g' }, h('div', { class: 'land-side' }, dl, extra[0] || null), h('div', { class: 'land-main' }, extra.slice(1))), footer: actions.length ? actions : null });
+  // پیش‌فرض: اگر جدول/بخش اضافه دارد، در دسکتاپ افقی؛ مشخصات یک طرف و جدول‌ها طرف دیگر (در موبایل زیر هم)
+  if (extra.flat(3).filter(Boolean).length) return modal({ title, wide: true, cls: 'land', body: h('div', { class: 'detail land-g' }, h('div', { class: 'land-side' }, dl), h('div', { class: 'land-main' }, extra)), footer: actions.length ? actions : null });
   return modal({ title, body: h('div', { class: 'detail' }, dl, extra), footer: actions.length ? actions : null });
 }
 export function stamp(r) { return `${r.created_by || ''}${r.created_at ? ' · ' + jstr(String(r.created_at).slice(0, 10)) : ''}`; }

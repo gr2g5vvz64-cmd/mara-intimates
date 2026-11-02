@@ -941,3 +941,6 @@ a.hchip:hover{background:#5d2e47}
   .t tfoot td{border-top:2px solid var(--line2);border-inline-end:1px solid var(--line2)}
   .t tfoot td:last-child{border-inline-end:0}
 }
+/* ۷.۵۵: در دسکتاپ مودال‌های جزئیات افقی‌اند؛ مودال‌های ساده‌ی بدون جدول کمی پهن‌تر */
+@media (min-width:901px){.sheet.wide:not(.land){width:min(900px,96vw)}}
+@media (min-width:901px){.sheet:not(.wide):not(.land){width:min(720px,96vw)}}
