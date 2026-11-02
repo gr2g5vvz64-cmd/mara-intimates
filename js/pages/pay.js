@@ -5,7 +5,10 @@ import { dtable, N, pill, tabsBar, kpi } from '../ui.js';
 import { supplierPaymentForm, expenseForm, collectionForm, transferForm, returnForm, supplierReturnForm, voidEntry, editEntryForm } from '../forms_misc.js';
 import { returnBatchForm } from '../return_batch.js';
 import { supplierReturnBatchForm } from '../supplier_return_batch.js';
-import { head, btn, searchBox, match, sortNew, detail, stamp, accName as accName0, rowCls } from './common.js';
+import { collectCustomerForm } from '../forms_misc.js';
+import { customerDetail } from './customers.js';
+import { supplierStatement } from './trade.js';
+import { head, btn, searchBox, match, sortNew, detail, stamp, accName as accName0, rowCls, dueCell } from './common.js';
 const accName = id => (id ? accName0(id) : 'چک (بدون حساب)');
 
 function entryDetail(kind, title, rows, row) {
@@ -43,10 +46,28 @@ export function render(query, defTab = 'sup') {
         { label: 'توضیح', hm: true, render: r => r.note || '' }, { label: 'ثبت‌کننده', hm: true, render: r => r.created_by }
       ], S.transfers.filter(r => !!r.voided === V && match(q, accName(r.from_account_id), accName(r.to_account_id), r.note)).sort(sortNew), { onRow: r => entryDetail('transfer', 'انتقال', [['تاریخ', jstr(r.date)], ['از', accName(r.from_account_id)], ['به', accName(r.to_account_id)], ['مبلغ', N(r.amount)], r.note ? ['توضیح', r.note] : null], r), rowCls, empty: 'انتقالی ثبت نشده' })
     };
+    // حساب‌های بازِ این بخش: چه کسی به ما بدهکار است / ما به چه کسی بدهکاریم (پیش از تاریخچه‌ی ثبت‌ها)
+    const openBox = () => {
+      if (tab === 'col') {
+        const rows = S.vCus.filter(c => c.outstanding > 0.5 && c.active !== false && match(q, c.name, c.phone)).sort((a, b) => b.overdue_amount - a.overdue_amount || b.outstanding - a.outstanding);
+        return h('div', null, h('h3', { class: 'sec' }, `طلب ما از مشتریان (${fmt(rows.length)} نفر · جمع ${fmt(sum(rows, c => c.outstanding))} ریال)`),
+          dtable([{ label: 'مشتری', main: true, render: c => c.name }, { label: 'تلفن', render: c => (c.phone ? h('span', { dir: 'ltr' }, c.phone) : '') },
+            { label: 'مانده', cls: 'num', render: c => pill(fmt(c.outstanding), c.overdue_amount > 0 ? 'red' : 'amber') }, { label: 'فروش باز', cls: 'num', render: c => c.open_count || '' },
+            { label: 'سررسید', render: c => (c.next_due ? dueCell(c.next_due) : '') },
+            { label: '', render: c => btn('دریافت', e => { e.stopPropagation(); collectCustomerForm(c.id); }, 'gold sm') }], rows, { onRow: c => customerDetail(c.id), empty: 'مشتری بدهکاری نداریم 🎉' }), h('h3', { class: 'sec' }, 'دریافت‌های ثبت‌شده'));
+      }
+      if (tab === 'sup') {
+        const rows = S.vSup.filter(x => x.balance > 0.5 && match(q, x.name)).sort((a, b) => b.balance - a.balance);
+        return h('div', null, h('h3', { class: 'sec' }, `بدهی ما به تامین‌کنندگان (${fmt(rows.length)} نفر · جمع ${fmt(sum(rows, x => x.balance))} ریال)`),
+          dtable([{ label: 'تامین‌کننده', main: true, render: x => x.name }, { label: 'مانده', cls: 'num', render: x => pill(fmt(x.balance), 'amber') },
+            { label: '', render: x => btn('تسویه', e => { e.stopPropagation(); supplierPaymentForm({ supplier_id: x.id }); }, 'gold sm') }], rows, { onRow: x => supplierStatement(x.id), empty: 'بدهی به تامین‌کننده نداریم 🎉' }), h('h3', { class: 'sec' }, 'پرداخت‌های ثبت‌شده'));
+      }
+      return null;
+    };
     V = false; const main = lists[tab](); const nv = SRC[tab]().filter(r => r.voided && match(q, r.note, r.category, r.created_by)).length;
     let box = null;
     if (nv) { V = true; const vt = lists[tab](); V = false; box = h('details', { class: 'voidbox' }, h('summary', null, `ابطال و ویرایش‌شده‌ها (${nv}) — برای دیدن اینکه چه اتفاقی افتاده باز کن`), vt); }
-    body.replaceChildren(main, box);
+    body.replaceChildren(...[openBox(), main, box].filter(Boolean));
     const adders = { sup: ['＋ پرداخت به تامین‌کننده', () => supplierPaymentForm()], exp: ['＋ هزینه‌ی جدید', () => expenseForm()], col: ['＋ دریافت از مشتری', () => collectionForm()], trf: ['＋ انتقال / سرمایه', () => transferForm()] };
     addBtn.replaceChildren(btn(adders[tab][0], adders[tab][1]));
   };
