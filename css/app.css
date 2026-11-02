@@ -923,3 +923,21 @@ a.hchip:hover{background:#5d2e47}
 .land-main .tw{max-height:none}
 .land-g .dl{padding:12px 14px;background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:14px}
 @media(max-width:900px){.sheet.land{width:100%}.land-g{grid-template-columns:1fr}.land-side{position:static}}
+
+/* ===== ۷.۵۱: همه‌ی جدول‌ها: دو رنگ یک‌درمیان برای ردیف‌ها + بردر کامل (ردیف‌ها و ستون‌ها کاملاً جدا) ===== */
+:root{--zebra:color-mix(in srgb,var(--ink) 8%,var(--card))}
+.t tbody tr:nth-child(odd) td,.t tbody tr:nth-child(odd) td:first-child{background:var(--card)}
+.t tbody tr:nth-child(even) td,.t tbody tr:nth-child(even) td:first-child{background:var(--zebra)}
+.t tbody tr:hover td,.t tbody tr:hover td:first-child{background:color-mix(in srgb,var(--gold) 16%,var(--card))}
+.t tbody tr.cq-bad td{background:var(--red-bg)}.t tbody tr.cq-setl td{background:#FFF0EE}
+.vmx tbody tr:nth-child(odd) td,.vmx tbody tr:nth-child(odd) th{background:var(--card)}
+.vmx tbody tr:nth-child(even) td,.vmx tbody tr:nth-child(even) th{background:var(--zebra)}
+.mt tbody tr:nth-child(even) td{background:var(--zebra)}
+@media (min-width:761px){
+  .t th,.t td{border-bottom:1px solid var(--line2);border-inline-end:1px solid var(--line2)}
+  .t th{border-bottom:2px solid var(--line2)}
+  .t th:last-child,.t td:last-child{border-inline-end:0}
+  .t tbody tr:last-child td{border-bottom:0}
+  .t tfoot td{border-top:2px solid var(--line2);border-inline-end:1px solid var(--line2)}
+  .t tfoot td:last-child{border-inline-end:0}
+}
