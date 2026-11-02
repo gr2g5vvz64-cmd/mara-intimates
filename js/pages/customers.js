@@ -46,7 +46,7 @@ export function customerDetail(id) {
   S.returns.filter(r => !r.voided && r.debt_cancel > 0 && r.sale_line_id).forEach(r => { const sl = S.saleLines.find(l => l.id === r.sale_line_id); const s = sl && S.SALE[sl.sale_id]; if (s && s.customer_id === id) ev.push({ date: r.date, ord: 3, text: `مرجوعی ${r.no} (کسر از بدهی)`, minus: r.debt_cancel }); });
   const open = sales.filter(s => s.outstanding > 0.5).sort((a, b2) => (a.date < b2.date ? -1 : 1));
   const m = detail({
-    title: `صورت‌حساب ${c.name}`,
+    title: `صورت‌حساب ${c.name}`, land: true,
     rows: [['مانده‌ی بدهی', b.outstanding > 0.5 ? N(b.outstanding, 'neg') : 'تسویه'], c.phone ? ['تلفن', h('span', { dir: 'ltr' }, c.phone)] : null, c.address ? ['نشانی', c.address] : null, c.note ? ['یادداشت', c.note] : null,
       b.overdue_amount > 0 ? ['سررسید گذشته', N(b.overdue_amount, 'neg')] : null, ['جمع فروش به او', N(b.sales_total || 0)]],
     extra: [open.length ? [h('h3', { class: 'sec' }, 'فروش‌های باز (قدیمی‌ترین اول)'), dtable([
@@ -54,6 +54,6 @@ export function customerDetail(id) {
       { label: 'سررسید', render: s => (s.due_date ? dueCell(s.due_date) : 'تعیین نشده') },
       { label: '', render: s => !canEdit() ? '' : btn('تغییر سررسید', e => { e.stopPropagation(); m.close(); setDueForm('sale', s); }, 'ghost sm') }], open, { onRow: s => { m.close(); saleDetail(s.id); } })] : null,
       h('h3', { class: 'sec' }, 'گردش حساب'), ledgerTable(ev, dtable, { plus: 'فروش (بدهکار شد)', minus: 'دریافت / کسر' })],
-    actions: [canEdit() ? btn('✏️ ویرایش مشتری', () => { m.close(); customerForm(c); }) : null, btn('🧾 صورت‌حساب برای ارسال', () => showStatement(customerSpec(id)), 'ghost'), b.outstanding > 0.5 ? btn('ثبت دریافت', () => { m.close(); collectCustomerForm(id); }, 'gold') : null, btn('فروش جدید به او', () => { m.close(); saleForm({ customer: id }); }, 'ghost'), btn('ویرایش مشتری', () => { m.close(); customerForm(c); }, 'ghost')]
+    actions: [btn('🧾 صورت‌حساب برای ارسال', () => showStatement(customerSpec(id)), 'ghost'), b.outstanding > 0.5 ? btn('ثبت دریافت', () => { m.close(); collectCustomerForm(id); }, 'gold') : null, btn('فروش جدید به او', () => { m.close(); saleForm({ customer: id }); }, 'ghost'), btn('ویرایش مشتری', () => { m.close(); customerForm(c); }, 'ghost')]
   });
 }

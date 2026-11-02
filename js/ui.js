@@ -5,7 +5,7 @@ import { errText, isViewer } from './store.js';
 /* ---------- مودال / شیت ---------- */
 const modalStack = [];
 export const closeTopModal = () => { const m = modalStack[modalStack.length - 1]; if (m) m.close(); };
-export function modal({ title, body, footer, wide = false, onClose }) {
+export function modal({ title, body, footer, wide = false, cls = '', onClose }) {
   if (isViewer() && body && body.classList && body.classList.contains('form')) { toast('این حساب فقط برای مشاهده است؛ ثبت یا تغییر ندارد.', 'err'); return { el: h('div'), body: h('div'), footer: null, close() {} }; }
   if (isViewer()) footer = null;
   const prevFocus = document.activeElement;
@@ -16,7 +16,7 @@ export function modal({ title, body, footer, wide = false, onClose }) {
   const bd = h('div', { class: 'sheet-b' }, body);
   const ft = footer ? h('div', { class: 'sheet-f' }, footer) : null;
   const ov = h('div', { class: 'ov', role: 'dialog', 'aria-modal': 'true', 'aria-label': title, onmousedown: e => { if (e.target === ov && window.innerWidth <= 800) close(); } },
-    h('div', { class: 'sheet' + (wide ? ' wide' : '') }, hd, bd, ft));
+    h('div', { class: 'sheet' + (wide ? ' wide' : '') + (cls ? ' ' + cls : '') }, hd, bd, ft));
   document.addEventListener('keydown', onKey); modalStack.push(me);
   document.body.append(ov); document.body.classList.add('lock');
   setTimeout(() => { const f = bd.querySelector('input:not([type=hidden]),select,button'); if (f && window.innerWidth > 800) f.focus(); }, 30);

@@ -148,7 +148,7 @@ export function supplierStatement(id) {
   const bal = (S.vSup.find(x => x.id === id) || {}).balance || 0;
   const dues = S.due.filter(d => d.kind === 'payable' && d.party_id === id);
   const m = detail({
-    title: `صورت‌حساب ${sup.name}`,
+    title: `صورت‌حساب ${sup.name}`, land: true,
     rows: [['وضعیت حساب', bal > 0 ? h('span', null, 'بدهکاریم ', N(bal, 'neg')) : bal < 0 ? h('span', null, 'طلبکاریم ', N(-bal)) : 'تسویه'], sup.phone ? ['تلفن', h('span', { dir: 'ltr' }, sup.phone)] : null],
     extra: [dues.length ? [h('h3', { class: 'sec' }, 'فاکتورهای باز'), dtable([{ label: 'فاکتور', main: true, render: d => d.ref_no }, { label: 'مانده', cls: 'num', render: d => N(d.amount) }, { label: 'سررسید', render: d => (d.due_date ? dueCell(d.due_date) : 'تعیین نشده') }, { label: '', render: d => btn('تسویه', () => { m.close(); supplierPaymentForm({ supplier_id: id, invoice_id: d.ref_id }); }, 'gold sm') }], dues)] : null,
       h('h3', { class: 'sec' }, 'گردش حساب'), ledgerTable(ev, dtable, { plus: 'خرید (بدهکار شدیم)', minus: 'پرداخت / اعتبار' })],
