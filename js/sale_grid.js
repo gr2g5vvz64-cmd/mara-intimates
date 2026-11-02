@@ -168,13 +168,16 @@ export function saleForm(preset = {}) {
   const sellerChips = chips([{ v: 'مهسا', label: 'مهسا' }, { v: 'رعنا', label: 'رعنا' }], seller, v => { seller = v; rows.forEach(r => { r.manual = false; allocate(r); if (r.ui) sync(r); }); defaultAccounts(); paint(); }, { cls: 'two', label: 'فروشنده' });
   const dateCtl = dateField(date, v => { date = v; due.refresh(); });
   const narrow = window.matchMedia && window.matchMedia('(max-width:820px)').matches;   // در موبایل نام کوتاه (بدون «پیج») تا همهٔ کانال‌ها در یک سطر بیایند
-  const channel = chips(CHANNELS.map(c => ({ v: c, label: narrow ? c.replace(/^پیج\s+/, '') : c })), edit ? edit.channel : pref('channel', CHANNELS[0]), () => {}, { label: 'کانال فروش' });
+  const chanList = edit && edit.channel && !CHANNELS.includes(edit.channel) ? [...CHANNELS, edit.channel] : CHANNELS;   // فروش‌های قدیمیِ «آشنایان» در ویرایش می‌مانند
+  const channel = chips(chanList.map(c => ({ v: c, label: narrow ? c.replace(/^پیج\s+/, '') : c })), edit ? edit.channel : pref('channel', CHANNELS[0]), () => {}, { label: 'کانال فروش' });
   const custOpts = () => customers().map(c => { const b = S.vCus.find(x => x.id === c.id); return { v: c.id, label: c.name, sub: (c.phone || '') + (b && b.outstanding > 0 ? ' · بدهکار ' + fmt(b.outstanding) : '') }; });
   const customer = combo({
     placeholder: 'نام خریدار (الزامی)', createLabel: 'مشتری جدید', options: custOpts(),
     onCreate: async name => { try { const r = await rpc('save_customer', { name }, { queue: false }); await loadAll(); customer.setOptions(custOpts()); customer.set(r.id); custInfoDraw(); toast('مشتری اضافه شد'); recalc(); return r.id; } catch (e) { toast(errText(e), 'err'); return null; } },
-    onChange: () => { custInfoDraw(); recalc(); }
+    onChange: () => { custInfoDraw(); const c = S.CUS[customer.get()]; if (c) acq.checked = !!c.is_acq; recalc(); }
   });
+  const acq = h('input', { type: 'checkbox', checked: edit ? !!edit.is_acq : null });
+  const acqBox = h('label', { class: 'chk', title: 'هدف فروش و پاداش آشنایان فقط از فروش‌هایی حساب می‌شود که این تیک را دارند' }, acq, 'فروش به آشنا (برای هدف و پاداش)');
   const custInfo = h('div', { class: 'inp ro bal' }, '—');
   function custInfoDraw() {
     const cid = customer.get(), cb = cid && S.vCus.find(x => x.id === cid);
@@ -195,7 +198,7 @@ export function saleForm(preset = {}) {
     }, 300);
   }
   const topHead = h('div', { class: 'sg-head' },
-    field('فروشنده', sellerChips), field('تاریخ', dateCtl), h('div', { class: 'sg-ch' }, field('کانال فروش', channel)),
+    field('فروشنده', sellerChips), field('تاریخ', dateCtl), h('div', { class: 'sg-ch' }, field('کانال فروش', channel), acqBox),
     h('div', { class: 'sg-cust' }, field('خریدار (الزامی) *', customer), field('مانده‌ی قبلی خریدار', custInfo)));
   const topBar = h('div', { class: 'pg-top' },
     h('div', null, h('b', null, 'اقلام فاکتور'), h('div', { class: 'hint' }, 'کالا را با نام یا کد جستجو کن؛ کد، رنگ، سایز و موجودی همان کالا خودکار می‌آید · «برداشت از» پیش‌فرض از موجودی فروشنده است و اگر کم بود، باقی خودکار از نفر دیگر می‌آید (هر عددی را می‌توانی دستی بنویسی) · سود هر ردیف با بهای تمام‌شده (FIFO) حساب می‌شود · عدد کمرنگ داخل «فی» فقط فی پیشنهادی است')),
@@ -234,7 +237,7 @@ export function saleForm(preset = {}) {
   function recalc() {
     if (step !== 2) return;
     const t = totals(), ds = done();
-    S2.who.textContent = `${customer.input.value || '—'} · ${channel.get()} · فروشنده ${seller}`;
+    S2.who.textContent = `${customer.input.value || '—'} · ${channel.get()}${acq.checked ? ' · آشنا' : ''} · فروشنده ${seller}`;
     S2.cnt.textContent = `جمع کالاها (${fmt(ds.length)} ردیف · ${fmt(sum(ds, r => r.qty))} عدد)`;
     S2.gross.textContent = fmt(t.gross); S2.disc.textContent = '−' + fmt(t.disc); S2.total.textContent = fmt(t.total); S2.recv.textContent = fmt(t.recv); S2.left.textContent = fmt(Math.max(0, t.total - t.recv));
     S2.gp.textContent = fmt(t.total - t.cost); S2.exp.textContent = '−' + fmt(t.c); S2.profit.textContent = fmt(t.profit); S2.profit.className = 'n ' + (t.profit < 0 ? 'neg' : 'pos');
@@ -302,7 +305,7 @@ export function saleForm(preset = {}) {
     if (t.c > 0 && !costAcc.get()) return toast('حساب پرداخت هزینه را انتخاب کن', 'err');
     const lines = [];
     ds.forEach(r => { const nt = (r.note || '').trim(); if (r.m > 0) lines.push({ item_id: r.item, qty: r.m, unit_price: r.price, holder: 'مهسا', note: nt }); if (r.r > 0) lines.push({ item_id: r.item, qty: r.r, unit_price: r.price, holder: 'رعنا', note: nt }); });
-    const payload = { date, seller, channel: channel.get(), customer_id: customer.get(), discount: t.disc, due_date: t.recv < t.total ? due.get() : null, received: t.recv, account_id: t.recv > 0 ? recvAcc.get() : null,
+    const payload = { date, seller, channel: channel.get(), is_acq: acq.checked, customer_id: customer.get(), discount: t.disc, due_date: t.recv < t.total ? due.get() : null, received: t.recv, account_id: t.recv > 0 ? recvAcc.get() : null,
       courier: courier.get(), pack: pack.get(), cost_account_id: t.c > 0 ? costAcc.get() : null, note: note.value.trim(), lines };
     const r0 = await run(submit, () => rpc(edit ? 'edit_sale' : 'create_sale', edit ? { ...payload, id: edit.id } : payload));
     if (!r0) return;

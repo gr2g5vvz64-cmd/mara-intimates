@@ -158,7 +158,7 @@ export const today = todayISO;
 export const bus = { refresh: async () => {} };
 export function pref(k, def) { try { const v = localStorage.getItem('mara.' + k); return v == null ? def : JSON.parse(v); } catch { return def; } }
 export function setPref(k, v) { try { localStorage.setItem('mara.' + k, JSON.stringify(v)); } catch {} }
-export const CHANNELS = ['پیج اینستاگرام', 'پیج تلگرام', 'پیج بله', 'آشنایان'];
+export const CHANNELS = ['پیج اینستاگرام', 'پیج تلگرام', 'پیج بله', 'واتساپ', 'حضوری'];   // سفارش از کجا رسید؛ «آشنا بودن» جداست (تیک روی مشتری و فروش)
 export const EXPCATS = ['تبلیغات', 'بسته‌بندی (خرید عمده)', 'رفت‌وآمد', 'اجاره و تجهیزات', 'سایر'];
 /* نوع هزینه: متغیر = با تعداد فروش بالا و پایین می‌رود؛ ثابت = هر ماه تقریباً همان است. پیش‌فرض هر دسته (قابل تغییر هنگام ثبت). */
 export const EXP_KIND_DEFAULT = { 'تبلیغات': 'variable', 'بسته‌بندی (خرید عمده)': 'variable', 'رفت‌وآمد': 'variable', 'اجاره و تجهیزات': 'fixed', 'سایر': 'fixed' };

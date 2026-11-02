@@ -30,7 +30,7 @@ function personStats(p, a, b, first, lineSale) {
   const ch = {}; for (const s of ss) ch[s.channel] = (ch[s.channel] || 0) + s.total;
   return {
     total, count: ss.length, avg: ss.length ? total / ss.length : 0, profit: sum(ss, s => s.profit),
-    beforeMonth: sum(ss.filter(s => s.channel === GOAL_CHANNEL && s.date < monthStartISO()), s => s.total), customers: ids.size, fresh: [...ids].filter(id => first.get(id) >= a).length,
+    beforeMonth: sum(ss.filter(s => s.is_acq && s.date < monthStartISO()), s => s.total), customers: ids.size, fresh: [...ids].filter(id => first.get(id) >= a).length,
     disc, discPct: gross > 0 ? disc / gross * 100 : 0, anon: ss.filter(s => !s.customer_id).length,
     retCount: ret.length, owed: sum(mine, s => s.outstanding), lateCount: late.length, lateAmt: sum(late, s => s.outstanding), channels: ch
   };

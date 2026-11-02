@@ -53,7 +53,7 @@ export function bonusMonth(month = jmonthKey(todayISO())) {
   const cfg = bonusCfg(), out = {};
   for (const n of ['مهسا', 'رعنا']) {
     const o = { name: n, sales: 0, collectedSales: 0, profitCollected: 0, goal: goalOf(n, month), base: 0, star: 0, total: 0, excluded: 0, isStar: false, tier: 'none', toGoal: 0 };
-    if (cfg.on) for (const s of activeSales().filter(x => x.seller === n && x.channel === GOAL_CHANNEL && jmonthKey(x.date) === month)) {
+    if (cfg.on) for (const s of activeSales().filter(x => x.seller === n && x.is_acq && jmonthKey(x.date) === month)) {
       if (!bonusEligible(s, cfg)) { o.excluded++; continue; }
       const frac = Math.min(1, ((s.received || 0) + (s.collected || 0) + (s.debt_cancel || 0)) / s.total);
       o.sales += s.total; o.collectedSales += s.total * frac; o.profitCollected += s.profit * frac;
@@ -69,12 +69,12 @@ export function bonusMonth(month = jmonthKey(todayISO())) {
 }
 /** جمع پاداش همه‌ی ماه‌ها تا امروز برای هر نفر (برای جدول «سهم از سود» در صفحه‌ی مالی) */
 export function bonusLifetime() {
-  const keys = new Set(activeSales().filter(s => s.channel === GOAL_CHANNEL).map(s => jmonthKey(s.date))), t = { 'مهسا': 0, 'رعنا': 0 };
+  const keys = new Set(activeSales().filter(s => s.is_acq).map(s => jmonthKey(s.date))), t = { 'مهسا': 0, 'رعنا': 0 };
   for (const k of keys) { const b = bonusMonth(k); t['مهسا'] += b['مهسا'].total; t['رعنا'] += b['رعنا'].total; }
   return t;
 }
 export function goalProgress(owner, month = jmonthKey(todayISO())) {
-  const cfg = bonusCfg(), all = activeSales().filter(s => s.seller === owner && s.channel === GOAL_CHANNEL && jmonthKey(s.date) === month);
+  const cfg = bonusCfg(), all = activeSales().filter(s => s.seller === owner && s.is_acq && jmonthKey(s.date) === month);
   const ok = cfg.on ? all.filter(s => bonusEligible(s, cfg)) : all, goal = goalOf(owner, month);
   const done = sum(ok, s => s.total), excluded = all.length - ok.length;
   const pct = goal > 0 ? Math.min(999, Math.round(done / goal * 100)) : null, el = monthElapsed(month);
