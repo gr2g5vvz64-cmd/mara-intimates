@@ -166,7 +166,12 @@ export function purchaseForm(preset = {}) {
     S2.debt.textContent = fmt(Math.abs(left)); S2.debt.className = 'n ' + (left > 0 ? 'neg' : left < 0 ? 'pos' : '');
     S2.cnt.textContent = `جمع کالاها (${fmt(done().length)} ردیف · ${fmt(sum(done(), r => r.qty))} عدد)`;
     S2.mq.textContent = `+${fmt(sum(done(), r => r.m))} عدد · ${fmt(Math.round(mv))} ریال`; S2.rq.textContent = `+${fmt(sum(done(), r => r.r))} عدد · ${fmt(Math.round(rv))} ریال`;
-    remainEl.textContent = left > 0.5 ? `مانده‌ی ${fmt(left)} ریال «نسیه» می‌ماند و به بدهی ما به تامین‌کننده اضافه می‌شود.` : left < -0.5 ? `جمع پرداخت‌ها ${fmt(-left)} ریال از فاکتور بیشتر است؛ مبلغ‌ها را اصلاح کن.` : 'کل فاکتور پرداخت شده است.'; remainEl.className = 'hint' + (left < -0.5 ? ' errt' : '');
+    const sid0 = supplier.get(), sb0 = sid0 && S.vSup.find(x => x.id === sid0);
+    const base = sb0 ? sb0.balance - (edit ? ((S.INV[edit.id] || {}).debt || 0) : 0) : 0;   // بدهی باز تامین‌کننده بدون این فاکتور
+    const totalOpen = base + g, older = Math.max(0, base);                                      // کل حساب باز با این فاکتور
+    remainEl.textContent = left > 0.5 ? `مانده‌ی ${fmt(left)} ریال «نسیه» می‌ماند و به بدهی ما به تامین‌کننده اضافه می‌شود.` + (sid0 ? ` کل حساب باز او بعد از این فاکتور: ${fmt(totalOpen - paid)} ریال.` : '') :
+      left < -0.5 ? (-left <= older + 0.5 ? `هشدار: ${fmt(-left)} ریال بیشتر از فاکتور پرداخت می‌کنی؛ این مبلغ روی فاکتورهای باز قبلیِ همین تامین‌کننده (قدیمی‌ترین اول) می‌نشیند. کل حساب باز او: ${fmt(totalOpen)} ریال.` : `هشدار: جمع پرداخت (${fmt(paid)}) از کل حساب باز این تامین‌کننده (${fmt(totalOpen)}) بیشتر است؛ ${fmt(paid - totalOpen)} ریال اضافه می‌ماند و او طلبکار می‌شود. می‌توانی ادامه بدهی.`) : 'کل فاکتور پرداخت شده است.';
+    remainEl.className = 'hint' + (left < -0.5 ? ' warnt' : '');
     dueBox.hidden = left <= 0.5;
     const sid = supplier.get(), sb = sid && S.vSup.find(x => x.id === sid);
     supInfo.textContent = !sid ? '—' : (sb && sb.balance > 0.5 ? `${fmt(sb.balance)} ریال بدهکاریم` : sb && sb.balance < -0.5 ? `${fmt(-sb.balance)} ریال طلبکاریم` : 'تسویه'); supInfo.classList.toggle('debt', !!(sb && sb.balance > 0.5));

@@ -255,7 +255,6 @@ export function payMethods({ getTotal, getDate, getSupplier, onChange = () => {}
       if (on.cap && !(cap.total() > 0)) return 'مبلغ «از سرمایه شخصی» را بنویس (یا آن روش را بردار)';
       if (on.biz && !(biz.total() > 0)) return 'مبلغ «از حساب کسب‌وکار» را بنویس (یا آن روش را بردار)';
       if (on.chq) { const p = chq.problems(); if (p) return p; }
-      if (total() > getTotal() + 0.5) return `جمع نقد و چک‌ها (${fmt(total())}) از مبلغ فاکتور (${fmt(getTotal())}) بیشتر است`;
       return null;
     },
     /** برای ویرایش: payments = [{account_id, amount}] و cheques = ردیف‌های چک */
