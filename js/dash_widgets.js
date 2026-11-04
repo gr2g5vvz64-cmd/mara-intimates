@@ -121,20 +121,22 @@ const prevMonthKey = k => { let [y, m] = k.split('-').map(Number); m--; if (m < 
 function seriesFor(kind, seller) {
   const t = todayISO(), all = activeSales().filter(s => !seller || s.seller === seller);
   const inR = (a, b) => sum(all.filter(s => s.date >= a && s.date <= b), s => s.total);
-  if (kind === 'day') return { sub: '۷ روز اخیر', pts: Array.from({ length: 7 }, (_, k) => { const d = addDaysISO(t, -(6 - k)); return { label: WD[new Date(d + 'T00:00:00Z').getUTCDay()], cur: inR(d, d), prev: inR(addDaysISO(d, -7), addDaysISO(d, -7)) }; }) };
-  if (kind === 'week') return { sub: '۸ هفته‌ی اخیر', pts: Array.from({ length: 8 }, (_, k) => { const to = addDaysISO(t, -7 * (7 - k)), from = addDaysISO(to, -6), [, jm, jd] = toJ(to); return { label: `${jm}/${jd}`, cur: inR(from, to), prev: inR(addDaysISO(from, -7), addDaysISO(to, -7)) }; }) };
+  const win = (a, b) => inR(a, b);   // جمع فروش یک بازه (برای مقایسه با «بازه‌ی قبلی هم‌اندازه»)
+  if (kind === 'day') return { sub: '۷ روز اخیر', prevTotal: win(addDaysISO(t, -13), addDaysISO(t, -7)), pts: Array.from({ length: 7 }, (_, k) => { const d = addDaysISO(t, -(6 - k)); return { label: WD[new Date(d + 'T00:00:00Z').getUTCDay()], cur: inR(d, d), prev: inR(addDaysISO(d, -7), addDaysISO(d, -7)) }; }) };
+  if (kind === 'week') return { sub: '۸ هفته‌ی اخیر', prevTotal: win(addDaysISO(t, -111), addDaysISO(t, -56)), pts: Array.from({ length: 8 }, (_, k) => { const to = addDaysISO(t, -7 * (7 - k)), from = addDaysISO(to, -6), [, jm, jd] = toJ(to); return { label: `${jm}/${jd}`, cur: inR(from, to), prev: inR(addDaysISO(from, -7), addDaysISO(to, -7)) }; }) };
   const by = new Map(); for (const s of all) { const k = jmonthKey(s.date); by.set(k, (by.get(k) || 0) + s.total); }
   const JM = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
-  return { sub: '۶ ماه اخیر', pts: lastMonths(6).map(k => ({ label: JM[Number(k.split('-')[1]) - 1], cur: by.get(k) || 0, prev: by.get(prevMonthKey(k)) || 0 })) };
+  const keys6 = lastMonths(6), back6 = k => { let x = k; for (let i = 0; i < 6; i++) x = prevMonthKey(x); return x; };
+  return { sub: '۶ ماه اخیر', prevTotal: keys6.reduce((a, k) => a + (by.get(back6(k)) || 0), 0), pts: lastMonths(6).map(k => ({ label: JM[Number(k.split('-')[1]) - 1], cur: by.get(k) || 0, prev: by.get(prevMonthKey(k)) || 0 })) };
 }
 export function salesLineCard({ title = 'روند فروش', seller = null, note = '' } = {}) {
   let kind = 'month'; const host = h('section', { class: 'card lc', 'aria-label': title });
   const draw = () => {
-    const { sub, pts } = seriesFor(kind, seller), n = pts.length, X0 = 30, X1 = 610, Y0 = 20, Y1 = 190;
+    const { sub, pts, prevTotal } = seriesFor(kind, seller), n = pts.length, X0 = 30, X1 = 610, Y0 = 20, Y1 = 190;
     const mx = Math.max(1, ...pts.map(p => Math.max(p.cur, p.prev))) * 1.1;
     const pt = (v, i) => [X0 + i * ((X1 - X0) / Math.max(1, n - 1)), Y1 - (v / mx) * (Y1 - Y0)];
     const path = k => pts.map((p, i) => { const [x, y] = pt(p[k], i); return (i ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1); }).join(' ');
-    const cur = sum(pts, p => p.cur), prev = sum(pts, p => p.prev), d = prev > 0 ? Math.round((cur - prev) / prev * 100) : null;
+    const cur = sum(pts, p => p.cur), prev = prevTotal, d = prev > 0 ? Math.round((cur - prev) / prev * 100) : null;   // مقایسه‌ی کل بازه با بازه‌ی قبلیِ هم‌اندازه (نه جمع نقطه‌های جابه‌جاشده)
     const svg = sv('svg', { viewBox: '0 0 640 230', class: 'lc-svg', role: 'img', 'aria-label': `${title}: ${sub}، جمع ${money(cur)}` });
     svg.append(sv('path', { d: 'M0 40H640M0 90H640M0 140H640M0 190H640', stroke: 'var(--line)', 'stroke-width': '1', fill: 'none' }),
       sv('path', { d: path('cur') + ` L${X1} ${Y1} L${X0} ${Y1} Z`, fill: 'var(--gold)', 'fill-opacity': '.10' }),

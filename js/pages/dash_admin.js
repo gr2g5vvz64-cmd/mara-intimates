@@ -70,18 +70,20 @@ export function adminDashboard() {
 
     const kp = h('div', { class: 'kpis' },
       kpi('فروش', ex(N(cur.sales), 'sales'), { ...delta(cur.sales, prev.sales), spark: sparkline(dailySeries(14, 'total'), delta(cur.sales, prev.sales).tone) }), kpi('سود خالص', ex(N(cur.profit), 'dprofit'), { ...delta(cur.profit, prev.profit), tone: cur.profit < 0 ? 'neg' : 'pos', spark: sparkline(dailySeries(14, 'profit'), cur.profit < 0 ? 'neg' : 'pos') }),
-      kpi('درصد سود', h('span', { class: 'n' }, cur.margin.toFixed(1) + '٪'), { sub: `قبل: ${prev.margin.toFixed(1)}٪` }),
+      kpi('درصد سود', h('span', { class: 'n' }, cur.margin.toFixed(1) + '٪'), { sub: prev.sales > 0 ? `قبل: ${prev.margin.toFixed(1)}٪` : 'بازه‌ی قبل: —' }),
       kpi('تعداد فاکتور', h('span', { class: 'n' }, fmt(cur.count)), { ...delta(cur.count, prev.count) }), kpi('میانگین هر فاکتور', N(cur.avg), { ...delta(cur.avg, prev.avg) }));
 
     const F = flowStats(d => d >= P.from && d <= P.to), Fp = flowStats(d => d >= P.pFrom && d <= P.pTo);
     const allCash = F.sold > 0 && Math.abs(F.received - F.sold) < 1 && F.owed < 1 && F.later < 1;   // فروش ۱۰۰٪ نقد: «فروختیم / دریافت کردیم / مانده» یک چیزند
-    const fk = [mini('خریدیم', N(F.bought), `${fmt(F.boughtN)} فاکتور · قبل: ${fmt(Math.round(Fp.bought))}`)];
-    if (allCash) fk.push(mini('فروختیم (همه نقد دریافت شد)', N(F.sold), `${fmt(F.soldN)} فاکتور · قبل: ${fmt(Math.round(Fp.sold))}`));
+    // «فروختیم» و تعداد فاکتورش دقیقاً همان «فروش» و «تعداد فاکتور» بالاست؛ این کارت فقط پول را نشان می‌دهد: چقدر خرید و چقدر از فروش پول شد
+    const pv = (v, n) => (n > 0 ? fmt(Math.round(v)) : '—');
+    const fk = [mini('خریدیم (کالا از تامین‌کننده)', N(F.bought), `${fmt(F.boughtN)} فاکتور خرید · قبل: ${pv(Fp.bought, Fp.boughtN)}`)];
+    if (allCash) fk.push(mini('دریافت کردیم', N(F.received), 'همه‌ی فروش نقد دریافت شد'));
     else {
-      fk.push(mini('فروختیم', N(F.sold), `${fmt(F.soldN)} فاکتور · قبل: ${fmt(Math.round(Fp.sold))}`), mini('دریافت کردیم', N(F.received), `هنگام فروش ${fmt(Math.round(F.atSale))} + وصول نسیه ${fmt(Math.round(F.later))}`));
-      if (F.owed > 0) fk.push(mini('مانده‌ی نسیه‌ی فروش‌های این بازه', N(F.owed), F.sold > 0 ? `${Math.round(F.owed / F.sold * 100)}٪ فروش بازه` : ''));
+      fk.push(mini('دریافت کردیم', N(F.received), `هنگام فروش ${fmt(Math.round(F.atSale))} + وصول نسیه ${fmt(Math.round(F.later))}`));
+      if (F.owed > 0) fk.push(mini('مانده‌ی نسیه‌ی فروش‌های این بازه', N(F.owed), F.sold > 0 ? `${Math.round(F.owed / F.sold * 100)}٪ از فروش بازه` : ''));
     }
-    const flow = h('div', { class: 'card' }, h('div', { class: 'ct' }, '🔁 خرید و فروش ', h('small', null, `(${label})`), tip('دریافتی = پولی که هنگام فروش گرفتیم + نسیه‌هایی که در همین بازه وصول شد (حتی اگر فاکتورش قدیمی باشد).')),
+    const flow = h('div', { class: 'card' }, h('div', { class: 'ct' }, '🔁 خرید کالا و پولِ دریافتی ', h('small', null, `(${label})`), tip('فروش و تعداد فاکتور در کارت‌های بالا است. دریافتی = پولی که هنگام فروش گرفتیم + نسیه‌هایی که در همین بازه وصول شد (حتی اگر فاکتورش قدیمی باشد).')),
       h('div', { class: 'kpis' }, ...fk));
 
     const people = h('div', { class: 'grid2' },

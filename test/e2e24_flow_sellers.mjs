@@ -5,7 +5,7 @@ try {
   const a = await newPage(browser, url, { logs, viewport: { width: 1280, height: 900 } }); await login(a, 'hamid@example.com', 'hamid-pass-333'); a.setDefaultTimeout(9000); await a.waitForTimeout(1200);
   await a.waitForSelector('.dbody .kpis'); await a.waitForTimeout(500);
   const t = await a.locator('.dbody').innerText();
-  ok(t.includes('خرید و فروش') && t.includes('خریدیم') && t.includes('فروختیم'), 'کارت خرید و فروش');
+  ok(t.includes('خرید کالا و پولِ دریافتی') && t.includes('خریدیم') && t.includes('دریافت کردیم') && !t.includes('فروختیم'), 'کارت خرید و دریافتی (بدون «فروختیم» تکراری)');
   ok(!t.includes('[object') && t.includes('خرید، فروش و دریافتی'), 'نمودار خرید/فروش/دریافتی');
   ok(t.includes('فروشنده‌ها') && t.includes('مشتری') && t.includes('مهسا') && t.includes('رعنا'), 'جدول فروشنده‌ها (مشتری هر فروشنده)');
   // مقایسه با محاسبه‌ی مستقل
@@ -18,6 +18,16 @@ try {
   });
   ok(r.res['مهسا'][0] === r.res['مهسا'][1] && r.res['رعنا'][0] === r.res['رعنا'][1], 'تعداد مشتری هر فروشنده درست: ' + JSON.stringify(r.res));
   ok(Math.abs(r.f.sold - r.sold) < 1 && Math.abs(r.f.bought - r.bought) < 1, `جمع فروش و خرید درست (${Math.round(r.f.sold)} / ${Math.round(r.f.bought)}) ؛ دریافتی ${Math.round(r.f.received)}`);
+  // درصد «نسبت به دوره‌ی قبل» نمودار فروش: کل بازه با بازه‌ی قبلیِ هم‌اندازه؛ بدون سابقه‌ی قبلی هیچ درصدی نشان نمی‌دهد (قبلاً جمع نقطه‌های یک‌ماه جابه‌جاشده مقایسه می‌شد و عددی مثل ۹۶۶٪ می‌ساخت)
+  const dl = await a.evaluate(async () => {
+    const u = await import('/js/util.js'), st = await import('/js/store.js'), w = await import('/js/dash_widgets.js'); const keep = st.S.vSales.slice(); st.S.vSales.length = 0; st.S.sales = st.S.vSales;
+    const mk = u.lastMonths(6), L = mk.length, iso = k => { const [y, m, d] = u.j2g(+k.split('-')[0], +k.split('-')[1], 10); return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`; };
+    const sale = (date, total) => ({ id: Math.random(), date, total, profit: 0, voided: false, seller: 'مهسا', received: total, outstanding: 0 });
+    st.S.vSales.push(sale(iso(mk[L - 1]), 700), sale(iso(mk[L - 2]), 100));
+    const el = w.salesLineCard({}).querySelector('.lc-tot'); const out = { txt: el.textContent, hasDelta: !!el.querySelector('.delta') };
+    st.S.vSales.length = 0; keep.forEach(x => st.S.vSales.push(x)); return out;
+  });
+  ok(!dl.hasDelta && /800/.test(dl.txt), 'نمودار فروش: بدون سابقه‌ی قبلی، درصدِ گمراه‌کننده نمی‌دهد (' + dl.txt + ')');
   await a.screenshot({ path: 'shots/f24_dash.png', fullPage: true });
   const real = logs.filter(l => !/ERR_FAILED|net::ERR|40\d|Failed to load resource/.test(l)); ok(real.length === 0, 'بدون خطای کنسول' + (real.length ? ': ' + real.slice(0, 3).join(' | ') : ''));
 } catch (e) { console.log('FAIL exception', e.message.split('\n')[0]); fails++; }
