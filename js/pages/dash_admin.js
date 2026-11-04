@@ -14,6 +14,7 @@ import { capitalCard, chequeCard, sv, mil, tip, hbars, dueChart, categoryProfitC
 let rangeN = 30, trendKind = 'week', tableTab = 'buyers', tableSort = 'range';
 
 /* نمودار ستونیِ چندسری: data = [{label, a, b}] ؛ series = [{key,label,color}] */
+const JMN = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
 function groupedBars(title, sub, data, series, fmtv = mil) {
   const max = Math.max(1, ...data.flatMap(d => series.map(s => Math.max(0, d[s.key] || 0))));
   const W = 560, H = 230, pb = 40, pt = 20, gap = (W - 20) / data.length, bw = Math.min(26, (gap - 8) / series.length);
@@ -26,7 +27,9 @@ function groupedBars(title, sub, data, series, fmtv = mil) {
       svg.append(sv('rect', { x, y: H - pb - hh, width: bw, height: hh, rx: 4, fill: v < 0 ? tok('--red') : s.color }));
       svg.append(sv('text', { x: x + bw / 2, y: H - pb - hh - 4, 'text-anchor': 'middle', class: 'cv' }, fmtv(v)));
     });
-    svg.append(sv('text', { x: cx, y: H - 16, 'text-anchor': 'middle', class: 'cl' }, d.label.includes('-') ? d.label.split('-')[1] : d.label));
+    const lab = /^\d{4}-\d{2}$/.test(d.label) ? JMN[Number(d.label.split('-')[1]) - 1] : d.label;   // کلید ماه ← نام ماه
+    svg.append(sv('text', { x: cx, y: d.sub ? H - 22 : H - 16, 'text-anchor': 'middle', class: 'cl' }, lab));
+    if (d.sub) svg.append(sv('text', { x: cx, y: H - 6, 'text-anchor': 'middle', class: 'cl sb', ...(data.length > 5 ? { style: 'font-size:9px' } : {}) }, d.sub));   // خط دوم: بازه‌ی تاریخ هفته
   });
   svg.append(sv('line', { x1: 6, x2: W - 6, y1: H - pb, y2: H - pb, stroke: tok('--line') }));
   return h('div', { class: 'card' }, h('div', { class: 'ct' }, title, sub ? h('small', null, ' ' + sub) : null),
@@ -106,7 +109,7 @@ export function adminDashboard() {
     const trendCards = h('div', { class: 'grid2' },
       groupedBars(`فروش و سود ${trendKind === 'week' ? 'هفتگی' : 'ماهانه'}`, '(میلیون ریال)', tr, [{ key: 'sales', label: 'فروش', color: tok('--gold') }, { key: 'profit', label: 'سود خالص', color: tok('--green') }]),
       groupedBars(`خرید، فروش و دریافتی ${trendKind === 'week' ? 'هفتگی' : 'ماهانه'}`, '(میلیون ریال)', tr, [{ key: 'bought', label: 'خرید', color: tok('--blue') || '#4a78c9' }, { key: 'sales', label: 'فروش', color: tok('--gold') }, { key: 'received', label: 'دریافتی', color: tok('--green') }]),
-      groupedBars(`خریداران و تامین‌کنندگان ${trendKind === 'week' ? 'هفتگی' : 'ماهانه'}`, '(نفر)', tr.map((x, i) => ({ label: x.label, ...pt[i] })), [{ key: 'active', label: 'خریدار فعال', color: tok('--gold') }, { key: 'fresh', label: 'خریدار جدید', color: tok('--green') }, { key: 'sup', label: 'تامین‌کننده‌ی فعال', color: tok('--blue') || '#4a78c9' }], v => String(v)));
+      groupedBars(`خریداران و تامین‌کنندگان ${trendKind === 'week' ? 'هفتگی' : 'ماهانه'}`, '(نفر)', tr.map((x, i) => ({ label: x.label, sub: x.sub, ...pt[i] })), [{ key: 'active', label: 'خریدار فعال', color: tok('--gold') }, { key: 'fresh', label: 'خریدار جدید', color: tok('--green') }, { key: 'sup', label: 'تامین‌کننده‌ی فعال', color: tok('--blue') || '#4a78c9' }], v => String(v)));
 
     /* برترین‌ها */
     const bt = buyerTable(P.from, P.to).filter(r => r.rangeTotal > 0), st = supplierTable(P.from, P.to).filter(r => r.rangeTotal > 0), conc = concentration(bt, grandTotal(P.from, P.to)), an = anonStats(P.from, P.to);

@@ -944,3 +944,6 @@ a.hchip:hover{background:#5d2e47}
 /* ۷.۵۵: در دسکتاپ مودال‌های جزئیات افقی‌اند؛ مودال‌های ساده‌ی بدون جدول کمی پهن‌تر */
 @media (min-width:901px){.sheet.wide:not(.land){width:min(900px,96vw)}}
 @media (min-width:901px){.sheet:not(.wide):not(.land){width:min(720px,96vw)}}
+
+/* برچسب خط دوم زیر ستون‌های نمودار (بازه‌ی تاریخ هفته) */
+.chart .cl.sb{font-size:10px;opacity:.85}

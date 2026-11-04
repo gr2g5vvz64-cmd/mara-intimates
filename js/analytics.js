@@ -1,6 +1,6 @@
 // محاسبات داشبورد تحلیلی مدیر: بازه، شاخص‌ها با مقایسه‌ی بازه‌ی قبل، خریداران و تامین‌کنندگان، روندها
 import { S, activeSales } from './store.js';
-import { todayISO, addDaysISO, sum, jmonthKey, lastMonths } from './util.js';
+import { todayISO, addDaysISO, sum, jmonthKey, lastMonths, toJ, JM, fmt } from './util.js';
 
 export const RANGES = [
   { v: 1, label: 'امروز' }, { v: 7, label: '۷ روز اخیر' }, { v: 30, label: '۳۰ روز اخیر' }, { v: 90, label: '۳ ماه اخیر' }, { v: 365, label: 'یک سال' }
@@ -105,9 +105,14 @@ export function monthTrend() {
   });
 }
 /** روند هفتگی: ۸ بازه‌ی ۷ روزه */
+/** بازه‌ی یک هفته به شمسی، مثل «۱۱–۱۷ آبان» یا «۳۰ مهر – ۶ آبان» */
+function weekRange(a, b) {
+  const [, m1, d1] = toJ(a), [, m2, d2] = toJ(b);
+  return m1 === m2 ? `${fmt(d1)}–${fmt(d2)} ${JM[m2 - 1]}` : `${fmt(d1)} ${JM[m1 - 1]}–${fmt(d2)} ${JM[m2 - 1]}`;
+}
 export function weekTrend() {
   const to = todayISO(), out = [];
-  for (let i = 7; i >= 0; i--) { const b = addDaysISO(to, -7 * i), a = addDaysISO(b, -6), st = salesStats(a, b); { const f = flowStats(d => d >= a && d <= b); out.push({ label: i === 0 ? 'این هفته' : i === 1 ? 'پیش' : `${i} پیش`, a, b, sales: st.sales, profit: st.profit, bought: f.bought, received: f.received }); } }
+  for (let i = 7; i >= 0; i--) { const b = addDaysISO(to, -7 * i), a = addDaysISO(b, -6), st = salesStats(a, b); { const f = flowStats(d => d >= a && d <= b); out.push({ label: i === 0 ? 'این هفته' : i === 1 ? 'هفته‌ی قبل' : `${fmt(i)} هفته قبل`, sub: weekRange(a, b), a, b, sales: st.sales, profit: st.profit, bought: f.bought, received: f.received }); } }
   return out;
 }
 /** خریداران فعال و جدید در هر بازه‌ی روند */
