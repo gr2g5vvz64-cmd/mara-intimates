@@ -21,6 +21,7 @@ import * as pack from './pages/pack.js';
 import * as meet from './pages/meeting.js';
 import * as stk from './pages/stocktake.js';
 import * as mcn from './pages/monthcount.js';
+import * as fundp from './pages/fund.js';
 import { onOutbox, initOutbox, pendingCount, blockedCount, pump, state as obState } from './outbox.js';
 import { saleForm, purchaseForm } from './forms_trade.js';
 import { navCounts } from './insights.js';
@@ -54,6 +55,7 @@ const ROUTES = {
   pnl: { t: 'صورت سود و زیان', i: '📒', f: () => rep.pnlPage() },
   meeting: { t: 'گزارش جلسه', i: '🧑‍💼', f: () => meet.render() },
   settle: { t: 'حساب‌وکتاب ماهانه', i: '🤝', f: () => rep.settlePage() },
+  fund: { t: 'صندوق پاداش', i: '🎁', f: () => fundp.render() },
   savelog: { t: 'گزارش ذخیره', i: '✔', f: () => savelog.render() },
   diag: { t: 'عیب‌یابی', i: '🛠', f: () => diag.render() },
   settings: { t: 'تم رنگی', i: '🎨', f: () => h('div', null, h('div', { class: 'phead' }, h('h1', null, 'تنظیمات ظاهر')), h('p', { class: 'hint' }, 'تمی که انتخاب می‌کنی فقط برای خودت و روی همین دستگاه می‌ماند.'), themePanel(true), h('h3', { class: 'sec' }, 'حساب کاربری'), h('div', { class: 'card' }, h('p', null, 'وارد شده با نام «' + S.me.name + '».'), logoutBtn())) }
@@ -64,7 +66,7 @@ const GROUPS = [
   { id: 'sales', t: 'فروش', i: '🛍', kids: ['sales', 'customers', 'custmsg', 'returns'] },
   { id: 'buy', t: 'خرید', i: '📦', kids: ['purchases', 'suppliers', 'sreturns'] },
   { id: 'wh', t: 'انبار', i: '▤', kids: ['stock', 'monthcount', 'items'] },
-  { id: 'money', t: 'مالی', i: '◎', kids: ['finance', 'pay', 'invoices', 'cheques', 'settle'] },
+  { id: 'money', t: 'مالی', i: '◎', kids: ['finance', 'pay', 'invoices', 'cheques', 'settle', 'fund'] },
   { id: 'set', t: 'تنظیمات', i: '⚙', kids: ['settings', 'history', 'help', 'savelog', 'diag'] }
 ];
 const NAVLBL = { monthcount: 'انبارگردانی', sales: 'فاکتور فروش', purchases: 'فاکتور خرید', finance: 'خلاصه‌ی مالی', pay: 'پرداخت و هزینه', calc: 'محاسبات درصد', pnl: 'سود و زیان ماهانه', meeting: 'گزارش جلسه‌ی دو هفته‌ای', settle: 'حساب‌وکتاب ماهانه' };
@@ -92,7 +94,7 @@ function route() {
   if (!view) return;
   let { path, q } = parseHash();
   if ((path === 'diag' || path === 'mgmt' || path === 'analysis' || path === 'pnl' || path === 'pack' || path === 'meeting' || path === 'custmsg') && !(S.me && S.me.role === 'admin')) { path = ''; history.replaceState(null, '', '#/'); }
-  if (path === 'settle' && (!S.me || S.me.role === 'viewer')) { path = ''; history.replaceState(null, '', '#/'); }
+  if ((path === 'settle' || path === 'fund') && (!S.me || S.me.role === 'viewer')) { path = ''; history.replaceState(null, '', '#/'); }
   const r = ROUTES[path] || ROUTES[''];
   const key = ROUTES[path] ? path : '';
   const nk = key === 'stocktake' ? 'monthcount' : key;   // «گزارش انبارگردانی» زیر همان آیتم «انبارگردانی» منو است

@@ -4,8 +4,10 @@ import { h, fmt, jmonthName, lastMonths, todayISO, jmonthKey, toast } from '../u
 import { S, api, errText } from '../store.js';
 import { N, pill, kpi, dtable, run } from '../ui.js';
 import { head, btn } from './common.js';
+import { saveBtn } from './fund.js';
 
 const cache = new Map();
+const afterSave = async () => { cache.clear(); window.dispatchEvent(new HashChangeEvent('hashchange')); };
 export async function load(month) {
   if (cache.has(month)) return cache.get(month);
   const r = await api('/api/report/month/?month=' + encodeURIComponent(month));
@@ -74,12 +76,14 @@ export function settleBody(d, month) {
     const rows = [
       ['فروش این ماه', x => N(x.sales_total)], ['تعداد فاکتور این ماه', x => fmt(x.sales_count)], ...(s.bonus_pool > 0 ? [['🎁 پاداش فروش آشنایان (از سود کم شده)', x => N((x.bonus || {}).total || 0, 'pos')], ['⭐ فروشنده‌ی برتر ماه', x => (x.bonus && x.bonus.is_star ? '⭐ بله' : '—')]] : []), ['کسر انبارگردانی از سود (کسری واقعی)', x => N(-(x.charge || 0), (x.charge || 0) > 0 ? 'neg' : '')], ['سهم از سود خالص این ماه (۵۰٪)', x => N(x.profit_share, x.profit_share < 0 ? 'neg' : 'pos')],
       ['سرمایه‌ی وارد‌شده تا امروز', x => N(x.capital)], ['پول نقد و بانک دست او', x => N(x.cash + x.bank)], ['جنس دست او (قیمت تمام‌شده)', x => N(x.stock_value)],
-      ['جیب شخصی (مانده)', x => N(x.pocket)], ['سهم او از سود کل تا امروز', x => N(x.profit_share_total)], ['برداشت سود این ماه', x => N(x.payout_month)], ['برداشت سود تا امروز', x => N(x.payout_total)]
+      ['جیب شخصی (مانده)', x => N(x.pocket)], ['سهم او از سود کل تا امروز', x => N(x.profit_share_total)],
+      ['🎁 پاداش ذخیره‌شده در صندوق', x => N(x.fund_saved || 0, 'pos')], ['پاداش هنوز ذخیره‌نشده', x => N(x.fund_pending || 0)], ['سود برابر قابل خرید مشترک (بدون پاداش)', x => N(x.buyable || 0, (x.buyable || 0) < 0 ? 'neg' : 'pos')], ['برداشت سود این ماه', x => N(x.payout_month)], ['برداشت سود تا امروز', x => N(x.payout_total)]
     ].map(([label, fn]) => ({ label, a: fn(P[0]), b: fn(P[1]) }));
     return [
       d.locked ? h('div', { class: 'alert info' }, '🔒 این ماه بسته شده است.') : null,
       h('div', { class: 'kpis' }, kpi('سود خالص ' + jmonthName(month), N(s.net_profit, s.net_profit < 0 ? 'neg' : 'pos')), kpi(s.bonus_pool > 0 ? 'سهم پایه‌ی هر نفر (۵۰٪)' : 'سهم هر نفر (۵۰٪)', N(s.half), s.bonus_pool > 0 ? { sub: 'بعد از کسر پاداش‌ها (' + fmt(Math.round(s.bonus_pool)) + ' ریال)' } : undefined),
         kpi('ارزش خالص کسب‌وکار', N(s.net_worth), { sub: 'نقد و بانک + انبار + طلب − بدهی' }), kpi('اختلاف سرمایه‌ی دو نفر', N(Math.abs(s.capital_diff)), { tone: Math.abs(s.capital_diff) > 1000 ? 'warn' : 'ok' })),
+      ...P.filter(x => x.fund_can_save && (S.me.role === 'admin' || S.me.name === x.name)).map(x => h('div', { class: 'alert ok no-print' }, h('p', null, `🎁 پایان ${jmonthName(month)} است؛ پاداش ${x.name} ${fmt(Math.round(x.fund_month_pending / 10))} تومان (${fmt(Math.round(x.fund_month_pending))} ریال) آمادهٔ ذخیره در صندوق است. `), saveBtn(x.name, month, jmonthName(month), x.fund_month_pending, afterSave))),
       s.equalize
         ? h('div', { class: 'alert warn' }, `⚖️ برای برابر شدن سرمایه: ${s.equalize.from} مبلغ ${fmt(Math.round(s.equalize.amount / 10))} تومان (${fmt(Math.round(s.equalize.amount))} ریال) به حساب شخصی ${s.equalize.to} واریز کند و بعد در «مالی › انتقال سرمایه» ثبت شود.`)
         : h('div', { class: 'alert ok' }, '⚖️ سرمایه‌ی مهسا و رعنا برابر است.'),
