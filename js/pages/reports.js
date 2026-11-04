@@ -77,7 +77,6 @@ export function settleBody(d, month) {
       ['فروش این ماه', x => N(x.sales_total)], ['تعداد فاکتور این ماه', x => fmt(x.sales_count)], ...(s.bonus_pool > 0 ? [['🎁 پاداش فروش آشنایان (از سود کم شده)', x => N((x.bonus || {}).total || 0, 'pos')], ['⭐ فروشنده‌ی برتر ماه', x => (x.bonus && x.bonus.is_star ? '⭐ بله' : '—')]] : []), ['کسر انبارگردانی از سود (کسری واقعی)', x => N(-(x.charge || 0), (x.charge || 0) > 0 ? 'neg' : '')], ['سهم از سود خالص این ماه (۵۰٪)', x => N(x.profit_share, x.profit_share < 0 ? 'neg' : 'pos')],
       ['سرمایه‌ی وارد‌شده تا امروز', x => N(x.capital)], ['پول نقد و بانک دست او', x => N(x.cash + x.bank)], ['جنس دست او (قیمت تمام‌شده)', x => N(x.stock_value)],
       ['جیب شخصی (مانده)', x => N(x.pocket)], ['سهم او از سود کل تا امروز', x => N(x.profit_share_total)],
-      ['🎁 پاداش ذخیره‌شده در صندوق', x => N(x.fund_saved || 0, 'pos')], ['پاداش هنوز ذخیره‌نشده', x => N(x.fund_pending || 0)], ['سود برابر قابل خرید مشترک (بدون پاداش)', x => N(x.buyable || 0, (x.buyable || 0) < 0 ? 'neg' : 'pos')], ['برداشت سود این ماه', x => N(x.payout_month)], ['برداشت سود تا امروز', x => N(x.payout_total)]
     ].map(([label, fn]) => ({ label, a: fn(P[0]), b: fn(P[1]) }));
     return [
       d.locked ? h('div', { class: 'alert info' }, '🔒 این ماه بسته شده است.') : null,

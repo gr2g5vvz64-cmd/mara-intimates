@@ -28,7 +28,7 @@ try {
   await page.screenshot({ path: 'shots/fund_after.png' });
   // حساب‌وکتاب ماه گذشته: ردیف‌های تازه
   await page.evaluate(() => { location.hash = '#/settle'; }); await sleep(1200);
-  const st2 = await page.locator('#view').innerText(); ok(/پاداش ذخیره‌شده در صندوق/.test(st2) && /سود برابر قابل خرید مشترک/.test(st2), 'حساب‌وکتاب ماهانه ردیف‌های صندوق را دارد');
+  const st2 = await page.locator('#view').innerText(); ok(!/ذخیره‌شده در صندوق/.test(st2) && !/قابل خرید مشترک/.test(st2) && !/موجودی صندوق/.test(st2), 'حساب‌وکتاب ماهانه هیچ نشانی از صندوق ندارد');
   // رعنا
   const p2 = await newPage(browser, url, { logs }); await login(p2, 'rana@example.com', 'rana-pass-22'); await p2.evaluate(() => { location.hash = '#/fund'; }); await p2.waitForTimeout(900);
   const t2 = await p2.locator('#view').innerText(); ok(/صندوق رعنا/.test(t2) && !/صندوق مهسا/.test(t2), 'رعنا فقط صندوق خودش را می‌بیند');

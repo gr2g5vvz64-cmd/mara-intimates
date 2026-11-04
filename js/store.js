@@ -83,6 +83,7 @@ export async function loadAll({ retries = 9 } = {}) {
     cheques: t.v_cheques || [], chequeAllocs: t.cheque_allocs || [], chequeBanks: t.cheque_banks || [],
     vSales: t.v_sales, goals: t.goals || [], pageStats: t.page_stats || [], custMsgs: t.customer_msgs || [], texts: t.app_texts || [], dayCloses: t.day_closes || [], periodLocks: t.period_locks || [], categories: t.categories || [], settings: t.app_settings || [], totals: t.v_totals || {}, me: r.data.user, bots: r.data.bots || {}
   });
+  S.fundNet = r.data.fund_net || null;   // پاداش ذخیره‌نشده‌ی هر نفر؛ پاداش ذخیره‌شده در صندوق از نمایش سود بیرون است
   S.sales = S.vSales;
   S.A = Object.fromEntries(S.accounts.map(x => [x.id, x]));
   S.I = Object.fromEntries(S.items.map(x => [x.id, x]));

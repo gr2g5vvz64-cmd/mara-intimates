@@ -14,7 +14,8 @@ export function render() {
   // پاداش فروش آشنایان (پلکانی + فروشنده‌ی برتر) اول از سود کم می‌شود، بقیه ۵۰/۵۰ است
   // کسری واقعی انبارگردانی از سهم همان نفر کم می‌شود و در سود کل آمده است؛ پس برای تقسیم برمی‌گردد (همان فرمول حساب‌وکتاب ماهانه)
   const chg = n => sum((S.charges || []).filter(c => !c.voided && c.partner === n), c => Number(c.amount) || 0), chgAll = chg('مهسا') + chg('رعنا');
-  const BL = bonusLifetime(), pool = BL['مهسا'] + BL['رعنا'], baseHalf = (profit + chgAll - pool) / 2;
+  const BLfull = bonusLifetime(), baseHalf = (profit + chgAll - (BLfull['مهسا'] + BLfull['رعنا'])) / 2;   // پاداش کامل از سود کم می‌شود
+  const BL = S.fundNet || BLfull, pool = BL['مهسا'] + BL['رعنا'];   // ولی فقط پاداش ذخیره‌نشده نمایش داده می‌شود؛ ذخیره‌شده‌ها فقط در صندوق‌اند
   const part = (name, cap, payout, pocketId) => { const mine = baseHalf - chg(name) + (BL[name] || 0); return { name, cap, share: sh(cap), base: baseHalf, bonus: BL[name] || 0, charge: chg(name), suggest: mine, payout, left: mine - payout, pocketId }; };
   const capDiff = capM - capR, hiName = capDiff > 0 ? 'مهسا' : 'رعنا', loName = capDiff > 0 ? 'رعنا' : 'مهسا', eqAmt = Math.abs(capDiff) / 2;
   const rows = [part('مهسا', capM, T.payout_m || 0, pk.find(a => a.owner === 'مهسا')), part('رعنا', capR, T.payout_r || 0, pk.find(a => a.owner === 'رعنا'))];
