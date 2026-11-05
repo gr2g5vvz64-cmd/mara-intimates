@@ -13,6 +13,7 @@ import * as cust from './pages/customers.js';
 import * as hist from './pages/history.js';
 import * as mgmt from './pages/mgmt.js';
 import * as diag from './pages/diag.js';
+import * as saudit from './pages/stockaudit.js';
 import * as savelog from './pages/savelog.js';
 import * as calc from './pages/calc.js';
 import * as ana from './pages/analysis_page.js';
@@ -58,6 +59,7 @@ const ROUTES = {
   settle: { t: 'حساب‌وکتاب ماهانه', i: '🤝', f: () => rep.settlePage() },
   fund: { t: 'صندوق پاداش', i: '🎁', f: () => fundp.render() },
   savelog: { t: 'گزارش ذخیره', i: '✔', f: () => savelog.render() },
+  stockaudit: { t: 'تطبیق انبار', i: '🧮', f: () => saudit.render() },
   diag: { t: 'عیب‌یابی', i: '🛠', f: () => diag.render() },
   settings: { t: 'تم رنگی', i: '🎨', f: () => h('div', null, h('div', { class: 'phead' }, h('h1', null, 'تنظیمات ظاهر')), h('p', { class: 'hint' }, 'تمی که انتخاب می‌کنی فقط برای خودت و روی همین دستگاه می‌ماند.'), themePanel(true), h('h3', { class: 'sec' }, 'حساب کاربری'), h('div', { class: 'card' }, h('p', null, 'وارد شده با نام «' + S.me.name + '».'), logoutBtn())) }
 };
@@ -68,7 +70,7 @@ const GROUPS = [
   { id: 'buy', t: 'خرید', i: '📦', kids: ['purchases', 'suppliers', 'sreturns'] },
   { id: 'wh', t: 'انبار', i: '▤', kids: ['stock', 'monthcount', 'items'] },
   { id: 'money', t: 'مالی', i: '◎', kids: ['finance', 'pay', 'invoices', 'cheques', 'settle', 'fund'] },
-  { id: 'set', t: 'تنظیمات', i: '⚙', kids: ['settings', 'history', 'help', 'savelog', 'diag'] }
+  { id: 'set', t: 'تنظیمات', i: '⚙', kids: ['settings', 'history', 'help', 'savelog', 'stockaudit', 'diag'] }
 ];
 const NAVLBL = { monthcount: 'انبارگردانی', sales: 'فاکتور فروش', purchases: 'فاکتور خرید', finance: 'خلاصه‌ی مالی', pay: 'پرداخت و هزینه', calc: 'محاسبات درصد', pnl: 'سود و زیان ماهانه', meeting: 'گزارش جلسه‌ی دو هفته‌ای', settle: 'حساب‌وکتاب ماهانه' };
 const BLBL = { '': 'خانه', sales: 'فروش', purchases: 'خرید', stock: 'موجودی', finance: 'مالی' };
@@ -94,7 +96,7 @@ function parseHash() {
 function route() {
   if (!view) return;
   let { path, q } = parseHash();
-  if ((path === 'diag' || path === 'mgmt' || path === 'analysis' || path === 'pnl' || path === 'pack' || path === 'meeting' || path === 'custmsg') && !(S.me && S.me.role === 'admin')) { path = ''; history.replaceState(null, '', '#/'); }
+  if ((path === 'diag' || path === 'stockaudit' || path === 'mgmt' || path === 'analysis' || path === 'pnl' || path === 'pack' || path === 'meeting' || path === 'custmsg') && !(S.me && S.me.role === 'admin')) { path = ''; history.replaceState(null, '', '#/'); }
   if ((path === 'settle' || path === 'fund') && (!S.me || S.me.role === 'viewer')) { path = ''; history.replaceState(null, '', '#/'); }
   const r = ROUTES[path] || ROUTES[''];
   const key = ROUTES[path] ? path : '';
