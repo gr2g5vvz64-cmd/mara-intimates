@@ -1,6 +1,6 @@
 // ابزارک‌های داشبورد ۷.۳۲: کارت خوشامد، سلامت سرمایه، نمودار فروش (روز/هفته/ماه)، سهم دسته‌ها، جریان رویدادها، نمودار کوچک
 import { h, fmt, sum, todayISO, addDaysISO, jmonthKey, lastMonths, toJ, toast } from './util.js';
-import { S, activeSales, defaultMarkup, expKindOf, stockTargetDays, rpc, bus, errText } from './store.js';
+import { S, catOf, activeSales, defaultMarkup, expKindOf, stockTargetDays, rpc, bus, errText } from './store.js';
 import { N, modal, field, numField, chips, run } from './ui.js';
 import { categoryStats } from './insights.js';
 import { salesStats } from './analytics.js';
@@ -45,7 +45,14 @@ export const catTarget = name => { const c = (S.categories || []).find(x => x.na
 export function marginStatus() {
   const rows = categoryStats('month').filter(r => r.cost > 0 && r.revenue > 0);
   const cost = sum(rows, r => r.cost), profit = sum(rows, r => r.profit);
-  const items = rows.map(r => ({ cat: r.cat, real: r.profit / r.cost * 100, target: catTarget(r.cat), cost: r.cost }));
+  /* نمونه‌ی آماری: فروخته‌ی این ماه (منهای مرجوعیِ مشتری) ÷ (فروخته‌ی این ماه + موجودی فعلی دسته) — زیر ۱۰٪ = «نمونه‌ی کم» */
+  const mk = jmonthKey(todayISO()), retQ = {}, left = {};
+  for (const r of S.returns || []) if (!r.voided && r.kind === 'customer' && jmonthKey(r.date) === mk) { const c = catOf(S.I[r.item_id]); retQ[c] = (retQ[c] || 0) + (r.qty || 0); }
+  for (const i of S.stock || []) if (i.active && i.rem > 0) { const c = catOf(i); left[c] = (left[c] || 0) + i.rem; }
+  const items = rows.map(r => {
+    const sold = Math.max(0, (r.qty || 0) - (retQ[r.cat] || 0)), rem = left[r.cat] || 0, pct = sold + rem > 0 ? sold / (sold + rem) * 100 : 0;
+    return { cat: r.cat, real: r.profit / r.cost * 100, target: catTarget(r.cat), cost: r.cost, sold, left: rem, pct, low: sold > 0 && pct < 10 };
+  });
   const target = cost > 0 ? sum(items, i => i.target * i.cost) / cost : defaultMarkup();
   return { items, real: cost > 0 ? profit / cost * 100 : null, target, below: items.filter(i => i.real < i.target - 1), has: cost > 0 };
 }
@@ -95,8 +102,13 @@ export function healthCard() {
   const mx = Math.max(40, ...M.items.map(i => Math.max(i.real, i.target * 1.5)));
   const catRows = M.items.slice(0, 6).map(i => {
     const ok = i.real >= i.target - 1;
-    return h('div', { class: 'hc-bar' }, h('div', { class: 'hc-bl' }, h('span', null, i.cat), h('span', null, h('b', { class: 'n' }, R1(i.real) + '٪'), h('small', null, ok ? ' · به هدف رسید' : ' · زیر هدف'))),
-      h('div', { class: 'hc-track' }, h('div', { class: 'hc-fill ' + (ok ? 'ok' : i.real < i.target * .7 ? 'bad' : 'mid'), style: { width: Math.max(2, Math.min(100, i.real / mx * 100)) + '%' } }), h('i', { class: 'hc-mark', style: { insetInlineStart: Math.min(100, i.target / mx * 100) + '%' } })));
+    const chips = h('span', { class: 'hc-chips' },
+      h('span', { class: 'hc-chip' }, 'فروختیم ', h('b', { class: 'n' }, fmt(i.sold))),
+      h('span', { class: 'hc-chip' }, 'مانده ', h('b', { class: 'n' }, fmt(i.left))),
+      h('span', { class: 'hc-chip' }, h('b', { class: 'n' }, R1(i.pct) + '٪'), ' موجودی فروخته شد'),
+      h('span', { class: 'hc-badge ' + (i.low ? 'low' : 'okk') }, i.low ? '⚠ نمونه‌ی کم' : '✓ نمونه‌ی کافی'));
+    return h('div', { class: 'hc-bar' + (i.low ? ' low' : ''), 'data-cat': i.cat }, h('div', { class: 'hc-bl' }, h('span', { class: 'hc-name' }, i.cat), chips, h('span', { class: 'hc-mg' }, h('b', { class: 'n' }, R1(i.real) + '٪'), h('small', null, ok ? ' · به هدف رسید' : ' · زیر هدف'))),
+      h('div', { class: 'hc-track' }, h('div', { class: 'hc-fill ' + (ok ? 'ok' : i.real < i.target * .7 ? 'bad' : 'mid') + (i.low ? ' hatch' : ''), style: { width: Math.max(2, Math.min(100, i.real / mx * 100)) + '%' } }), h('i', { class: 'hc-mark', style: { insetInlineStart: Math.min(100, i.target / mx * 100) + '%' } })));
   });
   const rowsEc = [['فروش این ماه', money(st.sales)], ['نقطه‌ی سربه‌سر', D.be ? money(D.be) : '—'], ['هزینه‌ی ثابت (اجاره، تجهیزات)', money(D.fixed)], ['هزینه‌ی متغیر (پیک، بسته‌بندی، تبلیغات)', money(D.varX + D.saleCosts)], ['سود ناخالص', money(st.sales - D.cogs)], ['سود خالص', money(st.profit)]];
   return h('section', { class: 'card hc', 'aria-label': 'سلامت سرمایه' },
