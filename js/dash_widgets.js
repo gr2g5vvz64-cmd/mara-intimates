@@ -79,6 +79,7 @@ function targetForm() {
 export function healthCard() {
   const D = healthData(), M = marginStatus(), st = D.st;
   const capTotal = Math.max(1, D.stock + D.recv + D.cash);
+  const debt = S.totals && S.totals.net_worth != null ? Math.max(0, D.stock + D.recv + D.cash - S.totals.net_worth) : 0;   // بدهی به تامین‌کننده + چک‌های هنوز نشسته
   const capParts = [['انبار', D.stock, 'var(--gold)'], ['طلب از مشتری', D.recv, 'var(--lux)'], ['پول حساب‌ها', D.cash, 'var(--green)']];
   const verdict = (() => {
     if (!st.count) return { tone: 'info', text: 'این ماه هنوز فروشی ثبت نشده.' };
@@ -109,6 +110,10 @@ export function healthCard() {
       h('div', { class: 'hc-col' }, h('div', { class: 'hc-t' }, '۲) سرمایه کجاست'),
         h('div', { class: 'hc-stack', role: 'img', 'aria-label': 'سهم انبار، طلب و پول حساب‌ها' }, capParts.map(([, v, c]) => h('div', { style: { width: (v / capTotal * 100) + '%', background: c } }))),
         capParts.map(([l, v, c]) => h('div', { class: 'hc-leg' }, h('i', { style: { background: c } }), h('span', null, l), h('b', null, money(v)), h('small', null, R1(v / capTotal * 100) + '٪'))),
+        // بالای صفحه «ارزش کسب‌وکار» = دارایی منهای بدهی است؛ اینجا فقط دارایی‌ها بود، پس بدهی و جمع خالص هم نوشته می‌شود تا دو عدد یکی دیده شوند
+        ...(debt > 0.5 ? [h('div', { class: 'srow', style: 'margin-top:6px' }, h('span', null, 'جمع دارایی‌ها'), h('b', null, money(capTotal))),
+          h('div', { class: 'srow' }, h('span', null, '− بدهی ما (تامین‌کننده و چک‌های در جریان)'), h('b', { class: 'neg' }, money(debt))),
+          h('div', { class: 'srow bold' }, h('span', null, '= ارزش خالص کسب‌وکار'), h('b', null, money(capTotal - debt)))] : []),
         D.cover != null ? h('div', { class: 'hint' }, `انبار مناسب برای ${fmt(D.target)} روز فروش: ${money(D.ideal)} · الان ${money(D.stock)} (${fmt(Math.round(D.cover))} روز)`) : null),
       h('div', { class: 'hc-col' }, h('div', { class: 'hc-t' }, '۳) فروش در برابر هزینه‌ها'),
         rowsEc.map(([k, v]) => h('div', { class: 'srow' }, k, h('b', null, v))),
