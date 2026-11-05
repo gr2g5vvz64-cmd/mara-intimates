@@ -13,27 +13,50 @@ import { returnForm, expenseForm, supplierPaymentForm, dayCloseForm, goalForm, b
 
 const NS = 'http://www.w3.org/2000/svg';
 export const sv = (tag, a = {}, ...k) => { const e = document.createElementNS(NS, tag); for (const x in a) e.setAttribute(x, a[x]); k.flat().forEach(c => c != null && e.append(c instanceof Node ? c : document.createTextNode(c))); return e; };
+/** مبلغ کامل با جداکننده‌ی هزارگان، بدون خلاصه‌نویسی: 1,470,000,000 */
+export const rial = n => Math.round(n || 0).toLocaleString('en-US');
+export const isNarrow = () => { try { return window.matchMedia('(max-width: 760px)').matches; } catch (e) { return false; } };
+/** دور نمودار یک کادر می‌گذارد و با لمس/نگه‌داشتن موس روی هر ستون، کادر مبلغ کامل را نشان می‌دهد. bind(el, متن) را برای هر ستون صدا بزن. */
+export function chartTipWrap(svg) {
+  const tip = h('div', { class: 'ctip', role: 'status', hidden: true }), wrap = h('div', { class: 'ctwrap' }, svg, tip);
+  const hide = () => { tip.hidden = true; };
+  const bind = (el, text) => {
+    el.style.cursor = 'pointer';
+    const show = () => {
+      tip.textContent = text; tip.hidden = false;
+      const w = wrap.getBoundingClientRect(), r = el.getBoundingClientRect(), tw = tip.offsetWidth;
+      const x = Math.min(Math.max(r.left - w.left + r.width / 2, tw / 2 + 4), w.width - tw / 2 - 4);
+      tip.style.left = x + 'px'; tip.style.top = Math.max(2, r.top - w.top - tip.offsetHeight - 6) + 'px';
+    };
+    el.addEventListener('mouseenter', show); el.addEventListener('mouseleave', hide);
+    el.addEventListener('click', e => { e.stopPropagation(); show(); });
+  };
+  document.addEventListener('click', hide, { passive: true });
+  return { wrap, bind };
+}
 export const mil = n => { const v = n / 1e6; return (Math.abs(v) >= 100 ? Math.round(v) : Math.round(v * 10) / 10).toString(); };
 
 function barChart() {
   const keys = lastMonths(6); const M = Object.fromEntries(monthly().map(m => [m.key, m]));
   const data = keys.map(k => ({ k, sales: (M[k] || {}).sales || 0, profit: (M[k] || {}).profit || 0 }));
   const max = Math.max(1, ...data.map(d => Math.max(d.sales, d.profit)));
-  const W = 560, H = 230, pb = 38, pt = 18, bw = 26, gap = (W - 20) / data.length;
-  const svg = sv('svg', { viewBox: `0 0 ${W} ${H}`, class: 'chart', role: 'img', 'aria-label': 'نمودار فروش و سود شش ماه اخیر' });
-  svg.append(sv('title', {}, 'فروش و سود ماهانه (میلیون ریال)'));
+  const narrow = isNarrow(), rot = !narrow;   // دسکتاپ: مبلغ کامل چرخیده بالای ستون؛ موبایل: بدون عدد، مبلغ کامل با لمس
+  const W = 560, H = rot ? 300 : 230, pb = 38, pt = rot ? 92 : 18, bw = 26, gap = (W - 20) / data.length;
+  const svg = sv('svg', { viewBox: `0 0 ${W} ${H}`, class: 'chart' + (rot ? ' tall' : ''), role: 'img', 'aria-label': 'نمودار فروش و سود شش ماه اخیر' });
+  svg.append(sv('title', {}, 'فروش و سود ماهانه (مبالغ به ریال)'));
+  const T = chartTipWrap(svg), lab = (x, y, v, cls) => sv('text', { transform: `translate(${x} ${y}) rotate(-90)`, 'text-anchor': 'start', class: cls, style: 'direction:ltr;unicode-bidi:isolate' }, rial(v));
   data.forEach((d, i) => {
-    const cx = W - 10 - gap * (i + .5);
+    const cx = W - 10 - gap * (i + .5), mname = jmonthName(d.k).split(' ')[0];
     const hs = (H - pb - pt) * d.sales / max, hp = d.profit < 0 ? 4 : (H - pb - pt) * d.profit / max;
-    svg.append(sv('rect', { x: cx - bw - 2, y: H - pb - hs, width: bw, height: Math.max(hs, 1), rx: 4, fill: tok('--gold') }));
-    svg.append(sv('rect', { x: cx + 2, y: H - pb - hp, width: bw, height: Math.max(hp, 1), rx: 4, fill: d.profit < 0 ? tok('--red') : tok('--green') }));
-    svg.append(sv('text', { x: cx - bw / 2 - 2, y: H - pb - hs - 4, 'text-anchor': 'middle', class: 'cv' }, mil(d.sales)));
-    svg.append(sv('text', { x: cx + bw / 2 + 2, y: H - pb - hp - 4, 'text-anchor': 'middle', class: 'cv g' }, mil(d.profit)));
-    svg.append(sv('text', { x: cx, y: H - 16, 'text-anchor': 'middle', class: 'cl' }, jmonthName(d.k).split(' ')[0]));
+    const r1 = sv('rect', { x: cx - bw - 2, y: H - pb - hs, width: bw, height: Math.max(hs, 1), rx: 4, fill: tok('--gold') });
+    const r2 = sv('rect', { x: cx + 2, y: H - pb - hp, width: bw, height: Math.max(hp, 1), rx: 4, fill: d.profit < 0 ? tok('--red') : tok('--green') });
+    svg.append(r1, r2); T.bind(r1, `${mname} · فروش: ${rial(d.sales)} ریال`); T.bind(r2, `${mname} · سود: ${rial(d.profit)} ریال`);
+    if (rot) svg.append(lab(cx - bw / 2 - 2 + 4, H - pb - hs - 6, d.sales, 'cv'), lab(cx + bw / 2 + 2 + 4, H - pb - hp - 6, d.profit, 'cv g'));
+    svg.append(sv('text', { x: cx, y: H - 16, 'text-anchor': 'middle', class: 'cl' }, mname));
   });
   svg.append(sv('line', { x1: 6, x2: W - 6, y1: H - pb, y2: H - pb, stroke: tok('--line') }));
-  return h('div', { class: 'card' }, h('div', { class: 'ct' }, 'فروش و سود ماهانه ', h('small', null, '(میلیون ریال)')),
-    h('div', { class: 'legend' }, h('i', { class: 'sw gold' }), 'فروش', h('i', { class: 'sw green' }), 'سود'), svg);
+  return h('div', { class: 'card' }, h('div', { class: 'ct' }, 'فروش و سود ماهانه ', h('small', null, '(مبالغ به ریال' + (narrow ? ' · برای دیدن مبلغ هر ستون آن را لمس کن' : '') + ')')),
+    h('div', { class: 'legend' }, h('i', { class: 'sw gold' }), 'فروش', h('i', { class: 'sw green' }), 'سود'), T.wrap);
 }
 export function hbars(title, rows, color = 'var(--gold)', unit = '') {
   const max = Math.max(1, ...rows.map(r => Math.abs(r.v)));

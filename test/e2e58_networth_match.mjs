@@ -14,9 +14,9 @@ try {
   const worth = await a.evaluate(async () => (await import('/js/store.js')).S.totals.net_worth);
   ok(/جمع دارایی‌ها/.test(t) && /بدهی ما/.test(t) && /ارزش خالص کسب‌وکار/.test(t), 'کارت سلامت سرمایه: دارایی، بدهی و ارزش خالص نوشته شده');
   const m = await a.evaluate(() => { const rows = [...document.querySelectorAll('.hc .srow')].map(r => r.innerText.replace(/\s+/g, ' ')); return rows.find(x => /ارزش خالص/.test(x)) || ''; });
-  const shown = Number((m.match(/([\d.]+)\s*(?:میلیون|ریال)/) || [])[1]);
+  const shown = Number(((m.match(/([\d,]+)\s*ریال/) || [])[1] || '').replace(/,/g, ''));
   console.log('worth=', worth, 'row=', m);
-  ok(Math.abs(shown - worth / 1e6) < 0.06, `ارزش خالص پایین (${shown} میلیون) با ارزش کسب‌وکار بالا (${(worth / 1e6).toFixed(1)} میلیون) یکی است`);
+  ok(Math.abs(shown - worth) <= 1, `ارزش خالص پایین (${shown} ریال) با ارزش کسب‌وکار بالا (${Math.round(worth)} ریال) یکی است`);
   const real = logs.filter(l => !/ERR_FAILED|net::ERR|40\d|Failed to load resource/.test(l)); ok(real.length === 0, 'بدون خطای کنسول');
 } catch (e) { console.log('ERR', e.message.split('\n')[0]); fails++; }
 console.log(fails ? 'FAILS ' + fails : 'ALL OK'); await browser.close(); srv.close(); process.exit(fails ? 1 : 0);

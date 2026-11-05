@@ -9,7 +9,7 @@ const NS = 'http://www.w3.org/2000/svg';
 const sv = (tag, a = {}, ...k) => { const e = document.createElementNS(NS, tag); for (const x in a) e.setAttribute(x, a[x]); k.flat().forEach(c => c != null && e.append(c instanceof Node ? c : document.createTextNode(String(c)))); return e; };
 const R1 = v => (Math.round(v * 10) / 10).toLocaleString('en-US');
 const dec = v => Number(v).toLocaleString('en-US', { maximumFractionDigits: 1 });
-export const money = v => (Math.abs(v) >= 1e6 ? `${dec(v / 1e6)} میلیون ریال` : `${fmt(Math.round(v))} ریال`);
+export const money = v => `${fmt(Math.round(v))} ریال`;   // همیشه کامل، بدون «میلیون» خلاصه‌نویسی
 const isAdmin = () => !!(S.me && S.me.role === 'admin');
 const monthStart = () => { const t = todayISO(); return addDaysISO(t, -(toJ(t)[2] - 1)); };
 const sameDayIn = (d, a, b) => d >= a && d <= b;

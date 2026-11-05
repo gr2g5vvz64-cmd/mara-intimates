@@ -9,31 +9,35 @@ import { analyze } from '../analysis.js';
 import { goalProgress, bonusMonth } from '../insights.js';
 import { goalForm, bonusForm } from '../forms_misc.js';
 import { healthCard, salesLineCard, donutCard, activityCard, adminHero, sparkline, dailySeries } from '../dash_widgets.js';
-import { capitalCard, chequeCard, sv, mil, tip, hbars, dueChart, categoryProfitCard, reorderCard } from './dashboard.js';
+import { capitalCard, chequeCard, sv, mil, rial, isNarrow, chartTipWrap, tip, hbars, dueChart, categoryProfitCard, reorderCard } from './dashboard.js';
 
 let rangeN = 30, trendKind = 'week', tableTab = 'buyers', tableSort = 'range';
 
 /* نمودار ستونیِ چندسری: data = [{label, a, b}] ؛ series = [{key,label,color}] */
 const JMN = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
-function groupedBars(title, sub, data, series, fmtv = mil) {
+function groupedBars(title, sub, data, series, fmtv) {
+  const money = fmtv === undefined, narrow = isNarrow(), rot = money && !narrow;   // مبلغ: دسکتاپ = عدد کامل چرخیده؛ موبایل = بدون عدد و با لمس. تعداد نفر مثل قبل
   const max = Math.max(1, ...data.flatMap(d => series.map(s => Math.max(0, d[s.key] || 0))));
-  const W = 560, H = 230, pb = 40, pt = 20, gap = (W - 20) / data.length, bw = Math.min(26, (gap - 8) / series.length);
-  const svg = sv('svg', { viewBox: `0 0 ${W} ${H}`, class: 'chart', role: 'img', 'aria-label': title });
+  const W = 560, H = rot ? 300 : 230, pb = 40, pt = rot ? 96 : 20, gap = (W - 20) / data.length, bw = Math.min(26, (gap - 8) / series.length);
+  const svg = sv('svg', { viewBox: `0 0 ${W} ${H}`, class: 'chart' + (rot ? ' tall' : ''), role: 'img', 'aria-label': title });
   svg.append(sv('title', {}, title));
+  const T = chartTipWrap(svg);
   data.forEach((d, i) => {
     const cx = W - 10 - gap * (i + .5);
+    const lab = /^\d{4}-\d{2}$/.test(d.label) ? JMN[Number(d.label.split('-')[1]) - 1] : d.label;   // کلید ماه ← نام ماه
     series.forEach((s, j) => {
       const v = d[s.key] || 0, hh = Math.max(v < 0 ? 4 : 1, (H - pb - pt) * Math.max(0, v) / max), x = cx + (j - series.length / 2) * (bw + 2) + 1;
-      svg.append(sv('rect', { x, y: H - pb - hh, width: bw, height: hh, rx: 4, fill: v < 0 ? tok('--red') : s.color }));
-      svg.append(sv('text', { x: x + bw / 2, y: H - pb - hh - 4, 'text-anchor': 'middle', class: 'cv' }, fmtv(v)));
+      const r = sv('rect', { x, y: H - pb - hh, width: bw, height: hh, rx: 4, fill: v < 0 ? tok('--red') : s.color }); svg.append(r);
+      T.bind(r, `${lab}${d.sub ? ' (' + d.sub + ')' : ''} · ${s.label}: ${money ? rial(v) + ' ریال' : v}`);
+      if (rot) svg.append(sv('text', { transform: `translate(${x + bw / 2 + 4} ${H - pb - hh - 6}) rotate(-90)`, 'text-anchor': 'start', class: 'cv', style: 'direction:ltr;unicode-bidi:isolate' }, rial(v)));
+      else if (!money) svg.append(sv('text', { x: x + bw / 2, y: H - pb - hh - 4, 'text-anchor': 'middle', class: 'cv' }, fmtv(v)));
     });
-    const lab = /^\d{4}-\d{2}$/.test(d.label) ? JMN[Number(d.label.split('-')[1]) - 1] : d.label;   // کلید ماه ← نام ماه
     svg.append(sv('text', { x: cx, y: d.sub ? H - 22 : H - 16, 'text-anchor': 'middle', class: 'cl' }, lab));
     if (d.sub) svg.append(sv('text', { x: cx, y: H - 6, 'text-anchor': 'middle', class: 'cl sb', ...(data.length > 5 ? { style: 'font-size:9px' } : {}) }, d.sub));   // خط دوم: بازه‌ی تاریخ هفته
   });
   svg.append(sv('line', { x1: 6, x2: W - 6, y1: H - pb, y2: H - pb, stroke: tok('--line') }));
-  return h('div', { class: 'card' }, h('div', { class: 'ct' }, title, sub ? h('small', null, ' ' + sub) : null),
-    h('div', { class: 'legend' }, ...series.flatMap(s => [h('i', { class: 'sw', style: `background:${s.color}` }), s.label])), svg);
+  return h('div', { class: 'card' }, h('div', { class: 'ct' }, title, sub ? h('small', null, ' ' + sub + (money && narrow ? ' · مبلغ هر ستون را لمس کن' : '')) : null),
+    h('div', { class: 'legend' }, ...series.flatMap(s => [h('i', { class: 'sw', style: `background:${s.color}` }), s.label])), T.wrap);
 }
 
 const delta = (cur, prev, goodUp = true) => {
@@ -107,8 +111,8 @@ export function adminDashboard() {
     const tr = firstData > 0 ? tr0.slice(Math.min(firstData, tr0.length - 1)) : tr0;   // هفته/ماه‌های خالیِ قبل از شروع کار نشان داده نمی‌شود
     const pt = peopleTrend(tr, x => (trendKind === 'week' ? [x.a, x.b] : rangeOfMonthKey(x.key)));
     const trendCards = h('div', { class: 'grid2' },
-      groupedBars(`فروش و سود ${trendKind === 'week' ? 'هفتگی' : 'ماهانه'}`, '(میلیون ریال)', tr, [{ key: 'sales', label: 'فروش', color: tok('--gold') }, { key: 'profit', label: 'سود خالص', color: tok('--green') }]),
-      groupedBars(`خرید، فروش و دریافتی ${trendKind === 'week' ? 'هفتگی' : 'ماهانه'}`, '(میلیون ریال)', tr, [{ key: 'bought', label: 'خرید', color: tok('--blue') || '#4a78c9' }, { key: 'sales', label: 'فروش', color: tok('--gold') }, { key: 'received', label: 'دریافتی', color: tok('--green') }]),
+      groupedBars(`فروش و سود ${trendKind === 'week' ? 'هفتگی' : 'ماهانه'}`, '(مبالغ به ریال)', tr, [{ key: 'sales', label: 'فروش', color: tok('--gold') }, { key: 'profit', label: 'سود خالص', color: tok('--green') }]),
+      groupedBars(`خرید، فروش و دریافتی ${trendKind === 'week' ? 'هفتگی' : 'ماهانه'}`, '(مبالغ به ریال)', tr, [{ key: 'bought', label: 'خرید', color: tok('--blue') || '#4a78c9' }, { key: 'sales', label: 'فروش', color: tok('--gold') }, { key: 'received', label: 'دریافتی', color: tok('--green') }]),
       groupedBars(`خریداران و تامین‌کنندگان ${trendKind === 'week' ? 'هفتگی' : 'ماهانه'}`, '(نفر)', tr.map((x, i) => ({ label: x.label, sub: x.sub, ...pt[i] })), [{ key: 'active', label: 'خریدار فعال', color: tok('--gold') }, { key: 'fresh', label: 'خریدار جدید', color: tok('--green') }, { key: 'sup', label: 'تامین‌کننده‌ی فعال', color: tok('--blue') || '#4a78c9' }], v => String(v)));
 
     /* برترین‌ها */

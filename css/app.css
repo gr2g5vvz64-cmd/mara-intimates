@@ -947,3 +947,9 @@ a.hchip:hover{background:#5d2e47}
 
 /* برچسب خط دوم زیر ستون‌های نمودار (بازه‌ی تاریخ هفته) */
 .chart .cl.sb{font-size:10px;opacity:.85}
+
+/* نمودار ستونی: مبلغ کامل چرخیده (دسکتاپ) و کادر مبلغ با لمس */
+.chart.tall{max-height:340px}
+.ctwrap{position:relative}
+.ctip{position:absolute;transform:translateX(-50%);z-index:5;background:var(--ink);color:var(--card);padding:5px 10px;border-radius:8px;font-size:12px;font-weight:700;white-space:nowrap;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+.ctip[hidden]{display:none}
