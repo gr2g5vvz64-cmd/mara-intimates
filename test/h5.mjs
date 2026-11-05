@@ -12,13 +12,13 @@ export function serve() {
   return new Promise(r => srv.listen(0, () => r({ srv, url: `http://localhost:${srv.address().port}` })));
 }
 export const launch = () => chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] });
-export async function newPage(browser, url, { viewport = { width: 1280, height: 900 }, logs = [] } = {}) {
+export async function newPage(browser, url, { viewport = { width: 1280, height: 900 }, logs = [], fa = false } = {}) {
   const ctx = await browser.newContext({ viewport, locale: 'fa-IR', timezoneId: 'Asia/Tehran', deviceScaleFactor: 1, acceptDownloads: true });
   const page = await ctx.newPage();
   page.on('console', m => { if (['error', 'warning'].includes(m.type())) logs.push(`[${m.type()}] ${m.text()}`); });
   page.on('pageerror', e => logs.push('[pageerror] ' + e.message));
   await page.route(/fonts\.(googleapis|gstatic)\.com|cdn\.jsdelivr\.net/, r => r.abort());
-  await page.addInitScript(a => { window.__MARA_API__ = a; }, API);
+  await page.addInitScript(o => { window.__MARA_API__ = o.a; try { o.fa ? localStorage.removeItem('mara_digits') : localStorage.setItem('mara_digits', 'en'); } catch {} }, { a: API, fa });
   await page.goto(url);
   return page;
 }

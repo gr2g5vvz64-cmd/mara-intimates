@@ -1,4 +1,5 @@
 import { h, toast, jlong, todayISO } from './util.js';
+import { initDigits } from './digits.js';
 import { S, api, apiBase, apiConfigured, getToken, setToken, loadAll, bus, authBus, errText, reportError } from './store.js';
 import * as dash from './pages/dashboard.js';
 import * as trade from './pages/trade.js';
@@ -305,4 +306,5 @@ setInterval(() => {
   lastLoad = Date.now(); refresh();
 }, 5000);
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost') && !window.__MARA_API__) navigator.serviceWorker.register('./sw.js').catch(() => {});
+initDigits();
 boot();
