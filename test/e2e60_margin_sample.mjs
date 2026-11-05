@@ -25,6 +25,12 @@ try {
   const lo = html.find(x => x.cat === 'کم'), hi = html.find(x => x.cat === 'کافی');
   ok(lo && lo.low && lo.hatch && /نمونه‌ی کم/.test(lo.txt) && /فروختیم 1/.test(lo.txt) && /مانده 20/.test(lo.txt) && /موجودی فروخته شد/.test(lo.txt), 'ردیف نمونه‌ی کم: زمینه‌ی زرد + نوار راه‌راه + چیپ‌ها');
   ok(hi && !hi.low && !hi.hatch && /نمونه‌ی کافی/.test(hi.txt), 'ردیف کافی: عادی با نشان ✓');
+  // بازشدن جزئیات کالا به کالا با کلیک روی ردیف
+  const dd = await a.evaluate(async () => { const { healthCard } = await import('/js/dash_widgets.js'); const el = healthCard(); document.body.append(el); el.querySelector('.hc-bar[data-cat="کم"]').click(); await new Promise(r => setTimeout(r, 300)); const t = document.querySelector('.ov') ? document.querySelector('.ov').innerText : ''; document.querySelector('.ov') && document.querySelector('.ov').remove(); el.remove(); return t; });
+  ok(/فروختیم/.test(dd) && /جمع/.test(dd) && /20/.test(dd), 'کلیک روی ردیف: جزئیات فروخته/مانده‌ی کالاها باز می‌شود');
+  // برگشتی از فروخته کم می‌شود
+  const rq = await a.evaluate(async () => { const { S } = await import('/js/store.js'); const { marginStatus } = await import('/js/dash_widgets.js'); S.saleLines.find(l => l.item_id === 2).returned_qty = 1; return marginStatus().items.find(i => i.cat === 'کافی').sold; });
+  ok(rq === 2, 'فروخته = تعداد منهای برگشتی (۳ − ۱ = ۲)');
   // موبایل: خط اول نام و درصد، خط دوم چیپ‌ها
   await a.setViewportSize({ width: 390, height: 800 });
   const lay = await a.evaluate(async () => { const { healthCard } = await import('/js/dash_widgets.js'); const el = healthCard(); document.body.append(el); const b = el.querySelector('.hc-bar'); const n = b.querySelector('.hc-name').getBoundingClientRect(), c = b.querySelector('.hc-chips').getBoundingClientRect(), g = b.querySelector('.hc-mg').getBoundingClientRect(); el.remove(); return { sameLine: Math.abs(n.top - g.top) < 8, chipsBelow: c.top > n.bottom - 2 }; });

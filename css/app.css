@@ -963,3 +963,4 @@ a.hchip:hover{background:#5d2e47}
 .hc-bar.low{background:rgba(245,180,40,.12);border-radius:8px;padding:4px 6px}
 .hc-fill.hatch{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.55) 0 4px,transparent 4px 8px)}
 @media(max-width:760px){.hc-name{order:1}.hc-mg{order:2}.hc-chips{order:3;flex-basis:100%}}
+.hc-bar.clk{cursor:pointer}

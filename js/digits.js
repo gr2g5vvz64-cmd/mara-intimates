@@ -1,9 +1,8 @@
-// ارقام فارسی در تمام برنامه (۷.۶۵): داده و محاسبه همان لاتین می‌ماند؛ فقط «نمایش» فارسی می‌شود.
+// ارقام فارسی در تمام برنامه (۷.۶۵، جداکننده‌ها ۷.۶۷): داده و محاسبه همان لاتین می‌ماند؛ فقط «نمایش» فارسی می‌شود.
 // ورودی‌ها (input/textarea) دست‌نخورده می‌مانند تا تایپ و محاسبه مثل قبل باشد؛ کپی‌کردن متن هم عدد لاتین می‌دهد.
 const FA = '۰۱۲۳۴۵۶۷۸۹';
 const SKIP = 'input,textarea,script,style,[contenteditable="true"],[data-latin]';
-export const toFa = s => String(s).replace(/[0-9]/g, d => FA[d])
-  .replace(/(?<=[۰-۹]),(?=[۰-۹])/g, '٬').replace(/(?<=[۰-۹])\.(?=[۰-۹])/g, '٫');
+export const toFa = s => String(s).replace(/[0-9]/g, d => FA[d]);   // جداکننده‌ی هزارگان «,» و اعشار «.» لاتین می‌مانند
 export const toEn = s => String(s).replace(/[۰-۹]/g, c => FA.indexOf(c)).replace(/٬/g, ',').replace(/٫/g, '.');
 const off = () => { try { return localStorage.getItem('mara_digits') === 'en'; } catch { return false; } };
 

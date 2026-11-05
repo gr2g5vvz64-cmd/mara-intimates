@@ -11,10 +11,10 @@ try {
   }
   await a.evaluate(() => { location.hash = '#/dashboard'; }); await a.waitForTimeout(1200);
   const t = await a.locator('#view').innerText();
-  ok(/[۰-۹]{1,3}٬[۰-۹]{3}/.test(t), 'مبلغ‌ها با رقم فارسی و جداکننده‌ی «٬»');
+  ok(/[۰-۹]{1,3},[۰-۹]{3}/.test(t) && !/٬/.test(t), 'مبلغ‌ها با رقم فارسی و جداکننده‌ی «,»');
   // تغییر پویا (مودال/ابزارک جدید) هم فارسی می‌شود
   await a.evaluate(() => { const d = document.createElement('div'); d.id = 'zz'; d.textContent = 'مبلغ 1,234,567.5 ریال'; document.body.append(d); }); await a.waitForTimeout(200);
-  ok(await a.evaluate(() => document.getElementById('zz').textContent) === 'مبلغ ۱٬۲۳۴٬۵۶۷٫۵ ریال', 'عنصر تازه‌اضافه‌شده هم فارسی می‌شود');
+  ok(await a.evaluate(() => document.getElementById('zz').textContent) === 'مبلغ ۱,۲۳۴,۵۶۷.۵ ریال', 'عنصر تازه‌اضافه‌شده هم فارسی می‌شود');
   // ورودی دست‌نخورده
   const v = await a.evaluate(() => { const i = document.createElement('input'); i.value = '123'; document.body.append(i); return new Promise(r => setTimeout(() => r(i.value), 200)); });
   ok(v === '123', 'مقدار input لاتین می‌ماند');
