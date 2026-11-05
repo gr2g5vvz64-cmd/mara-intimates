@@ -1,4 +1,5 @@
-:root{--fb:'Vazirmatn',Tahoma,sans-serif;--fd:'B Nazanin','Noto Naskh Arabic','Vazirmatn',serif;
+@font-face{font-family:'IRNazanin';src:url('../fonts/IRNazanin.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap;size-adjust:114%}
+:root{--fb:'IRNazanin',Tahoma,sans-serif;--fd:'IRNazanin',Tahoma,serif;
   /* تم ۷ — تمشکی و مشکی. نام متغیرها ثابت مانده؛ --gold در واقع «رنگ اصلی تمشکی» است و --lux طلایی. */
   --bg:#FFF5F8; --card:#FFFFFF; --ink:#2A1520; --brown:#7D4A62; --gold:#C2185B; --gold-d:#9C1049; --lux:#C9A24B; --line:#F8D3E1; --tint:#FCE7EF; --pinkl:#F4A6C0;
   --green:#2F6B45; --green-bg:#DCEFE2; --blue:#1F5A8C; --blue-bg:#DCEAF6; --red:#B3261E; --red-bg:#FBDDD9; --amber:#7A4A00; --amber-bg:#FBE3A6; --gray-bg:#F1E6EB;

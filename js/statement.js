@@ -7,7 +7,7 @@ import { modal, field } from './ui.js';
 
 const W = 900, SC = 2, PAD = 44;
 const INK = '#2A1520', MUTED = '#7b6670', LINE = '#e6d3da', ACC = '#B4466B', TINT = '#fdf1f5', RED = '#B3261E', GREEN = '#1B7F4B';
-const FONT = "'Vazirmatn',Tahoma,sans-serif";
+const FONT = "'IRNazanin',Tahoma,sans-serif";
 const NOTE_KEY = 'mara.statement.note';
 const getNote = () => { try { return localStorage.getItem(NOTE_KEY) || ''; } catch { return ''; } };
 const setNote = v => { try { localStorage.setItem(NOTE_KEY, v); } catch { /* بدون ذخیره هم کار می‌کند */ } };
@@ -59,7 +59,7 @@ function loadLogo() {
   return new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = 'icons/logo-mark.jpg'; });
 }
 export async function drawStatement(spec, payNote) {
-  try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch { /* ادامه با فونت پیش‌فرض */ }
+  try { if (document.fonts) { await document.fonts.load(`22px ${FONT}`); await document.fonts.ready; } } catch { /* ادامه با فونت پیش‌فرض */ }
   const logo = await loadLogo();
   const meas = document.createElement('canvas').getContext('2d'); meas.font = `500 22px ${FONT}`; meas.direction = 'rtl';
   const colsW = spec.cols.map(c => c.w); const fixed = colsW.reduce((a, b) => a + b, 0); const flex = W - 2 * PAD - fixed;
