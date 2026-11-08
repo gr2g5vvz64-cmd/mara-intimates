@@ -1,0 +1,37 @@
+# پشتیبان یدک: اگر کرون Render (یا خود Render) نفرستاد، GitHub مستقیم از دیتابیس Supabase پشتیبان می‌گیرد
+# و همزمان به تلگرام و بله می‌فرستد. اگر پشتیبانِ ۱۸ ساعت اخیر رفته باشد، چیزی نمی‌فرستد (تکراری نمی‌شود).
+# اگر هیچ فایلی به هیچ کانالی نرسد، این کار قرمز می‌شود و GitHub به ایمیل تو خبر می‌دهد.
+# مخزن باید «خصوصی (Private)» باشد. سه Secret لازم است: Settings › Secrets and variables › Actions
+#   DATABASE_URL        همان مقدار Render (Session pooler سوپابیس)
+#   TELEGRAM_BOT_TOKEN  همان مقدار Render
+#   BALE_BOT_TOKEN      همان مقدار Render
+name: پشتیبان یدک
+
+on:
+  schedule:
+    - cron: '30 21 * * *'      # ۰۱:۰۰ بامداد تهران (UTC+3:30)، یک ساعت بعد از کرون اصلی
+  workflow_dispatch:           # دکمه‌ی «Run workflow» برای اجرای دستی
+    inputs:
+      force:
+        description: 'حتی اگر امروز پشتیبان رفته، دوباره بفرست (برای آزمایش)'
+        type: boolean
+        default: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: پشتیبان کامل (فقط اگر امروز نرفته)
+        run: python manage.py backup_now ${{ inputs.force && ' ' || '--if-missing' }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          BALE_BOT_TOKEN: ${{ secrets.BALE_BOT_TOKEN }}
+          SECRET_KEY: backup-job-not-used
