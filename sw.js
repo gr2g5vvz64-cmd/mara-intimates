@@ -1,6 +1,6 @@
 // سرویس‌ورکر ساده: فایل‌های برنامه را کش می‌کند؛ داده‌ها همیشه از اینترنت می‌آیند.
-const V = 'mara-v7.68';
-const SHELL = ['./', 'index.html', 'css/app.css?v=7.68', 'css/themes.css?v=7.68', 'js/app.js?v=7.68', 'manifest.webmanifest', 'icons/icon-192.png', 'fonts/IRNazanin.woff2'];
+const V = 'mara-v7.69';
+const SHELL = ['./', 'index.html', 'css/app.css?v=7.69', 'css/themes.css?v=7.69', 'js/app.js?v=7.69', 'manifest.webmanifest', 'icons/icon-192.png', 'fonts/IRNazanin.woff2'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(V).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {

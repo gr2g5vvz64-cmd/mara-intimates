@@ -964,3 +964,8 @@ a.hchip:hover{background:#5d2e47}
 .hc-fill.hatch{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.55) 0 4px,transparent 4px 8px)}
 @media(max-width:760px){.hc-name{order:1}.hc-mg{order:2}.hc-chips{order:3;flex-basis:100%}}
 .hc-bar.clk{cursor:pointer}
+/* 7.69 — ردیف‌های نمودار افقی: عنوان کامل (چندخطی) + مبلغ بالا، میله زیر آن؛ دیگر عنوان با «…» بریده نمی‌شود و مبلغ بیرون نمی‌زند */
+.hb{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"l v" "b b";gap:3px 10px;align-items:baseline;margin:10px 0}
+.hb .hl{grid-area:l;white-space:normal;overflow:visible;text-overflow:clip;line-height:1.7;min-width:0}
+.hb .hv{grid-area:v;white-space:nowrap;font-weight:700}
+.hb .hbar{grid-area:b;height:9px}
