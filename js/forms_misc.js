@@ -494,12 +494,12 @@ export function customerForm(c, after) {
   const note = h('input', { class: 'inp', value: c && c.note || '', placeholder: 'یادداشت (مثلاً اینستاگرام: @sara)' });
   const addr = h('textarea', { class: 'inp', rows: 2, placeholder: 'نشانی (اختیاری)' }, c && c.address || '');
   const tick = (label, on) => { const i = h('input', { type: 'checkbox', checked: on || null }); return { i, el: h('label', { class: 'chk' }, i, label) }; };
-  const tAcq = tick('آشنا', c && c.is_acq), tTg = tick('از تلگرام', c && c.src_telegram), tIg = tick('از اینستاگرام', c && c.src_instagram);
-  const srcRow = h('div', { class: 'row', style: 'gap:16px;flex-wrap:wrap' }, tAcq.el, tIg.el, tTg.el);
+  const tAcq = tick('آشنا', c && c.is_acq), tTg = tick('از تلگرام', c && c.src_telegram), tIg = tick('از اینستاگرام', c && c.src_instagram), tBl = tick('از بله', c && c.src_bale);
+  const srcRow = h('div', { class: 'row', style: 'gap:16px;flex-wrap:wrap' }, tAcq.el, tIg.el, tTg.el, tBl.el);
   const act = chips([{ v: true, label: 'فعال' }, { v: false, label: 'غیرفعال' }], c ? c.active : true, () => {}, { cls: 'two' });
   const used = c && S.vSales.some(x => x.customer_id === c.id);
   const btn = h('button', { class: 'btn primary lg', type: 'button' }, c ? 'ذخیره' : 'افزودن مشتری');
-  btn.onclick = async () => { const r = await run(btn, () => rpc('save_customer', { id: c && c.id, name: name.value, phone: phone.value, address: addr.value, is_acq: tAcq.i.checked, src_instagram: tIg.i.checked, src_telegram: tTg.i.checked, note: note.value, active: act.get() })); if (r) { await finish(m, 'ذخیره شد'); after && after(r); } };
+  btn.onclick = async () => { const r = await run(btn, () => rpc('save_customer', { id: c && c.id, name: name.value, phone: phone.value, address: addr.value, is_acq: tAcq.i.checked, src_instagram: tIg.i.checked, src_telegram: tTg.i.checked, src_bale: tBl.i.checked, note: note.value, active: act.get() })); if (r) { await finish(m, 'ذخیره شد'); after && after(r); } };
   const delBtn = h('button', { class: 'btn danger ghost', type: 'button' }, 'حذف مشتری');
   delBtn.onclick = async () => { if (!(await confirmBox(`«${c.name}» حذف شود؟ از لیست‌ها کنار می‌رود و فروش‌هایش می‌ماند. مشتری بدهکار حذف نمی‌شود.`, 'حذف کن', true))) return; const r = await run(delBtn, () => rpc('save_customer', { id: c.id, name: c.name, phone: c.phone, note: c.note, active: false })); if (r) { await finish(m, 'مشتری حذف شد'); after && after(r); } };
   const m = modal({ title: c ? 'ویرایش مشتری' : 'مشتری جدید', body: h('div', { class: 'form' }, field('نام', name, used && !canEdit() ? 'برای این مشتری فروش ثبت شده؛ نامش را فقط حمیدرضا، مهسا و رعنا می‌توانند عوض کنند.' : null), field('تلفن', phone), field('نشانی', addr), field('این مشتری', srcRow, 'تیک «آشنا» ملاک هدف و پاداش فروش به آشنایان است؛ در فروش‌های بعدی خودکار می‌آید و تغییرش فروش‌های قبلی را عوض نمی‌کند.'), field('یادداشت', note), c ? field('وضعیت', act) : null), footer: [btn, ...(c ? [delBtn] : [])] });

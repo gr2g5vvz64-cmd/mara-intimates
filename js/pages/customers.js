@@ -9,6 +9,13 @@ import { head, btn, searchBox, match, detail, accName, dueCell, ledgerTable } fr
 import { saleDetail } from './trade.js';
 import { topCustomersCard } from './dashboard.js';
 
+/* برچسب‌های «نوع مشتری»: آشنا / اینستاگرام / تلگرام / بله (هر کدام که در ویرایش مشتری تیک خورده) */
+function srcTags(c) {
+  if (!c) return '';
+  const t = [c.is_acq ? ['آشنا', 'green'] : null, c.src_instagram ? ['اینستا', 'amber'] : null, c.src_telegram ? ['تلگرام', 'blue'] : null, c.src_bale ? ['بله', 'gray'] : null].filter(Boolean);
+  return t.length ? h('span', { class: 'row', style: 'gap:4px;flex-wrap:wrap' }, ...t.map(([x, k]) => pill(x, k))) : '';
+}
+
 export function render(query) {
   let q = '', onlyDebt = query.get('debt') === '1', sortBy = 'debt', tbl = h('div');
   const debtors = S.vCus.filter(c => c.outstanding > 0.5);
@@ -17,7 +24,7 @@ export function render(query) {
     const rows = S.vCus.filter(c => (!onlyDebt || c.outstanding > 0.5) && c.active !== false && match(q, c.name, c.phone, c.note, (S.CUS[c.id] || {}).address))
       .sort((a, b) => sortBy === 'buy' ? b.sales_total - a.sales_total || a.name.localeCompare(b.name, 'fa') : b.overdue_amount - a.overdue_amount || b.outstanding - a.outstanding || a.name.localeCompare(b.name, 'fa'));
     tbl.replaceChildren(dtable([
-      { label: 'مشتری', main: true, render: c => c.name }, { label: 'تلفن', render: c => (c.phone ? h('span', { dir: 'ltr' }, c.phone) : (canEdit() ? btn('＋ تلفن', e => { e.stopPropagation(); customerForm(S.CUS[c.id]); }, 'ghost sm') : '')) }, { label: 'نشانی', hm: true, render: c => (S.CUS[c.id] || {}).address || '' },
+      { label: 'مشتری', main: true, render: c => c.name }, { label: 'تلفن', render: c => (c.phone ? h('span', { dir: 'ltr' }, c.phone) : (canEdit() ? btn('＋ تلفن', e => { e.stopPropagation(); customerForm(S.CUS[c.id]); }, 'ghost sm') : '')) }, { label: 'نوع مشتری', render: c => srcTags(S.CUS[c.id]) }, { label: 'نشانی', hm: true, render: c => (S.CUS[c.id] || {}).address || '' },
       { label: 'جمع فروش', cls: 'num', hm: true, render: c => N(c.sales_total) }, { label: 'تسویه‌شده', cls: 'num', hm: true, render: c => N(c.settled) },
       { label: 'مانده‌ی بدهی', cls: 'num', render: c => (c.outstanding > 0.5 ? pill(fmt(c.outstanding), c.overdue_amount > 0 ? 'red' : 'amber') : pill('تسویه', 'green')) },
       { label: 'فروش باز', cls: 'num', render: c => c.open_count || '' }, { label: 'نزدیک‌ترین سررسید', render: c => (c.outstanding > 0.5 && c.next_due ? dueCell(c.next_due) : '') },
@@ -47,7 +54,7 @@ export function customerDetail(id) {
   const open = sales.filter(s => s.outstanding > 0.5).sort((a, b2) => (a.date < b2.date ? -1 : 1));
   const m = detail({
     title: `صورت‌حساب ${c.name}`, land: true,
-    rows: [['مانده‌ی بدهی', b.outstanding > 0.5 ? N(b.outstanding, 'neg') : 'تسویه'], c.phone ? ['تلفن', h('span', { dir: 'ltr' }, c.phone)] : null, c.address ? ['نشانی', c.address] : null, c.note ? ['یادداشت', c.note] : null,
+    rows: [['مانده‌ی بدهی', b.outstanding > 0.5 ? N(b.outstanding, 'neg') : 'تسویه'], c.phone ? ['تلفن', h('span', { dir: 'ltr' }, c.phone)] : null, srcTags(S.CUS[id]) ? ['نوع مشتری', srcTags(S.CUS[id])] : null, c.address ? ['نشانی', c.address] : null, c.note ? ['یادداشت', c.note] : null,
       b.overdue_amount > 0 ? ['سررسید گذشته', N(b.overdue_amount, 'neg')] : null, ['جمع فروش به او', N(b.sales_total || 0)]],
     extra: [open.length ? [h('h3', { class: 'sec' }, 'فروش‌های باز (قدیمی‌ترین اول)'), dtable([
       { label: 'فروش', main: true, render: s => s.no }, { label: 'تاریخ', render: s => jstr(s.date) }, { label: 'مانده', cls: 'num', render: s => N(s.outstanding) },
