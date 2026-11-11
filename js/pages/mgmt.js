@@ -103,7 +103,7 @@ function kpiView(rg) {
       h('div', { class: 'ct sub2' }, 'سرمایه و جنس هر شریک'),
       h('div', { class: 'tw' }, h('table', { class: 't' }, h('thead', null, h('tr', null, h('th', null, ''), h('th', { class: 'num' }, 'مهسا'), h('th', { class: 'num' }, 'رعنا'))),
         h('tbody', null, h('tr', null, h('th', { scope: 'row' }, 'سرمایه'), h('td', { class: 'num' }, fmt(c.T.capital_m || 0)), h('td', { class: 'num' }, fmt(c.T.capital_r || 0))),
-          h('tr', null, h('th', { scope: 'row' }, 'ارزش جنس دستشان'), h('td', { class: 'num' }, fmt(Math.round(sum(S.stock, i => i.value_m)))), h('td', { class: 'num' }, fmt(Math.round(sum(S.stock, i => i.value_r))))))));
+          h('tr', null, h('th', { scope: 'row' }, 'ارزش جنس دستشان'), h('td', { class: 'num' }, fmt(Math.round(sum(S.stock, i => i.value_m)))), h('td', { class: 'num' }, fmt(Math.round(sum(S.stock, i => i.value_r)))))))));
 
     /* ۵) مشتری و کانال (سه شاخص اصلی) */
     const custRow = h('div', { class: 'card' }, h('div', { class: 'ct' }, 'مشتری و کانال ', h('small', null, `(${rgl})`)), h('div', { class: 'kpis' },
