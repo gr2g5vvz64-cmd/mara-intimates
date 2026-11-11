@@ -4,6 +4,7 @@ import { S, activeSales, businessAccounts, accBalance } from '../store.js';
 import { N, kpi, chips, dtable, pill, tabsBar } from '../ui.js';
 import { period, salesStats, buyerStats, flowStats, sellerStats, stockAge, receivableAge, dataStart, buyerTable, concentration, grandTotal, profitWordShort, STALE_OLD } from '../analytics.js';
 import { head } from './common.js';
+import { salesLineCard } from '../dash_widgets.js';
 
 const RG = [{ v: 30, label: '۳۰ روز اخیر' }, { v: 90, label: '۳ ماه اخیر' }, { v: 365, label: 'یک سال' }, { v: 0, label: 'از روز اول' }];
 const R1 = v => (Math.round(v * 10) / 10).toLocaleString('fa-IR');
@@ -56,45 +57,97 @@ function insights(c) {
 function kpiView(rg) {
   const body = h('div');
   const draw = () => {
-    const c = compute(rg), pos = v => (v < 0 ? 'neg' : 'pos'), ins = insights(c), roi = c.cap > 0 ? c.profit / c.cap * 100 : null;
-    const sec = (title, sub, ...k) => h('div', { class: 'card' }, h('div', { class: 'ct' }, title, sub ? h('small', null, ' ' + sub) : null), h('div', { class: 'kpis' }, ...k));
-    const top = c.top ? S.I[c.top[0]] : null, ch = c.chs[0];
-    body.replaceChildren(
-      h('div', { class: 'card' }, h('div', { class: 'ct' }, 'تصمیم‌های امروز ', h('small', null, '(خودکار از روی همهٔ داده‌ها)')),
-        ins.map(x => h('div', { class: 'li task ' + (x.tone === 'bad' ? 'bad' : x.tone === 'warn' ? 'warn' : '') }, h('div', null, x.text), x.href ? h('a', { class: 'more', href: x.href }, 'ببین ←') : null))),
-      sec('۱ · سرمایه و بازده', '(از روز اول)',
+    const c = compute(rg), pos = v => (v < 0 ? 'neg' : 'pos'), ins = insights(c), roi = c.cap > 0 ? c.profit / c.cap * 100 : null, rgl = RG.find(r => r.v === rg).label;
+    const top = c.top ? S.I[c.top[0]] : null, ch = c.chs[0], pw = profitWordShort();
+    const rial = v => h('span', null, N(Math.round(v)), h('small', null, 'ریال'));
+    const hero = (label, val, sub, { tone = '', first = false } = {}) => h('div', { class: 'mg-hc' + (first ? ' first' : '') }, h('div', { class: 'mg-l' }, label), h('div', { class: 'mg-v ' + tone }, val), sub ? h('div', { class: 'mg-s' }, sub) : null);
+    const track = (pct, tone) => h('span', { class: 'mg-track' }, h('i', { class: tone, style: { width: Math.max(2, Math.min(100, pct)) + '%' } }));
+    const sub = (title, ...k) => h('div', { class: 'mg-sub' }, h('div', { class: 'ct sub2' }, title), h('div', { class: 'kpis' }, ...k));
+
+    /* ۱) چهار عدد اصلی؛ مبلغ‌ها کامل و با «ریال» (بدون خلاصه‌نویسی میلیون) */
+    const net = c.cash + c.rec - c.pay;
+    const heroRow = h('div', { class: 'mg-hero' },
+      hero('فروش', rial(c.cur.sales), c.prev && c.prev.sales ? dlt(c.cur.sales, c.prev.sales) : `${fmt(c.cur.count)} فاکتور · میانگین ${fmt(Math.round(c.cur.avg))} ریال`, { first: true }),
+      hero(pw, rial(c.cur.profit), `${R1(c.cur.margin)}٪ از فروش` + (c.prev && c.prev.profit ? ' · ' + dlt(c.cur.profit, c.prev.profit) : ''), { tone: pos(c.cur.profit) }),
+      hero('پول حساب‌ها', rial(c.cash), `خالص نقدی (با طلب و بدهی): ${fmt(Math.round(net))} ریال`, { tone: pos(c.cash) }),
+      hero('ارزش انبار', rial(c.stockVal), c.worth > 0 ? `${R1(c.stockVal / c.worth * 100)}٪ از ارزش کسب‌وکار` + (c.cover != null ? ` · کفاف ${fmt(Math.round(c.cover))} روز فروش` : '') : ''));
+
+    /* ۲) انبار: دو نوار هشدار */
+    const deadPct = c.stockVal > 0 ? c.deadVal / c.stockVal * 100 : 0, deadTone = c.deadVal <= 0 ? 'ok' : deadPct >= 20 ? 'bad' : 'warn';
+    const lowTone = c.zero.length > 0 ? 'bad' : c.low.length > 0 ? 'warn' : 'ok';
+    const stockCard = h('div', { class: 'card' }, h('div', { class: 'ct' }, 'وضعیت انبار ', h('small', null, '(الان)')),
+      h('div', { class: 'mg-row' }, h('div', { class: 'mg-rh' }, h('span', null, 'کالای راکد (۳۰ روز بی‌فروش)'), h('b', { class: deadTone }, `${fmt(Math.round(c.deadVal))} ریال`)), track(deadPct, deadTone),
+        h('div', { class: 'hint' }, c.deadVal > 0 ? `${R1(deadPct)}٪ از ارزش انبار در ۳۰ روز اخیر فروش نداشته.` : 'همهٔ کالاهای موجود در ۳۰ روز اخیر فروش داشته‌اند.')),
+      h('div', { class: 'mg-row' }, h('div', { class: 'mg-rh' }, h('span', null, 'پرفروش‌های تمام‌شده / رو به اتمام'), h('b', { class: lowTone }, `${fmt(c.zero.length)} / ${fmt(c.low.length)}`)), track(c.low.length > 0 ? c.zero.length / c.low.length * 100 : 0, lowTone),
+        h('div', { class: 'hint' }, c.low.length > 0 ? `${fmt(c.zero.length)} کالای پرفروش تمام شده و ${fmt(c.low.length)} کالا به حداقل موجودی رسیده (تمام‌شده‌ها هم در این شمارش‌اند).` : 'کالای پرفروشی به حداقل موجودی نرسیده.')),
+      h('div', { class: 'hint' }, `گردش موجودی ${c.turn == null ? '—' : R1(c.turn) + ' بار'} · انبار برای ${c.cover == null ? '—' : fmt(Math.round(c.cover)) + ' روز'} (با سرعت فروش همین بازه)`));
+
+    /* ۳) سلامت: موارد صفر سبز و یک‌جا؛ موارد دارای مشکل قرمز */
+    const hs = [
+      ['بدهی به تامین‌کننده‌ها', c.pay > 0, c.pay > 0 ? `${fmt(Math.round(c.pay))} ریال` : '۰'],
+      ['طلب معوق', c.overdueAmt > 0, c.overdueAmt > 0 ? `${fmt(Math.round(c.overdueAmt))} ریال` : '۰'],
+      ['طلب بالای ۸ روز', c.ra.c > 0, c.ra.c > 0 ? `${fmt(Math.round(c.ra.c))} ریال` : '۰'],
+      [`انبار بالای ${fmt(STALE_OLD)} روز مانده`, c.sa.old > 0, c.sa.old > 0 ? `${fmt(Math.round(c.sa.old))} ریال` : '۰'],
+      ['نرخ مرجوعی', c.soldQ > 0 && c.retQ / c.soldQ >= 0.05, c.soldQ > 0 ? R1(c.retQ / c.soldQ * 100) + '٪' : '—'],
+      ['وصول فروش', c.flow.sold > 0 && c.flow.received / c.flow.sold < 0.8, c.flow.sold > 0 ? R1(Math.min(100, c.flow.received / c.flow.sold * 100)) + '٪' : '—']];
+    const nBad = hs.filter(x => x[1]).length;
+    const healthCard = h('div', { class: 'card' }, h('div', { class: 'ct' }, nBad ? `${fmt(nBad)} مورد نیازمند توجه` : 'پول و طلب‌ها بدون مشکل ✓', h('small', null, ' (الان)')),
+      h('div', { class: 'mg-chips' }, ...hs.map(([l, bad, v]) => h('div', { class: 'mg-chip' + (bad ? ' bad' : '') }, h('span', null, l), h('b', null, v)))));
+
+    /* ۴) شرکا: سهم فروش + سرمایه و جنس */
+    const sl = c.sellers, st = sum(sl, s => s.total), cols = ['var(--gold)', 'var(--blue)'];
+    const partnerCard = h('div', { class: 'card' }, h('div', { class: 'ct' }, 'شرکا ', h('small', null, `(${rgl})`)),
+      h('div', { class: 'mg-stack', role: 'img', 'aria-label': 'سهم فروش مهسا و رعنا' }, ...sl.map((s, i) => (st > 0 ? h('div', { style: { width: (s.total / st * 100) + '%', background: cols[i] } }) : null))),
+      ...sl.map((s, i) => h('div', { class: 'mg-leg' }, h('span', { class: 'hc-leg' }, h('i', { style: { background: cols[i] } }), h('b', null, s.seller), h('small', null, st > 0 ? ' ' + R1(s.total / st * 100) + '٪' : '')),
+        h('span', { style: { textAlign: 'end' } }, h('b', { class: 'n' }, `${fmt(Math.round(s.total))} ریال`), h('small', { style: { display: 'block' } }, `${fmt(s.count)} فاکتور · ${fmt(s.customers)} خریدار · ${pw} ${fmt(Math.round(s.profit))}`)))),
+      h('div', { class: 'ct sub2' }, 'سرمایه و جنس هر شریک'),
+      h('div', { class: 'tw' }, h('table', { class: 't' }, h('thead', null, h('tr', null, h('th', null, ''), h('th', { class: 'num' }, 'مهسا'), h('th', { class: 'num' }, 'رعنا'))),
+        h('tbody', null, h('tr', null, h('th', { scope: 'row' }, 'سرمایه'), h('td', { class: 'num' }, fmt(c.T.capital_m || 0)), h('td', { class: 'num' }, fmt(c.T.capital_r || 0))),
+          h('tr', null, h('th', { scope: 'row' }, 'ارزش جنس دستشان'), h('td', { class: 'num' }, fmt(Math.round(sum(S.stock, i => i.value_m)))), h('td', { class: 'num' }, fmt(Math.round(sum(S.stock, i => i.value_r))))))));
+
+    /* ۵) مشتری و کانال (سه شاخص اصلی) */
+    const custRow = h('div', { class: 'card' }, h('div', { class: 'ct' }, 'مشتری و کانال ', h('small', null, `(${rgl})`)), h('div', { class: 'kpis' },
+      kpi('خریدار فعال', h('span', { class: 'n' }, fmt(c.B.active)), { sub: `${fmt(c.B.fresh)} نفر جدید` }),
+      kpi('بهترین کانال فروش', h('span', { class: 'n' }, ch ? ch[0] : '—'), { sub: ch ? `${fmt(Math.round(ch[1].t))} ریال · سود ${fmt(Math.round(ch[1].p))}` : '' }),
+      kpi('پرسودترین کالا', h('span', { class: 'n' }, top ? top.name : '—'), { sub: c.top ? `${fmt(Math.round(c.top[1]))} ریال سود` : '' })));
+
+    /* ۶) همهٔ شاخص‌های قبلی (جزئیات کامل) — چیزی حذف نشده، فقط جمع شده */
+    const all = h('details', { class: 'card mg-all' }, h('summary', null, 'همهٔ شاخص‌ها (جزئیات کامل)'),
+      sub('سرمایه و بازده (از روز اول)',
         kpi('جمع سرمایه', N(c.cap)), kpi('سود کل', N(c.profit), { tone: pos(c.profit) }),
         kpi('بازده سرمایه', h('span', { class: 'n' }, roi == null ? '—' : R1(roi) + '٪'), { sub: roi == null ? '' : `از هر ۱۰۰ تومان سرمایه ${R1(roi)} تومان` }),
         kpi('ارزش کسب‌وکار', N(c.worth), { sub: `${fmt(Math.round(c.worth - c.cap))} نسبت به سرمایه` })),
-      sec('۲ · فروش و سودآوری', `(${RG.find(r => r.v === rg).label})`,
+      sub(`فروش و سودآوری (${rgl})`,
         kpi('فروش', N(c.cur.sales), { sub: c.prev ? dlt(c.cur.sales, c.prev.sales) : `${fmt(c.cur.count)} فاکتور` }),
-        kpi(profitWordShort(), N(c.cur.profit), { tone: pos(c.cur.profit), sub: c.prev ? dlt(c.cur.profit, c.prev.profit) : '' }),
-        kpi('حاشیهٔ ' + profitWordShort(), h('span', { class: 'n' }, R1(c.cur.margin) + '٪'), { sub: 'از هر ۱۰۰ تومان فروش، چند تومان سود می‌ماند' }),
+        kpi(pw, N(c.cur.profit), { tone: pos(c.cur.profit), sub: c.prev ? dlt(c.cur.profit, c.prev.profit) : '' }),
+        kpi('حاشیهٔ ' + pw, h('span', { class: 'n' }, R1(c.cur.margin) + '٪'), { sub: 'از هر ۱۰۰ تومان فروش، چند تومان سود می‌ماند' }),
         kpi('حاشیهٔ سود ناخالص', h('span', { class: 'n' }, c.cur.sales > 0 ? R1(c.cur.gross / c.cur.sales * 100) + '٪' : '—'), { sub: 'پیش از هزینه‌ها' }),
         kpi('هزینه به فروش', h('span', { class: 'n' }, c.cur.sales > 0 ? R1(c.cur.expenses / c.cur.sales * 100) + '٪' : '—'), { sub: `${fmt(Math.round(c.cur.expenses))} ریال هزینه` }),
         kpi('تخفیف داده‌شده', h('span', { class: 'n' }, c.gross > 0 ? R1(c.disc / c.gross * 100) + '٪' : '—'), { sub: `${fmt(Math.round(c.disc))} ریال` }),
         kpi('نرخ مرجوعی', h('span', { class: 'n' }, c.soldQ > 0 ? R1(c.retQ / c.soldQ * 100) + '٪' : '—'), { sub: `${fmt(c.retQ)} از ${fmt(c.soldQ)} عدد` }),
         kpi('میانگین هر فاکتور', N(c.cur.avg))),
-      sec('۳ · پول و نقدینگی', '(الان)',
+      sub('پول و نقدینگی (الان)',
         kpi('پول حساب‌ها', N(c.cash), { tone: pos(c.cash) }), kpi('طلب از مشتری‌ها', N(c.rec), { sub: `معوق: ${fmt(Math.round(c.overdueAmt))}`, tone: c.overdueAmt > 0 ? 'neg' : '' }),
-        kpi('بدهی به تامین‌کننده‌ها', N(c.pay)), kpi('خالص نقدی', N(c.cash + c.rec - c.pay), { sub: 'حساب‌ها + طلب − بدهی', tone: pos(c.cash + c.rec - c.pay) }),
+        kpi('بدهی به تامین‌کننده‌ها', N(c.pay)), kpi('خالص نقدی', N(net), { sub: 'حساب‌ها + طلب − بدهی', tone: pos(net) }),
         kpi('وصول فروش', h('span', { class: 'n' }, c.flow.sold > 0 ? R1(Math.min(100, c.flow.received / c.flow.sold * 100)) + '٪' : '—'), { sub: 'دریافتی نسبت به فروش همین بازه' }),
         kpi('طلب بالای ۸ روز', N(c.ra.c), { tone: c.ra.c > 0 ? 'neg' : '' })),
-      sec('۴ · انبار', '(الان)',
+      sub('انبار (الان)',
         kpi('ارزش انبار', N(c.stockVal), { sub: c.worth > 0 ? `${R1(c.stockVal / c.worth * 100)}٪ از ارزش کسب‌وکار` : '' }),
         kpi('گردش موجودی', h('span', { class: 'n' }, c.turn == null ? '—' : R1(c.turn) + ' بار'), { sub: 'بهای فروش‌رفته ÷ ارزش انبار در این بازه' }),
         kpi('انبار برای چند روز؟', h('span', { class: 'n' }, c.cover == null ? '—' : fmt(Math.round(c.cover)) + ' روز'), { sub: 'با سرعت فروش همین بازه' }),
         kpi('کالای راکد (۳۰ روز بی‌فروش)', N(c.deadVal), { sub: c.stockVal > 0 ? `${R1(c.deadVal / c.stockVal * 100)}٪ انبار` : '', tone: c.deadVal > 0 ? 'neg' : '' }),
         kpi(`انبار بالای ${fmt(STALE_OLD)} روز مانده`, N(c.sa.old)), kpi('پرفروش‌های تمام‌شده / رو به اتمام', h('span', { class: 'n' }, `${fmt(c.zero.length)} / ${fmt(c.low.length)}`))),
-      sec('۵ · مشتری و کانال', `(${RG.find(r => r.v === rg).label})`,
-        kpi('خریدار فعال', h('span', { class: 'n' }, fmt(c.B.active)), { sub: `${fmt(c.B.fresh)} نفر جدید` }), kpi('خریدار تکراری', h('span', { class: 'n' }, c.B.repeat + '٪'), { sub: 'از خریداران فعال' }),
-        kpi('وابستگی به خریداران بزرگ', h('span', { class: 'n' }, c.conc ? c.conc.share + '٪' : '—'), { sub: c.conc ? `${fmt(c.conc.k)} نفر از ${fmt(c.conc.n)}` : 'خریدار کافی نیست' }),
-        kpi('بهترین کانال فروش', h('span', { class: 'n' }, ch ? ch[0] : '—'), { sub: ch ? `${fmt(Math.round(ch[1].t))} ریال · سود ${fmt(Math.round(ch[1].p))}` : '' }),
-        kpi('پرسودترین کالا', h('span', { class: 'n' }, top ? top.name : '—'), { sub: c.top ? `${fmt(Math.round(c.top[1]))} ریال سود` : '' })),
-      sec('۶ · شرکا', `(${RG.find(r => r.v === rg).label})`,
-        ...c.sellers.flatMap(s => [kpi(`فروش ${s.seller}`, N(s.total), { sub: `${fmt(s.count)} فاکتور · ${fmt(s.customers)} خریدار` }), kpi(`سود فروش ${s.seller}`, N(s.profit), { tone: pos(s.profit) })]),
-        kpi('ارزش جنس دست مهسا / رعنا', h('span', { class: 'n' }, `${fmt(Math.round(sum(S.stock, i => i.value_m)))} / ${fmt(Math.round(sum(S.stock, i => i.value_r)))}`)),
-        kpi('سرمایهٔ مهسا / رعنا', h('span', { class: 'n' }, `${fmt(c.T.capital_m || 0)} / ${fmt(c.T.capital_r || 0)}`))));
+      sub(`مشتری (${rgl})`,
+        kpi('خریدار تکراری', h('span', { class: 'n' }, c.B.repeat + '٪'), { sub: 'از خریداران فعال' }),
+        kpi('وابستگی به خریداران بزرگ', h('span', { class: 'n' }, c.conc ? c.conc.share + '٪' : '—'), { sub: c.conc ? `${fmt(c.conc.k)} نفر از ${fmt(c.conc.n)}` : 'خریدار کافی نیست' })));
+
+    body.replaceChildren(
+      heroRow,
+      h('div', { class: 'card' }, h('div', { class: 'ct' }, 'تصمیم‌های امروز ', h('small', null, '(خودکار از روی همهٔ داده‌ها)')),
+        ins.map(x => h('div', { class: 'li task ' + (x.tone === 'bad' ? 'bad' : x.tone === 'warn' ? 'warn' : '') }, h('div', null, x.text), x.href ? h('a', { class: 'more', href: x.href }, 'ببین ←') : null))),
+      h('div', { class: 'mg-2' }, stockCard, healthCard),
+      h('div', { class: 'mg-2' }, salesLineCard({ title: 'روند فروش' }), partnerCard),
+      custRow, all);
   };
   draw();
   return body;

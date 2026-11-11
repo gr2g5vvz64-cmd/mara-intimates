@@ -969,3 +969,30 @@ a.hchip:hover{background:#5d2e47}
 .hb .hl{grid-area:l;white-space:normal;overflow:visible;text-overflow:clip;line-height:1.7;min-width:0}
 .hb .hv{grid-area:v;white-space:nowrap;font-weight:700}
 .hb .hbar{grid-area:b;height:9px}
+
+/* ---- گزارش مدیریتی ۷.۷۱: چهار عدد اصلی، نوار هشدار انبار، یک‌جا کردن صفرها، شرکا ---- */
+.mg-hero{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.mg-hc{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow);min-width:0}
+.mg-hc.first{background:linear-gradient(160deg,var(--tint),var(--card));border-color:var(--pinkl)}
+.mg-l{font-size:13.5px;color:var(--brown)}
+.mg-v{font-size:clamp(20px,2.3vw,28px);font-weight:800;line-height:1.45;overflow-wrap:anywhere}
+.mg-v small{font-size:12px;font-weight:500;color:var(--brown);margin-inline-start:5px}
+.mg-v.pos{color:var(--green)} .mg-v.neg{color:var(--red)}
+.mg-s{font-size:12.5px;color:var(--brown);margin-top:2px;line-height:1.7}
+@media (max-width:900px){.mg-hero{grid-template-columns:1fr 1fr}.mg-hc.first{grid-column:1/-1}}
+.mg-track{display:block;height:10px;border-radius:99px;background:var(--tint);overflow:hidden}
+.mg-track i{display:block;height:100%;border-radius:99px}
+.mg-track i.ok{background:var(--green)} .mg-track i.warn{background:var(--amber)} .mg-track i.bad{background:var(--red)}
+.mg-row{margin:12px 0}
+.mg-rh{display:flex;justify-content:space-between;align-items:baseline;gap:6px 12px;flex-wrap:wrap;margin-bottom:6px;font-size:14px}
+.mg-rh b{font-size:18px} .mg-rh b.bad{color:var(--red)} .mg-rh b.warn{color:var(--amber)} .mg-rh b.ok{color:var(--green)}
+.mg-chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.mg-chip{border-radius:12px;padding:8px 12px;font-size:13px;background:var(--green-bg);color:var(--green)}
+.mg-chip span{display:block;color:var(--ink);opacity:.85} .mg-chip b{display:block;font-size:16px}
+.mg-chip.bad{background:var(--red-bg);color:var(--red)}
+.mg-2{display:grid;grid-template-columns:minmax(0,1fr);gap:0 14px}
+@media (min-width:900px){.mg-2{grid-template-columns:minmax(0,3fr) minmax(0,2fr)}}
+.mg-stack{display:flex;height:18px;border-radius:99px;overflow:hidden;background:var(--tint)}
+.mg-leg{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin:12px 0 2px}
+.mg-all>summary{cursor:pointer;font-weight:800;min-height:44px;display:flex;align-items:center}
+.mg-sub .kpis{margin-bottom:6px}
