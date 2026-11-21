@@ -24,6 +24,8 @@ import * as meet from './pages/meeting.js';
 import * as stk from './pages/stocktake.js';
 import * as mcn from './pages/monthcount.js';
 import * as fundp from './pages/fund.js';
+import * as debts from './pages/debts.js';
+import * as fullrep from './pages/full_report.js';
 import { onOutbox, initOutbox, pendingCount, blockedCount, pump, state as obState } from './outbox.js';
 import { saleForm, purchaseForm } from './forms_trade.js';
 import { navCounts } from './insights.js';
@@ -42,6 +44,8 @@ const ROUTES = {
   sreturns: { t: 'مرجوعی خرید', i: '↪', f: () => pay.returns('supplier') },
   customers: { t: 'مشتریان و طلب‌ها', i: '👥', f: q => cust.render(q) },
   invoices: { t: 'بدهی به تامین‌کننده', i: '📄', f: () => trade.invoices() },
+  fullreport: { t: 'گزارش جامع', i: '🗃', f: () => fullrep.render() },
+  debts: { t: 'بدهکاران و بستانکاران', i: '⇅', f: () => debts.render() },
   finance: { t: 'مالی', i: '◎', f: () => fin.render() },
   cheques: { t: 'چک‌های پرداختی', i: '🧾', f: () => chq.render() },
   stocktake: { t: 'انبارگردانی', i: '☑', f: () => stk.render() },
@@ -70,7 +74,7 @@ const GROUPS = [
   { id: 'sales', t: 'فروش', i: '🛍', kids: ['sales', 'customers', 'custmsg', 'returns'] },
   { id: 'buy', t: 'خرید', i: '📦', kids: ['purchases', 'suppliers', 'sreturns'] },
   { id: 'wh', t: 'انبار', i: '▤', kids: ['stock', 'monthcount', 'items'] },
-  { id: 'money', t: 'مالی', i: '◎', kids: ['finance', 'pay', 'invoices', 'cheques', 'settle', 'fund'] },
+  { id: 'money', t: 'مالی', i: '◎', kids: ['finance', 'fullreport', 'debts', 'pay', 'invoices', 'cheques', 'settle', 'fund'] },
   { id: 'set', t: 'تنظیمات', i: '⚙', kids: ['settings', 'history', 'help', 'savelog', 'stockaudit', 'diag'] }
 ];
 const NAVLBL = { monthcount: 'انبارگردانی', sales: 'فاکتور فروش', purchases: 'فاکتور خرید', finance: 'خلاصه‌ی مالی', pay: 'پرداخت و هزینه', calc: 'محاسبات درصد', pnl: 'سود و زیان ماهانه', meeting: 'گزارش جلسه‌ی دو هفته‌ای', settle: 'حساب‌وکتاب ماهانه' };
@@ -97,7 +101,7 @@ function parseHash() {
 function route() {
   if (!view) return;
   let { path, q } = parseHash();
-  if ((path === 'diag' || path === 'stockaudit' || path === 'mgmt' || path === 'analysis' || path === 'pnl' || path === 'pack' || path === 'meeting' || path === 'custmsg') && !(S.me && S.me.role === 'admin')) { path = ''; history.replaceState(null, '', '#/'); }
+  if ((path === 'diag' || path === 'stockaudit' || path === 'mgmt' || path === 'analysis' || path === 'pnl' || path === 'pack' || path === 'meeting' || path === 'custmsg' || path === 'fullreport') && !(S.me && S.me.role === 'admin')) { path = ''; history.replaceState(null, '', '#/'); }
   if ((path === 'settle' || path === 'fund') && (!S.me || S.me.role === 'viewer')) { path = ''; history.replaceState(null, '', '#/'); }
   const r = ROUTES[path] || ROUTES[''];
   const key = ROUTES[path] ? path : '';

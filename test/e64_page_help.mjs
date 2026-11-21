@@ -5,7 +5,7 @@ const ok = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) fails++; };
 try {
   const page = await newPage(browser, url, { logs }); await login(page, 'hamid@example.com', 'hamid-pass-333'); page.setDefaultTimeout(9000);
   const sleep = ms => page.waitForTimeout(ms);
-  const keys = ['', 'sales', 'purchases', 'stock', 'pay', 'expenses', 'returns', 'sreturns', 'customers', 'invoices', 'finance', 'cheques', 'stocktake', 'monthcount', 'items', 'suppliers', 'history', 'help', 'mgmt', 'analysis', 'custmsg', 'calc', 'pack', 'pnl', 'meeting', 'settle', 'fund', 'savelog', 'stockaudit', 'diag', 'settings'];
+  const keys = ['', 'sales', 'purchases', 'stock', 'pay', 'expenses', 'returns', 'sreturns', 'customers', 'invoices', 'finance', 'cheques', 'stocktake', 'monthcount', 'items', 'suppliers', 'history', 'help', 'mgmt', 'analysis', 'custmsg', 'calc', 'pack', 'pnl', 'meeting', 'settle', 'fund', 'debts', 'fullreport', 'savelog', 'stockaudit', 'diag', 'settings'];
   for (const k of keys) {
     await page.evaluate(x => { location.hash = x; }, '#/' + k); await sleep(900);
     const n = await page.locator('#view .qhelp').count();
