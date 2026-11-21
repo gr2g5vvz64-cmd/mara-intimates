@@ -55,7 +55,7 @@ export function bonusMonth(month = jmonthKey(todayISO())) {
     const o = { name: n, sales: 0, collectedSales: 0, profitCollected: 0, goal: goalOf(n, month), base: 0, star: 0, total: 0, excluded: 0, isStar: false, tier: 'none', toGoal: 0 };
     if (cfg.on) for (const s of activeSales().filter(x => x.seller === n && x.is_acq && jmonthKey(x.date) === month)) {
       if (!bonusEligible(s, cfg)) { o.excluded++; continue; }
-      const frac = Math.min(1, ((s.received || 0) + (s.collected || 0) + (s.debt_cancel || 0)) / s.total);
+      const frac = Math.min(1, ((s.received || 0) + (s.collected || 0) + (s.debt_cancel || 0) + (s.credit_used || 0)) / s.total);
       o.sales += s.total; o.collectedSales += s.total * frac; o.profitCollected += s.profit * frac;
     }
     if (o.goal > 0 && o.sales > 0) { const sh = Math.min(o.sales, o.goal) / o.sales; o.base = o.profitCollected * (sh * cfg.base + (1 - sh) * cfg.above) / 100; }

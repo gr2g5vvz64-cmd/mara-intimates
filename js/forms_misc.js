@@ -200,6 +200,8 @@ export function returnForm(saleId, edit) {
   const refund = numField({ value: '', onInput: () => preview() });
   const debt = numField({ value: '', onInput: () => preview() });
   const debtBox = h('div', { hidden: true }, field('کسر از بدهی (نسیه‌ی) مشتری', debt, 'اگر مشتری هنوز بدهکار است، می‌توانی به‌جای پس‌دادن پول، از بدهی‌اش کم کنی.'));
+  const credit = numField({ value: '', onInput: () => preview() });
+  const creditBox = h('div', null, field('اعتبار مشتری (بستانکار می‌شود)', credit, 'اگر پول نقد برنمی‌گردد و مشتری جنس دیگری می‌برد، مبلغ را اینجا بنویس و «چقدر به مشتری پس دادیم» را کم کن؛ اعتبار در فاکتور فروش بعدی خودکار کم می‌شود.'))
   const acc = accountPicker(businessAccounts(), null, () => {}, { pockets: false, balances: accBalance });
   const lastA = pref('payAcc', null); acc.set(lastA && S.A[lastA] ? lastA : (businessAccounts()[1] || businessAccounts()[0]).id);
   const accBox = h('div', null, field('پول از کدام حساب برگشت؟', acc));
@@ -227,34 +229,36 @@ export function returnForm(saleId, edit) {
   }
   const cur = () => lines.find(l => l.id === +lineSel.value);
   function setupLine() { const l = cur(); holder = l ? l.holder : null; if (l) { qty.setMax(avail(l)); qty.set(1); } defaults(); }
-  function defaults() { const l = cur(); if (l) { refund.set(Math.round(qty.get() * l.net_unit)); debt.set(''); } preview(); }
+  function defaults() { const l = cur(); if (l) { refund.set(Math.round(qty.get() * l.net_unit)); debt.set(''); credit.set(''); } preview(); }
   function preview() {
     const l = cur(); prev.replaceChildren(); syncHolder(); if (!l) return;
     const lot = S.LOT[l.lot_id]; const q = qty.get();
     const rec = toSup ? q * lot.unit_price : cond === 'سالم' ? q * lot.landed_unit : 0;
-    const eff = rec - refund.get() - debt.get();
+    const eff = rec - refund.get() - debt.get() - credit.get();
+    const value = Math.round(q * l.net_unit), gap = value - refund.get() - debt.get() - credit.get();
     const r = (k, v, c = '') => h('div', { class: 'srow ' + c }, h('span', null, k), h('b', { class: 'n' }, fmt(v)));
-    prev.append(r('پول برگشتی به مشتری', refund.get() + debt.get()), r(toSup ? 'اعتبار نزد تامین‌کننده' : cond === 'سالم' ? 'ارزش کالای برگشته به موجودی' : 'ارزش بازیافت‌شده', rec),
-      r(eff >= 0 ? 'سود این مرجوعی' : 'ضرر این مرجوعی', Math.abs(eff), eff >= 0 ? 'ok' : 'warn'));
+    prev.append(...[r('پول نقد برگشتی به مشتری', refund.get()), debt.get() > 0 ? r('کسر از بدهی مشتری', debt.get()) : null, credit.get() > 0 ? r('اعتبار مشتری (بستانکار می‌شود)', credit.get(), 'ok') : null, r(toSup ? 'اعتبار نزد تامین‌کننده' : cond === 'سالم' ? 'ارزش کالای برگشته به موجودی' : 'ارزش بازیافت‌شده', rec),
+      r(eff >= 0 ? 'سود این مرجوعی' : 'ضرر این مرجوعی', Math.abs(eff), eff >= 0 ? 'ok' : 'warn')].filter(Boolean));
+    if (Math.abs(gap) > 1) prev.append(h('div', { class: 'hint amb' }, gap > 0 ? `⚠ ${fmt(gap)} ریال از ارزش کالا (${fmt(value)}) نه پس داده می‌شود نه اعتبار می‌شود؛ به‌عنوان سود ثبت می‌شود. اگر مشتری بستانکار است، آن را در «اعتبار مشتری» بنویس.` : `⚠ جمع مبالغ از ارزش کالا (${fmt(value)}) بیشتر است.`));
     if (!toSup && cond === 'سالم') prev.append(h('div', { class: 'hint' }, `کالا به موجودی ${holder || l.holder} برمی‌گردد.` + (holder && holder !== l.holder ? ` (در فروش از موجودی ${l.holder} کم شده بود.)` : '')));
   }
   const btn = h('button', { class: 'btn primary lg', type: 'button' }, edit ? 'ذخیره‌ی ویرایش مرجوعی' : 'ثبت مرجوعی');
   btn.onclick = async () => {
     const l = cur(); if (!l) return toast('کالای برگشتی را انتخاب کن', 'err');
     if (refund.get() > 0 && !acc.get()) return toast('حساب بازگشت پول را انتخاب کن', 'err');
-    const r = await run(btn, () => rpc(edit ? 'edit_return' : 'create_return', { ...(edit ? { id: edit.id } : {}), date, sale_line_id: l.id, holder: holder || l.holder, qty: qty.get(), condition: cond, reason, to_supplier: toSup, refund_amount: refund.get(), refund_account_id: refund.get() > 0 ? acc.get() : null, debt_cancel: debt.get(), note: note.value }));
+    const r = await run(btn, () => rpc(edit ? 'edit_return' : 'create_return', { ...(edit ? { id: edit.id } : {}), date, sale_line_id: l.id, holder: holder || l.holder, qty: qty.get(), condition: cond, reason, to_supplier: toSup, refund_amount: refund.get(), refund_account_id: refund.get() > 0 ? acc.get() : null, debt_cancel: debt.get(), credit: credit.get(), note: note.value }));
     if (r) { setPref('payAcc', acc.get()); finish(m, `مرجوعی ${r.no} ${edit ? 'ویرایش شد' : 'ثبت شد'}`); }
   };
   const m = modal({ title: edit ? `ویرایش مرجوعی ${edit.no}` : 'مرجوعی از مشتری', wide: true, body: h('div', { class: 'form' },
     field('تاریخ', dateField(date, v => { date = v; })), field('کدام فروش؟', sale), field('کدام کالا؟', lineSel), field('چند عدد برگشت؟', qty),
     field('وضعیت کالا', condC, 'سالم = به موجودی برمی‌گردد. معیوب = ضرر ثبت می‌شود.'), field('علت برگشت', reasonC, 'برای شناخت مشکل (مثلاً سایز نشد) تا بعداً بدانیم چه چیزی را درست کنیم.'), field('به تامین‌کننده پس داده شد؟', supC, 'اگر بله، بهای خرید کالا از بدهی همان تامین‌کننده کم می‌شود.'),
-    holdBox, field('چقدر به مشتری پس دادیم؟', refund), accBox, debtBox, prev, field('دلیل', note)), footer: [btn] });
+    holdBox, field('چقدر به مشتری پس دادیم؟ (نقد)', refund), accBox, debtBox, creditBox, prev, field('دلیل', note)), footer: [btn] });
   drawLines();
   if (edit) {                                   // پیش‌پر کردن با اطلاعات مرجوعی قبلی
     const sl0 = S.saleLines.find(l => l.id === edit.sale_line_id);
     if (sl0) { sale.set(sl0.sale_id); drawLines(); lineSel.value = String(edit.sale_line_id); setupLine(); }
     qty.set(edit.qty); condC.set(edit.condition); reasonC.set(edit.reason || ''); supC.set(!!edit.to_supplier); holder = edit.holder;
-    refund.set(edit.refund_amount || ''); debt.set(edit.debt_cancel || '');
+    refund.set(edit.refund_amount || ''); debt.set(edit.debt_cancel || ''); credit.set(edit.credit || '');
     if (edit.refund_account_id && S.A[edit.refund_account_id]) acc.set(edit.refund_account_id);
     note.value = edit.note || ''; preview();
   }
@@ -536,6 +540,65 @@ export function collectCustomerForm(customerId) {
     if (r) { setPref('recvAcc_any', acc.get()); finish(m, 'دریافت ثبت شد'); }
   };
   const m = modal({ title: 'دریافت از مشتری (کامل یا قسطی)', body: h('div', { class: 'form' }, field('تاریخ', dateField(date, v => { date = v; })), field('مشتری', cus), field('مبلغی که امروز داد', [amt, quick]), prevBox, field('به کدام حساب آمد؟', acc), field('یادداشت', note), P('اگر مشتری کم‌کم می‌دهد، هر بار فقط مبلغ همان قسط را بنویس؛ باقی‌مانده سر جایش می‌ماند و از قدیمی‌ترین فروش کم می‌شود.')), footer: [btn] });
+  if (customerId) preview();
+}
+
+/* ----- اعتبار مشتری (بستانکاری): پرداخت نقد به مشتری و تهاتر با بدهی‌اش ----- */
+export function payCreditForm(customerId) {
+  const list = S.vCus.filter(c => c.credit_bal > 0.5);
+  if (!list.length) { toast('هیچ مشتری بستانکاری وجود ندارد'); return; }
+  let date = todayISO();
+  const credOf = id => (S.vCus.find(c => c.id === id) || {}).credit_bal || 0;
+  const cus = combo({ placeholder: 'نام مشتری…', options: list.map(c => ({ v: c.id, label: c.name, sub: `بستانکار ${fmt(c.credit_bal)}` })), value: customerId || null, onChange: v => { amt.set(credOf(v)); preview(); } });
+  const amt = numField({ value: customerId ? credOf(customerId) : '', onInput: () => preview() });
+  const quick = h('div', { class: 'quick' }, h('button', { type: 'button', class: 'mini', onclick: () => { amt.set(credOf(cus.get())); preview(); } }, 'کل اعتبار'), h('button', { type: 'button', class: 'mini', onclick: () => { amt.set(Math.round(credOf(cus.get()) / 2)); preview(); } }, 'نصف اعتبار'));
+  const prevBox = h('div', { class: 'sumbox', hidden: true });
+  function preview() {
+    prevBox.replaceChildren(); const id = cus.get(), a = amt.get(); prevBox.hidden = !(id && a); if (!id || !a) return;
+    const r = (k, v, c = '') => h('div', { class: 'srow ' + c }, h('span', null, k), h('b', { class: 'n' }, fmt(v)));
+    prevBox.append(r('پول نقدی که به مشتری می‌دهیم', a), r('اعتبار باقی‌مانده‌ی مشتری', Math.max(0, credOf(id) - a), credOf(id) - a <= 0.5 ? 'ok' : ''));
+    if (a > credOf(id) + 0.5) prevBox.append(h('div', { class: 'warnbox' }, `مبلغ از اعتبار مشتری (${fmt(credOf(id))}) بیشتر است.`));
+  }
+  const acc = accountPicker(businessAccounts(), null, () => {}, { pockets: false, balances: accBalance });
+  const last = pref('payAcc', null); acc.set(last && S.A[last] ? last : (businessAccounts()[1] || businessAccounts()[0]).id);
+  const note = h('input', { class: 'inp', placeholder: 'یادداشت (اختیاری)' });
+  const btn = h('button', { class: 'btn primary lg', type: 'button' }, 'ثبت پرداخت به مشتری');
+  btn.onclick = async () => {
+    if (!cus.get()) return toast('مشتری را انتخاب کن', 'err');
+    if (!amt.get()) return toast('مبلغ را بنویس', 'err');
+    if (amt.get() > credOf(cus.get()) + 0.5) return toast('مبلغ از اعتبار مشتری بیشتر است', 'err');
+    const r = await run(btn, () => rpc('pay_customer_credit', { date, customer_id: cus.get(), account_id: acc.get(), amount: amt.get(), note: note.value }));
+    if (r) { setPref('payAcc', acc.get()); finish(m, 'پرداخت به مشتری ثبت شد'); }
+  };
+  const m = modal({ title: 'پرداخت نقد اعتبار به مشتری', body: h('div', { class: 'form' }, field('تاریخ', dateField(date, v => { date = v; })), field('مشتری', cus), field('چقدر نقد به او دادیم؟', [amt, quick]), prevBox, field('از کدام حساب پرداخت شد؟', acc), field('یادداشت', note),
+    P('این مبلغ از حساب انتخابی کم و از اعتبار مشتری کسر می‌شود؛ روی سود اثری ندارد.')), footer: [btn] });
+  if (customerId) preview();
+}
+
+export function applyCreditForm(customerId) {
+  const list = S.vCus.filter(c => c.credit_bal > 0.5 && c.outstanding > 0.5);
+  if (!list.length) { toast('مشتری‌ای نداریم که هم بستانکار باشد هم بدهکار'); return; }
+  let date = todayISO();
+  const maxOf = id => { const c = S.vCus.find(x => x.id === id) || {}; return Math.min(c.credit_bal || 0, c.outstanding || 0); };
+  const cus = combo({ placeholder: 'نام مشتری…', options: list.map(c => ({ v: c.id, label: c.name, sub: `بستانکار ${fmt(c.credit_bal)} · بدهکار ${fmt(c.outstanding)}` })), value: customerId || null, onChange: v => { amt.set(maxOf(v)); preview(); } });
+  const amt = numField({ value: customerId ? maxOf(customerId) : '', onInput: () => preview() });
+  const prevBox = h('div', { class: 'sumbox', hidden: true });
+  function preview() {
+    prevBox.replaceChildren(); const id = cus.get(), a = amt.get(); prevBox.hidden = !(id && a); if (!id || !a) return;
+    const r = (k, v, c = '') => h('div', { class: 'srow ' + c }, h('span', null, k), h('b', { class: 'n' }, fmt(v)));
+    let left = a;
+    for (const s of S.vSales.filter(x => x.customer_id === id && !x.voided && x.outstanding > 0.5).sort((x, y) => (x.date < y.date ? -1 : x.date > y.date ? 1 : x.id - y.id))) { if (left <= 0) break; const p = Math.min(left, s.outstanding); prevBox.append(r(`${s.no} (${jstr(s.date)}) ← ${p >= s.outstanding ? 'تسویه' : 'مانده ' + fmt(s.outstanding - p)}`, p, p >= s.outstanding ? 'ok' : '')); left -= p; }
+    if (a > maxOf(id) + 0.5) prevBox.append(h('div', { class: 'warnbox' }, `حداکثر ${fmt(maxOf(id))} ریال قابل تهاتر است.`));
+  }
+  const btn = h('button', { class: 'btn primary lg', type: 'button' }, 'ثبت تهاتر');
+  btn.onclick = async () => {
+    if (!cus.get()) return toast('مشتری را انتخاب کن', 'err');
+    if (!amt.get()) return toast('مبلغ را بنویس', 'err');
+    const r = await run(btn, () => rpc('apply_customer_credit', { date, customer_id: cus.get(), amount: amt.get() }));
+    if (r) finish(m, 'تهاتر ثبت شد');
+  };
+  const m = modal({ title: 'تهاتر اعتبار مشتری با بدهی‌اش', body: h('div', { class: 'form' }, field('تاریخ', dateField(date, v => { date = v; })), field('مشتری', cus), field('چقدر از اعتبار با بدهی تهاتر شود؟', amt), prevBox,
+    P('پولی جابه‌جا نمی‌شود؛ بدهی فاکتورهای باز (قدیمی‌ترین اول) و اعتبار مشتری به همان اندازه کم می‌شوند.')), footer: [btn] });
   if (customerId) preview();
 }
 

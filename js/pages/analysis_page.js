@@ -13,7 +13,7 @@ import { analysisSettingsForm, pageStatsForm } from '../forms_misc.js';
 import { profitWordShort } from '../analytics.js';
 
 const LV = { error: ['red', '🔴 خطا'], warn: ['amber', '🟠 هشدار'], info: ['gray', '🔵 توضیح'] };
-const PAGE = { lot: '#/stock', item: '#/items', account: '#/finance', payment: '#/pay', collection: '#/customers', return: '#/returns' };
+const PAGE = { lot: '#/stock', item: '#/items', account: '#/finance', payment: '#/pay', collection: '#/customers', customer: '#/customers', return: '#/returns' };
 let tab = 'advisor', periodN = 7, cache = null;
 
 function goRef(r) {

@@ -12,7 +12,7 @@ try {
   const n1 = await page.locator('#view table tbody tr').count(); ok(n1 <= 10, 'جدول تاریخچه حداکثر ۱۰ ردیف: ' + n1);
   await page.locator('.tabs button', { hasText: 'اصلاحات MARA' }).click(); await sleep(400);
   const n2 = await page.locator('#view table tbody tr').count(); ok(n2 === 10, 'اصلاحات: ۱۰ ردیف اول: ' + n2);
-  ok(/۱۴۰۵\/۰۷/.test(await page.locator('#view').innerText()), 'تاریخ شمسی دارد');
+  ok(/۱۴۰۵\/۰[78]/.test(await page.locator('#view').innerText()), 'تاریخ شمسی دارد');
   await page.locator('#view button', { hasText: 'نمایش بیشتر' }).click(); await sleep(400);
   const n3 = await page.locator('#view table tbody tr').count(); ok(n3 > 10, 'نمایش بیشتر ردیف‌های قدیمی را آورد: ' + n3);
 } catch (e) { console.log('FAIL exception', e.message); fails++; }

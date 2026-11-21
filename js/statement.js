@@ -17,13 +17,13 @@ export function invoiceSpec(saleId) {
   const s = S.SALE[saleId]; const lines = S.saleLines.filter(l => l.sale_id === saleId);
   const gross = lines.reduce((a, l) => a + l.qty * l.unit_price, 0);
   const cust = S.CUS[s.customer_id] || {};
-  const paid = (s.received || 0) + (s.collected || 0);
+  const paid = (s.received || 0) + (s.collected || 0) + (s.credit_used || 0);
   return {
     kind: 'invoice', title: 'فاکتور فروش', no: s.no, date: s.date, buyer: s.customer || cust.name || '', phone: cust.phone || '',
     cols: [{ k: 'n', label: '#', w: 50, align: 'center' }, { k: 'name', label: 'کالا', w: 0 }, { k: 'qty', label: 'تعداد', w: 90, align: 'center' }, { k: 'unit', label: 'فی (ریال)', w: 160, align: 'left' }, { k: 'sum', label: 'جمع (ریال)', w: 170, align: 'left' }],
     rows: lines.map((l, i) => ({ n: String(i + 1), name: (S.I[l.item_id] || {}).name || '', qty: fmt(l.qty), unit: fmt(l.unit_price), sum: fmt(l.qty * l.unit_price) })),
     totals: [['جمع کالاها', fmt(gross)], ...(s.discount > 0 ? [['تخفیف', '− ' + fmt(s.discount)]] : []), ['مبلغ فاکتور', fmt(s.total), 'strong'],
-      ['پرداخت‌شده', fmt(paid)], s.outstanding > 0.5 ? ['مانده‌ی قابل پرداخت', fmt(s.outstanding), 'due'] : ['وضعیت', 'تسویه ✓', 'ok']],
+      ...(s.credit_used > 0 ? [['از اعتبار مشتری', fmt(s.credit_used)]] : []), ['پرداخت‌شده', fmt(paid)], s.outstanding > 0.5 ? ['مانده‌ی قابل پرداخت', fmt(s.outstanding), 'due'] : ['وضعیت', 'تسویه ✓', 'ok']],
     extra: s.outstanding > 0.5 && s.due_date ? 'سررسید پرداخت: ' + jstr(s.due_date) : ''
   };
 }
@@ -39,13 +39,19 @@ export function customerSpec(custId) {
     const sl = S.saleLines.find(l => l.id === r.sale_line_id), s = sl && S.SALE[sl.sale_id];
     if (s && s.customer_id === custId) ev.push({ date: r.date, ord: 3, text: `مرجوعی کالا (${s.no})`, minus: r.debt_cancel });
   });
+  S.returns.filter(r => !r.voided && r.credit > 0 && r.sale_line_id).forEach(r => {
+    const sl = S.saleLines.find(l => l.id === r.sale_line_id), s = sl && S.SALE[sl.sale_id];
+    if (s && s.customer_id === custId) ev.push({ date: r.date, ord: 3, text: `مرجوعی کالا (${s.no}) — اعتبار شما`, minus: r.credit });
+  });
+  S.creditUses.filter(u => !u.voided && S.SALE[u.sale_id] && S.SALE[u.sale_id].customer_id === custId).forEach(u => ev.push({ date: u.date, ord: 4, text: `پرداخت با اعتبار برای فاکتور ${S.SALE[u.sale_id].no}`, minus: u.amount }));
+  S.payouts.filter(p => !p.voided && p.customer_id === custId).forEach(p => ev.push({ date: p.date, ord: 4, text: 'پرداخت نقد اعتبار به شما', plus: p.amount }));
   ev.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.ord - b.ord));
   let bal = 0; const rows = ev.map(e => { bal += (e.plus || 0) - (e.minus || 0); return { date: jstr(e.date), text: e.text, plus: e.plus ? fmt(e.plus) : '', minus: e.minus ? fmt(e.minus) : '', bal: fmt(bal) }; });
-  const open = sales.reduce((a, s) => a + (s.outstanding > 0.5 ? s.outstanding : 0), 0);
+  const open = sales.reduce((a, s) => a + (s.outstanding > 0.5 ? s.outstanding : 0), 0), cred = (S.vCus.find(c => c.id === custId) || {}).credit_bal || 0;
   return {
     kind: 'statement', title: 'صورت‌حساب مشتری', no: '', date: new Date().toISOString().slice(0, 10), buyer: c.name || '', phone: c.phone || '',
     cols: [{ k: 'date', label: 'تاریخ', w: 120, align: 'center' }, { k: 'text', label: 'شرح', w: 0 }, { k: 'plus', label: 'فاکتور', w: 130, align: 'left' }, { k: 'minus', label: 'پرداخت', w: 130, align: 'left' }, { k: 'bal', label: 'مانده', w: 140, align: 'left' }],
-    rows, totals: [['جمع فاکتورها', fmt(sales.reduce((a, s) => a + s.total, 0))], open > 0.5 ? ['مانده‌ی قابل پرداخت', fmt(open), 'due'] : ['وضعیت', 'تسویه ✓', 'ok']], extra: ''
+    rows, totals: [['جمع فاکتورها', fmt(sales.reduce((a, s) => a + s.total, 0))], open > 0.5 ? ['مانده‌ی قابل پرداخت', fmt(open), 'due'] : ['وضعیت', 'تسویه ✓', 'ok'], ...(cred > 0.5 ? [['اعتبار شما نزد ما', fmt(cred), 'ok']] : [])], extra: ''
   };
 }
 

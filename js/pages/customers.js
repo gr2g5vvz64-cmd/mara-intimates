@@ -2,7 +2,7 @@
 import { h, fmt, jstr, sum } from '../util.js';
 import { S, canEdit } from '../store.js';
 import { dtable, N, pill, kpi } from '../ui.js';
-import { collectCustomerForm, customerForm, collectionForm, setDueForm } from '../forms_misc.js';
+import { collectCustomerForm, customerForm, collectionForm, setDueForm, payCreditForm, applyCreditForm, voidEntry } from '../forms_misc.js';
 import { saleForm } from '../forms_trade.js';
 import { showStatement, customerSpec } from '../statement.js';
 import { head, btn, searchBox, match, detail, accName, dueCell, ledgerTable } from './common.js';
@@ -20,21 +20,22 @@ export function render(query) {
   let q = '', onlyDebt = query.get('debt') === '1', sortBy = 'debt', tbl = h('div');
   const debtors = S.vCus.filter(c => c.outstanding > 0.5);
   const total = sum(debtors, c => c.outstanding), over = sum(debtors, c => c.overdue_amount);
+  const creditors = S.vCus.filter(c => c.credit_bal > 0.5), totalCredit = sum(creditors, c => c.credit_bal);
   const draw = () => {
     const rows = S.vCus.filter(c => (!onlyDebt || c.outstanding > 0.5) && c.active !== false && match(q, c.name, c.phone, c.note, (S.CUS[c.id] || {}).address))
       .sort((a, b) => sortBy === 'buy' ? b.sales_total - a.sales_total || a.name.localeCompare(b.name, 'fa') : b.overdue_amount - a.overdue_amount || b.outstanding - a.outstanding || a.name.localeCompare(b.name, 'fa'));
     tbl.replaceChildren(dtable([
       { label: 'مشتری', main: true, render: c => c.name }, { label: 'تلفن', render: c => (c.phone ? h('span', { dir: 'ltr' }, c.phone) : (canEdit() ? btn('＋ تلفن', e => { e.stopPropagation(); customerForm(S.CUS[c.id]); }, 'ghost sm') : '')) }, { label: 'نوع مشتری', render: c => srcTags(S.CUS[c.id]) }, { label: 'نشانی', hm: true, render: c => (S.CUS[c.id] || {}).address || '' },
       { label: 'جمع فروش', cls: 'num', hm: true, render: c => N(c.sales_total) }, { label: 'تسویه‌شده', cls: 'num', hm: true, render: c => N(c.settled) },
-      { label: 'مانده‌ی بدهی', cls: 'num', render: c => (c.outstanding > 0.5 ? pill(fmt(c.outstanding), c.overdue_amount > 0 ? 'red' : 'amber') : pill('تسویه', 'green')) },
+      { label: 'مانده‌ی بدهی', cls: 'num', render: c => h('span', { class: 'row', style: 'gap:4px;flex-wrap:wrap;justify-content:flex-end' }, c.outstanding > 0.5 ? pill(fmt(c.outstanding), c.overdue_amount > 0 ? 'red' : 'amber') : (c.credit_bal > 0.5 ? null : pill('تسویه', 'green')), c.credit_bal > 0.5 ? pill('بستانکار ' + fmt(c.credit_bal), 'blue') : null) },
       { label: 'فروش باز', cls: 'num', render: c => c.open_count || '' }, { label: 'نزدیک‌ترین سررسید', render: c => (c.outstanding > 0.5 && c.next_due ? dueCell(c.next_due) : '') },
-      { label: '', render: c => h('span', null, c.outstanding > 0.5 ? btn('دریافت', e => { e.stopPropagation(); collectCustomerForm(c.id); }, 'gold sm') : null, ' ', canEdit() ? btn('ویرایش', e => { e.stopPropagation(); customerForm(S.CUS[c.id]); }, 'ghost sm') : null) }
+      { label: '', render: c => h('span', null, c.outstanding > 0.5 ? btn('دریافت', e => { e.stopPropagation(); collectCustomerForm(c.id); }, 'gold sm') : null, ' ', c.credit_bal > 0.5 ? btn('پرداخت اعتبار', e => { e.stopPropagation(); payCreditForm(c.id); }, 'ghost sm') : null, ' ', canEdit() ? btn('ویرایش', e => { e.stopPropagation(); customerForm(S.CUS[c.id]); }, 'ghost sm') : null) }
     ], rows, { onRow: c => customerDetail(c.id), empty: onlyDebt ? 'مشتری بدهکاری نداریم 🎉' : 'هنوز مشتری ثبت نشده' }));
   };
   draw();
-  return h('div', null, head('مشتریان و طلب‌ها', [btn('＋ مشتری جدید', () => customerForm()), btn('＋ دریافت از مشتری', () => collectCustomerForm(), 'gold')],
+  return h('div', null, head('مشتریان و طلب‌ها', [btn('＋ مشتری جدید', () => customerForm()), btn('＋ دریافت از مشتری', () => collectCustomerForm(), 'gold'), creditors.length ? btn('↩ پرداخت اعتبار مشتری', () => payCreditForm(), 'ghost') : null],
     'فروش نسیه که مشتری ۳ یا ۵ یا ۱۰ روز بعد می‌دهد: مانده، سررسید و تسویه‌ی کامل یا قسطی همین‌جاست.'),
-    h('div', { class: 'kpis' }, kpi('جمع طلب ما از مشتریان', N(total), { sub: 'ریال', tone: total > 0 ? 'warn' : '' }), kpi('سررسید گذشته', N(over), { sub: 'ریال', tone: over > 0 ? 'neg' : '' }), kpi('مشتریان بدهکار', debtors.length, { sub: 'نفر' })),
+    h('div', { class: 'kpis' }, kpi('جمع طلب ما از مشتریان', N(total), { sub: 'ریال', tone: total > 0 ? 'warn' : '' }), kpi('سررسید گذشته', N(over), { sub: 'ریال', tone: over > 0 ? 'neg' : '' }), kpi('مشتریان بدهکار', debtors.length, { sub: 'نفر' }), kpi('اعتبار مشتریان (بدهی ما)', N(totalCredit), { sub: creditors.length ? `ریال · ${fmt(creditors.length)} نفر بستانکار` : 'ریال', tone: totalCredit > 0 ? 'warn' : '' })),
     topCustomersCard(),
     h('div', { class: 'bar' }, searchBox(v => { q = v; draw(); }, 'جستجو: نام، تلفن یا نشانی…'),
       h('select', { class: 'sel', 'aria-label': 'مرتب‌سازی', onchange: e => { sortBy = e.target.value; draw(); } }, h('option', { value: 'debt' }, 'مرتب: بیشترین بدهی / سررسید'), h('option', { value: 'buy' }, 'مرتب: بیشترین خرید')),
@@ -51,16 +52,24 @@ export function customerDetail(id) {
   });
   S.collections.filter(x => !x.voided && S.SALE[x.sale_id] && S.SALE[x.sale_id].customer_id === id).forEach(x => ev.push({ date: x.date, ord: 2, text: `دریافت برای ${S.SALE[x.sale_id].no} → ${accName(x.account_id)}` + (x.note ? ' · ' + x.note : ''), minus: x.amount }));
   S.returns.filter(r => !r.voided && r.debt_cancel > 0 && r.sale_line_id).forEach(r => { const sl = S.saleLines.find(l => l.id === r.sale_line_id); const s = sl && S.SALE[sl.sale_id]; if (s && s.customer_id === id) ev.push({ date: r.date, ord: 3, text: `مرجوعی ${r.no} (کسر از بدهی)`, minus: r.debt_cancel }); });
+  S.returns.filter(r => !r.voided && r.credit > 0 && r.sale_line_id).forEach(r => { const sl = S.saleLines.find(l => l.id === r.sale_line_id); const s = sl && S.SALE[sl.sale_id]; if (s && s.customer_id === id) ev.push({ date: r.date, ord: 3, text: `مرجوعی ${r.no} (اعتبار مشتری)`, minus: r.credit }); });
+  const uses = S.creditUses.filter(u => !u.voided && S.SALE[u.sale_id] && S.SALE[u.sale_id].customer_id === id), pays = S.payouts.filter(p => !p.voided && p.customer_id === id);
+  uses.forEach(u => ev.push({ date: u.date, ord: 4, text: `پرداخت با اعتبار برای ${S.SALE[u.sale_id].no}` + (u.note ? ' · ' + u.note : ''), minus: u.amount }));
+  pays.forEach(p => ev.push({ date: p.date, ord: 4, text: `پرداخت نقد اعتبار به او ← ${accName(p.account_id)}` + (p.note ? ' · ' + p.note : ''), plus: p.amount }));
   const open = sales.filter(s => s.outstanding > 0.5).sort((a, b2) => (a.date < b2.date ? -1 : 1));
   const m = detail({
     title: `صورت‌حساب ${c.name}`, land: true,
-    rows: [['مانده‌ی بدهی', b.outstanding > 0.5 ? N(b.outstanding, 'neg') : 'تسویه'], c.phone ? ['تلفن', h('span', { dir: 'ltr' }, c.phone)] : null, srcTags(S.CUS[id]) ? ['نوع مشتری', srcTags(S.CUS[id])] : null, c.address ? ['نشانی', c.address] : null, c.note ? ['یادداشت', c.note] : null,
+    rows: [['مانده‌ی بدهی', b.outstanding > 0.5 ? N(b.outstanding, 'neg') : (b.credit_bal > 0.5 ? 'ندارد' : 'تسویه')], b.credit_bal > 0.5 ? ['اعتبار (بستانکار)', N(b.credit_bal, 'pos')] : null, c.phone ? ['تلفن', h('span', { dir: 'ltr' }, c.phone)] : null, srcTags(S.CUS[id]) ? ['نوع مشتری', srcTags(S.CUS[id])] : null, c.address ? ['نشانی', c.address] : null, c.note ? ['یادداشت', c.note] : null,
       b.overdue_amount > 0 ? ['سررسید گذشته', N(b.overdue_amount, 'neg')] : null, ['جمع فروش به او', N(b.sales_total || 0)]],
     extra: [open.length ? [h('h3', { class: 'sec' }, 'فروش‌های باز (قدیمی‌ترین اول)'), dtable([
       { label: 'فروش', main: true, render: s => s.no }, { label: 'تاریخ', render: s => jstr(s.date) }, { label: 'مانده', cls: 'num', render: s => N(s.outstanding) },
       { label: 'سررسید', render: s => (s.due_date ? dueCell(s.due_date) : 'تعیین نشده') },
       { label: '', render: s => !canEdit() ? '' : btn('تغییر سررسید', e => { e.stopPropagation(); m.close(); setDueForm('sale', s); }, 'ghost sm') }], open, { onRow: s => { m.close(); saleDetail(s.id); } })] : null,
-      h('h3', { class: 'sec' }, 'گردش حساب'), ledgerTable(ev, dtable, { plus: 'فروش (بدهکار شد)', minus: 'دریافت / کسر' })],
-    actions: [btn('🧾 صورت‌حساب برای ارسال', () => showStatement(customerSpec(id)), 'ghost'), b.outstanding > 0.5 ? btn('ثبت دریافت', () => { m.close(); collectCustomerForm(id); }, 'gold') : null, btn('فروش جدید به او', () => { m.close(); saleForm({ customer: id }); }, 'ghost'), btn('ویرایش مشتری', () => { m.close(); customerForm(c); }, 'ghost')]
+      uses.length || pays.length ? [h('h3', { class: 'sec' }, 'اعتبار مشتری: مصرف‌ها و پرداخت‌ها'), dtable([
+        { label: 'تاریخ', main: true, render: x => jstr(x.date) }, { label: 'شرح', cls: 'wrap', render: x => x.kind === 'use' ? `مصرف در ${S.SALE[x.sale_id].no}` + (x.note ? ' · ' + x.note : '') : `پرداخت نقد ← ${accName(x.account_id)}` },
+        { label: 'مبلغ', cls: 'num', render: x => N(x.amount) }, { label: '', render: x => !canEdit() ? '' : btn('ابطال', e => { e.stopPropagation(); m.close(); voidEntry(x.kind === 'use' ? 'credituse' : 'payout', x, x.kind === 'use' ? 'مصرف اعتبار' : 'پرداخت اعتبار'); }, 'ghost sm') }],
+        [...uses.map(u => ({ ...u, kind: 'use' })), ...pays.map(p => ({ ...p, kind: 'pay' }))].sort((a, b2) => (a.date < b2.date ? 1 : -1)))] : null,
+      h('h3', { class: 'sec' }, 'گردش حساب (مثبت = بدهکار، منفی = بستانکار)'), ledgerTable(ev, dtable, { plus: 'فروش / پرداخت به او', minus: 'دریافت / کسر / اعتبار', signed: true })],
+    actions: [btn('🧾 صورت‌حساب برای ارسال', () => showStatement(customerSpec(id)), 'ghost'), b.outstanding > 0.5 ? btn('ثبت دریافت', () => { m.close(); collectCustomerForm(id); }, 'gold') : null, b.credit_bal > 0.5 ? btn('پرداخت نقد اعتبار', () => { m.close(); payCreditForm(id); }, 'gold') : null, b.credit_bal > 0.5 && b.outstanding > 0.5 ? btn('تهاتر اعتبار با بدهی', () => { m.close(); applyCreditForm(id); }, 'ghost') : null, btn('فروش جدید به او', () => { m.close(); saleForm({ customer: id }); }, 'ghost'), btn('ویرایش مشتری', () => { m.close(); customerForm(c); }, 'ghost')]
   });
 }

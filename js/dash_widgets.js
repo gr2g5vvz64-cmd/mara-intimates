@@ -135,7 +135,7 @@ export function healthCard() {
         capParts.map(([l, v, c]) => h('div', { class: 'hc-leg' }, h('i', { style: { background: c } }), h('span', null, l), h('b', null, money(v)), h('small', null, R1(v / capTotal * 100) + '٪'))),
         // بالای صفحه «ارزش کسب‌وکار» = دارایی منهای بدهی است؛ اینجا فقط دارایی‌ها بود، پس بدهی و جمع خالص هم نوشته می‌شود تا دو عدد یکی دیده شوند
         ...(debt > 0.5 ? [h('div', { class: 'srow', style: 'margin-top:6px' }, h('span', null, 'جمع دارایی‌ها'), h('b', null, money(capTotal))),
-          h('div', { class: 'srow' }, h('span', null, '− بدهی ما (تامین‌کننده و چک‌های در جریان)'), h('b', { class: 'neg' }, money(debt))),
+          h('div', { class: 'srow' }, h('span', null, '− بدهی ما (تامین‌کننده، چک‌های در جریان و اعتبار مشتریان)'), h('b', { class: 'neg' }, money(debt))),
           h('div', { class: 'srow bold' }, h('span', null, '= ارزش خالص کسب‌وکار'), h('b', null, money(capTotal - debt)))] : []),
         D.cover != null ? h('div', { class: 'hint' }, `انبار مناسب برای ${fmt(D.target)} روز فروش: ${money(D.ideal)} · الان ${money(D.stock)} (${fmt(Math.round(D.cover))} روز)`) : null),
       h('div', { class: 'hc-col' }, h('div', { class: 'hc-t' }, '۳) فروش در برابر هزینه‌ها'),

@@ -169,6 +169,7 @@ function cashView() {
   for (const i of S.vInvoices) if (!i.voided && i.ship_account_id) outt(R.ship, i.date, i.ship_cost, i.ship_account_id);
   for (const e of S.expenses) if (!e.voided) outt(R.exp, e.date, e.amount, e.account_id);
   for (const r of S.returns) if (!r.voided) outt(R.ref, r.date, r.refund_amount, r.refund_account_id);
+  for (const x of S.payouts) if (!x.voided) outt(R.ref, x.date, x.amount, x.account_id);   // پرداخت نقد اعتبار به مشتری
   for (const t of S.transfers) if (!t.voided) { const f = S.A[t.from_account_id], to = S.A[t.to_account_id]; if (!f || !to) continue; if (f.kind === 'pocket' && to.kind !== 'pocket') add(R.cap, t.date, t.amount); else if (f.kind !== 'pocket' && to.kind === 'pocket') add(R.out, t.date, t.amount); }
   const tot = o => sum(Object.values(o)), cell = v => h('td', { class: 'num' }, v ? fmt(Math.round(v)) : '—');
   const line = (label, o, { sign = 1, cls = '' } = {}) => h('tr', { class: cls }, h('th', { scope: 'row' }, label), ...keys.map(k => cell(sign * o[k])), h('td', { class: 'num main' }, tot(o) ? fmt(Math.round(sign * tot(o))) : '—'));

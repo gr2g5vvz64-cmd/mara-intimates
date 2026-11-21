@@ -2,7 +2,7 @@
 // هر ردیف = یک «کد کالا»؛ «برداشت از» = چه تعداد از موجودی مهسا و چه تعداد از رعنا (پیش‌فرض: اول فروشنده، باقی از دیگری).
 // بهای تمام‌شده با FIFO حساب می‌شود؛ هر ردیف در دیتابیس به یک یا دو خط (به‌ازای هر نگه‌دارنده) تبدیل می‌شود.
 import { h, fmt, parseNum, todayISO, toast, sum } from './util.js';
-import { S, rpc, loadAll, bus, pref, setPref, holdKey, customers, businessAccounts, CHANNELS, accBalance, errText, canEdit, markupOf } from './store.js';
+import { S, rpc, loadAll, bus, pref, setPref, holdKey, customers, businessAccounts, CHANNELS, accBalance, errText, canEdit, markupOf, creditOf } from './store.js';
 import { modal, field, chips, accountPicker, numField, dateField, dueField, combo, run } from './ui.js';
 import { itemForm } from './forms_misc.js';
 import { COLOR_HEX } from './purchase_grid.js';
@@ -170,7 +170,7 @@ export function saleForm(preset = {}) {
   const narrow = window.matchMedia && window.matchMedia('(max-width:820px)').matches;   // در موبایل نام کوتاه (بدون «پیج») تا همهٔ کانال‌ها در یک سطر بیایند
   const chanList = edit && edit.channel && !CHANNELS.includes(edit.channel) ? [...CHANNELS, edit.channel] : CHANNELS;   // فروش‌های قدیمیِ «آشنایان» در ویرایش می‌مانند
   const channel = chips(chanList.map(c => ({ v: c, label: narrow ? c.replace(/^پیج\s+/, '') : c })), edit ? edit.channel : pref('channel', CHANNELS[0]), () => {}, { label: 'کانال فروش' });
-  const custOpts = () => customers().map(c => { const b = S.vCus.find(x => x.id === c.id); return { v: c.id, label: c.name, sub: (c.phone || '') + (b && b.outstanding > 0 ? ' · بدهکار ' + fmt(b.outstanding) : '') }; });
+  const custOpts = () => customers().map(c => { const b = S.vCus.find(x => x.id === c.id); return { v: c.id, label: c.name, sub: (c.phone || '') + (b && b.outstanding > 0 ? ' · بدهکار ' + fmt(b.outstanding) : '') + (b && b.credit_bal > 0.5 ? ' · بستانکار ' + fmt(b.credit_bal) : '') }; });
   const customer = combo({
     placeholder: 'نام خریدار (الزامی)', createLabel: 'مشتری جدید', options: custOpts(),
     onCreate: async name => { try { const r = await rpc('save_customer', { name }, { queue: false }); await loadAll(); customer.setOptions(custOpts()); customer.set(r.id); custInfoDraw(); toast('مشتری اضافه شد'); recalc(); return r.id; } catch (e) { toast(errText(e), 'err'); return null; } },
@@ -181,8 +181,10 @@ export function saleForm(preset = {}) {
   const custInfo = h('div', { class: 'inp ro bal' }, '—');
   function custInfoDraw() {
     const cid = customer.get(), cb = cid && S.vCus.find(x => x.id === cid);
-    custInfo.textContent = !cid ? '—' : (cb && cb.outstanding > 0 ? `${fmt(cb.outstanding)} ریال بدهکار` + (cb.overdue_amount > 0 ? ` (${fmt(cb.overdue_amount)} سررسید گذشته!)` : '') : 'تسویه');
+    const cr = cb ? cb.credit_bal || 0 : 0;
+    custInfo.textContent = !cid ? '—' : [cb && cb.outstanding > 0 ? `${fmt(cb.outstanding)} ریال بدهکار` + (cb.overdue_amount > 0 ? ` (${fmt(cb.overdue_amount)} سررسید گذشته!)` : '') : null, cr > 0.5 ? `${fmt(cr)} ریال بستانکار` : null].filter(Boolean).join(' · ') || 'تسویه';
     custInfo.classList.toggle('debt', !!(cb && cb.outstanding > 0));
+    custInfo.classList.toggle('cred', cr > 0.5);
   }
   function newItem() {    // همان فرم کالا؛ بعد از بسته شدن، فهرست‌ها تازه می‌شوند
     const before = new Set(S.stock.map(i => i.id)), im = itemForm();
@@ -214,6 +216,10 @@ export function saleForm(preset = {}) {
   const received = numField({ onInput: () => recalc() });
   const remainEl = h('div', { class: 'hint' });
   const partBox = h('div', { hidden: true }, field('مبلغ دریافتی (ریال)', received, null), remainEl, due);
+  /* اعتبار مشتری (از مرجوعی قبلی): پیش‌فرض از مبلغ فاکتور کم می‌شود؛ در ویرایش، اعتبارِ همین فاکتور هم برمی‌گردد */
+  const credChk = h('input', { type: 'checkbox', checked: true, onchange: () => recalc() }), credTxt = h('span', null, '');
+  const credBox = h('label', { class: 'chk credbox', hidden: true }, credChk, credTxt);
+  const credAvail = () => { const cid = customer.get(); return cid ? creditOf(cid) + (edit && edit.customer_id === cid ? edit.credit_used || 0 : 0) : 0; };
   const recvAcc = accountPicker(businessAccounts(), null, () => {}, { pockets: false, balances: accBalance });
   const discount = numField({ onInput: () => recalc() });
   const courier = numField({ onInput: () => recalc() }), pack = numField({ onInput: () => recalc() });
@@ -225,24 +231,26 @@ export function saleForm(preset = {}) {
     const pr = pref('recvAcc_' + seller, null); recvAcc.set(pr && S.A[pr] ? pr : (bank ? bank.id : null));
     const pc = pref('costAcc_' + seller, null); costAcc.set(pc && S.A[pc] ? pc : (cash ? cash.id : null));
   }
-  const S2 = { who: h('div', { class: 'sm-who' }, ''), cnt: h('span', null, ''), gross: h('b', { class: 'n' }, '0'), disc: h('b', { class: 'n' }, '0'), total: h('b', { class: 'n' }, '0'), recv: h('b', { class: 'n' }, '0'), left: h('b', { class: 'n' }, '0'), gp: h('b', { class: 'n' }, '0'), exp: h('b', { class: 'n' }, '0'), profit: h('b', { class: 'n' }, '0'), mq: h('span', null, ''), rq: h('span', null, '') };
+  const S2 = { cu: h('b', { class: 'n' }, '0'), cuRow: h('div', { class: 'sr', hidden: true }), who: h('div', { class: 'sm-who' }, ''), cnt: h('span', null, ''), gross: h('b', { class: 'n' }, '0'), disc: h('b', { class: 'n' }, '0'), total: h('b', { class: 'n' }, '0'), recv: h('b', { class: 'n' }, '0'), left: h('b', { class: 'n' }, '0'), gp: h('b', { class: 'n' }, '0'), exp: h('b', { class: 'n' }, '0'), profit: h('b', { class: 'n' }, '0'), mq: h('span', null, ''), rq: h('span', null, '') };
   const itemsList = h('div', { class: 'pg-il' });
   const done = () => rows.filter(r => r.item && r.price > 0 && r.qty > 0);
   function totals() {
     const ds = done(), gross = sum(ds, r => r.qty * r.price), cost = sum(ds, r => r.cost);
     const disc = Math.min(discount.get(), gross), total = gross - disc, c = courier.get() + pack.get();
-    const recv = payMode === 'full' ? total : Math.min(received.get(), total);
-    return { gross, disc, total, cost, c, recv, profit: total - cost - c };
+    const cu = credChk.checked ? Math.min(Math.max(credAvail(), 0), total) : 0, due0 = total - cu;
+    const recv = payMode === 'full' ? due0 : Math.min(received.get(), due0);
+    return { gross, disc, total, cost, c, recv, cu, profit: total - cost - c };
   }
   function recalc() {
     if (step !== 2) return;
     const t = totals(), ds = done();
     S2.who.textContent = `${customer.input.value || '—'} · ${channel.get()}${acq.checked ? ' · آشنا' : ''} · فروشنده ${seller}`;
     S2.cnt.textContent = `جمع کالاها (${fmt(ds.length)} ردیف · ${fmt(sum(ds, r => r.qty))} عدد)`;
-    S2.gross.textContent = fmt(t.gross); S2.disc.textContent = '−' + fmt(t.disc); S2.total.textContent = fmt(t.total); S2.recv.textContent = fmt(t.recv); S2.left.textContent = fmt(Math.max(0, t.total - t.recv));
+    S2.gross.textContent = fmt(t.gross); S2.disc.textContent = '−' + fmt(t.disc); S2.total.textContent = fmt(t.total); S2.recv.textContent = fmt(t.recv); S2.left.textContent = fmt(Math.max(0, t.total - t.cu - t.recv)); S2.cu.textContent = fmt(t.cu); S2.cuRow.hidden = !(credAvail() > 0.5);
+    const av = credAvail(); credBox.hidden = !(av > 0.5); credTxt.textContent = `پرداخت با اعتبار مشتری — بستانکار ${fmt(av)} ریال` + (av > t.total ? ` (بعد از این فاکتور ${fmt(av - t.cu)} ریال می‌ماند)` : '');
     S2.gp.textContent = fmt(t.total - t.cost); S2.exp.textContent = '−' + fmt(t.c); S2.profit.textContent = fmt(t.profit); S2.profit.className = 'n ' + (t.profit < 0 ? 'neg' : 'pos');
     S2.mq.textContent = `−${fmt(sum(ds, r => r.m))} عدد · بها ${fmt(Math.round(sum(ds, r => r.cm)))} ریال`; S2.rq.textContent = `−${fmt(sum(ds, r => r.r))} عدد · بها ${fmt(Math.round(sum(ds, r => r.cr)))} ریال`;
-    remainEl.textContent = payMode === 'part' ? `مانده‌ی فاکتور به حساب بدهکاری مشتری منتقل می‌شود: ${fmt(Math.max(0, t.total - t.recv))} ریال` : '';
+    remainEl.textContent = payMode === 'part' ? `مانده‌ی فاکتور به حساب بدهکاری مشتری منتقل می‌شود: ${fmt(Math.max(0, t.total - t.cu - t.recv))} ریال` : '';
     costAccBox.hidden = t.c <= 0;
   }
   function drawItemsList() {
@@ -251,14 +259,14 @@ export function saleForm(preset = {}) {
   function zone(n, title, sub, ...kids) { return h('section', { class: 'z2' }, h('div', { class: 'zt' }, n ? h('i', null, n) : null, h('span', null, title), sub ? h('small', null, sub) : null), h('div', { class: 'zx' }, ...kids)); }
   const step2 = h('div', { class: 'pg2', hidden: true },
     h('div', { class: 'pg2l' },
-      zone('۱', 'تسویه با خریدار', 'دریافت وجه از مشتری', payChips, partBox, field('دریافت وجه در (تنخواه / حساب بانکی)', recvAcc)),
+      zone('۱', 'تسویه با خریدار', 'دریافت وجه از مشتری', credBox, payChips, partBox, field('دریافت وجه در (تنخواه / حساب بانکی)', recvAcc)),
       zone('۲', 'تخفیف و هزینه‌های جانبی', 'اختیاری', field('تخفیف فروش (ریال)', discount, 'از جمع ردیف‌ها کم می‌شود و روی طلب، دریافتی و سود اثر می‌گذارد.'),
         h('div', { class: 'two-col' }, field('هزینه‌ی ارسال (پیک)', courier), field('هزینه‌ی بسته‌بندی', pack)), h('div', { class: 'hint' }, 'اگر مشتری کرایه‌ی ارسال را مستقیم می‌پردازد، خالی بگذار.'), costAccBox),
       zone('۳', 'توضیحات فاکتور', null, note)),
     h('div', { class: 'pg2r' },
       h('section', { class: 'z2 dk' }, h('div', { class: 'zt dark' }, h('span', null, 'خلاصهٔ فاکتور')), h('div', { class: 'zx' }, S2.who,
         h('div', { class: 'sr' }, S2.cnt, S2.gross), h('div', { class: 'sr' }, h('span', null, 'تخفیف'), S2.disc), h('div', { class: 'sr' }, h('span', null, 'مبلغ فاکتور'), S2.total),
-        h('div', { class: 'sr' }, h('span', null, 'دریافتی'), S2.recv), h('div', { class: 'sr' }, h('span', null, 'مانده (نسیه)'), S2.left),
+        (() => { S2.cuRow.append(h('span', null, 'پرداخت با اعتبار مشتری'), S2.cu); return S2.cuRow; })(), h('div', { class: 'sr' }, h('span', null, 'دریافتی'), S2.recv), h('div', { class: 'sr' }, h('span', null, 'مانده (نسیه)'), S2.left),
         h('div', { class: 'sr' }, h('span', null, 'سود ناخالص'), S2.gp), h('div', { class: 'sr' }, h('span', null, 'هزینه (پیک + بسته‌بندی)'), S2.exp), h('div', { class: 'sr' }, h('span', null, 'سود این فاکتور'), S2.profit))),
       zone('', 'اثر روی موجودی (پس از ثبت)', null, h('div', { class: 'sr' }, h('span', null, 'مهسا'), S2.mq), h('div', { class: 'sr' }, h('span', null, 'رعنا'), S2.rq), h('div', { class: 'hint' }, 'بها با روش FIFO (قدیمی‌ترین پارت اول) حساب شده است.')),
       zone('', 'اقلام در فاکتور', null, itemsList)));
@@ -305,7 +313,7 @@ export function saleForm(preset = {}) {
     if (t.c > 0 && !costAcc.get()) return toast('حساب پرداخت هزینه را انتخاب کن', 'err');
     const lines = [];
     ds.forEach(r => { const nt = (r.note || '').trim(); if (r.m > 0) lines.push({ item_id: r.item, qty: r.m, unit_price: r.price, holder: 'مهسا', note: nt }); if (r.r > 0) lines.push({ item_id: r.item, qty: r.r, unit_price: r.price, holder: 'رعنا', note: nt }); });
-    const payload = { date, seller, channel: channel.get(), is_acq: acq.checked, customer_id: customer.get(), discount: t.disc, due_date: t.recv < t.total ? due.get() : null, received: t.recv, account_id: t.recv > 0 ? recvAcc.get() : null,
+    const payload = { date, seller, channel: channel.get(), is_acq: acq.checked, customer_id: customer.get(), discount: t.disc, due_date: t.recv + t.cu < t.total ? due.get() : null, credit_used: t.cu, received: t.recv, account_id: t.recv > 0 ? recvAcc.get() : null,
       courier: courier.get(), pack: pack.get(), cost_account_id: t.c > 0 ? costAcc.get() : null, note: note.value.trim(), lines };
     const r0 = await run(submit, () => rpc(edit ? 'edit_sale' : 'create_sale', edit ? { ...payload, id: edit.id } : payload));
     if (!r0) return;
@@ -341,7 +349,8 @@ export function saleForm(preset = {}) {
     }
     if (edit.customer_id) customer.set(edit.customer_id);
     discount.set(edit.discount || '');
-    if (edit.received < edit.total) { payMode = 'part'; payChips.set('part'); partBox.hidden = false; received.set(edit.received); }
+    credChk.checked = true;
+    if (edit.received + (edit.credit_used || 0) < edit.total - 0.5) { payMode = 'part'; payChips.set('part'); partBox.hidden = false; received.set(edit.received); }
     if (edit.due_date) due.setDate(edit.due_date);
     if (edit.account_id) recvAcc.set(edit.account_id);
     courier.set(edit.courier || ''); pack.set(edit.pack || ''); if (edit.cost_account_id) costAcc.set(edit.cost_account_id);

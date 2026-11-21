@@ -60,7 +60,7 @@ export function ledgerTable(events, dtable, labels = e0) {
   return dtable([
     { label: 'تاریخ', main: true, render: r => jstr(r.date) }, { label: 'شرح', cls: 'wrap', render: r => r.text },
     { label: labels.plus, cls: 'num', render: r => (r.plus ? N(r.plus) : '') }, { label: labels.minus, cls: 'num', render: r => (r.minus ? N(r.minus) : '') },
-    { label: 'مانده', cls: 'num', render: r => N(r.bal, r.bal > 0 ? 'neg' : '') }
+    { label: 'مانده', cls: 'num', render: r => (labels.signed && r.bal < -0.5 ? h('span', { class: 'n pos' }, fmt(r.bal) + ' (بستانکار)') : N(r.bal, r.bal > 0 ? 'neg' : '')) }
   ], rows, { empty: 'گردشی ثبت نشده' });
 }
 const e0 = { plus: 'افزایش', minus: 'کاهش' };

@@ -996,3 +996,9 @@ a.hchip:hover{background:#5d2e47}
 .mg-leg{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin:12px 0 2px}
 .mg-all>summary{cursor:pointer;font-weight:800;min-height:44px;display:flex;align-items:center}
 .mg-sub .kpis{margin-bottom:6px}
+
+/* ۷.۷۳ اعتبار مشتری */
+.bal.cred{color:var(--blue,#2563a8);font-weight:800}
+.bal.debt.cred{color:var(--red)}
+.chk.credbox{padding:10px 12px;border:1px dashed var(--line,#cdbf9d);border-radius:12px;background:var(--tint);margin-bottom:8px;font-weight:700}
+.hint.amb{color:var(--amber,#b7791f)}

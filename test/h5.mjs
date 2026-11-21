@@ -11,7 +11,8 @@ export function serve() {
   });
   return new Promise(r => srv.listen(0, () => r({ srv, url: `http://localhost:${srv.address().port}` })));
 }
-export const launch = () => chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] });
+const CHROME = [process.env.CHROME_PATH, '/opt/pw-browsers/chromium-1243/chrome-linux64/chrome', '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'].filter(Boolean).find(p => fs.existsSync(p));
+export const launch = () => chromium.launch({ executablePath: CHROME, args: ['--no-sandbox'] });
 export async function newPage(browser, url, { viewport = { width: 1280, height: 900 }, logs = [], fa = false } = {}) {
   const ctx = await browser.newContext({ viewport, locale: 'fa-IR', timezoneId: 'Asia/Tehran', deviceScaleFactor: 1, acceptDownloads: true });
   const page = await ctx.newPage();

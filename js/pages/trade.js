@@ -56,7 +56,7 @@ export function saleDetail(id) {
     title: `فروش ${s.no}`,
     rows: [['تاریخ', jstr(s.date)], ['فروشنده', s.seller], ['محل فروش', s.channel], s.customer ? ['مشتری', s.customer] : null,
       ...(s.discount > 0 ? [['جمع کالاها', N(s.total + s.discount)], ['تخفیف', N(-s.discount, 'neg')]] : []),
-      ['مبلغ فاکتور' + (s.discount > 0 ? ' (پس از تخفیف)' : ''), N(s.total)], ['دریافتی هنگام فروش', h('span', null, N(s.received), s.account_id ? ' → ' + accName(s.account_id) : '')],
+      ['مبلغ فاکتور' + (s.discount > 0 ? ' (پس از تخفیف)' : ''), N(s.total)], ['دریافتی هنگام فروش', h('span', null, N(s.received), s.account_id ? ' → ' + accName(s.account_id) : '')], s.credit_used > 0 ? ['پرداخت با اعتبار مشتری', N(s.credit_used)] : null,
       s.outstanding > 0 && !s.voided ? ['سررسید', s.due_date ? dueCell(s.due_date) : 'تعیین نشده'] : null,
       s.courier ? ['پیک', N(s.courier)] : null, s.pack ? ['بسته‌بندی', N(s.pack)] : null, (s.courier + s.pack) ? ['هزینه از حساب', accName(s.cost_account_id)] : null,
       ['بهای تمام‌شده‌ی کالا', N(s.cogs)], ['سود این فروش', N(s.profit, s.profit < 0 ? 'neg' : 'pos')], s.outstanding > 0 && !s.voided ? ['نسیه‌ی باز', N(s.outstanding, 'neg')] : null,

@@ -31,7 +31,7 @@ const safe = async f => { try { return await f(); } catch (e) { return '(خطا:
 export const SECTIONS = [
   { id: 'status', icon: '🏦', title: 'وضعیت کلی (داشبورد مدیر)', hint: 'حساب‌ها، موجودی، طلب و بدهی، فروش به تفکیک فروشنده/کانال، مرجوعی‌ها', build: async () => {
     const T = S.totals || {}, L = [];
-    L.push(`حساب‌های کسب‌وکار: ${M(T.business_balance)} · ارزش موجودی: ${M(T.stock_value)} · طلب از مشتریان: ${M(T.receivable)} · بدهی به تامین‌کنندگان: ${M(T.payable)}`);
+    L.push(`حساب‌های کسب‌وکار: ${M(T.business_balance)} · ارزش موجودی: ${M(T.stock_value)} · طلب از مشتریان: ${M(T.receivable)} · بدهی به تامین‌کنندگان: ${M(T.payable)}` + (T.customer_credit > 0.5 ? ` · اعتبار مشتریان (بدهی ما): ${M(T.customer_credit)}` : ''));
     if (T.net_worth != null) L.push(`کل دارایی خالص: ${M(T.net_worth)}`);
     const act = S.stock.filter(i => i.active && i.rem > 0);
     L.push(`تعداد کالای موجود: ${fmt(act.length)} · جمع تعداد: ${fmt(act.reduce((a, i) => a + i.rem, 0))}`);
