@@ -24,11 +24,23 @@ try {
   const sec1 = en(await page.locator('#view .pack-sec').nth(2).innerText());
   ok(/سرمایه/.test(sec1) && /طلب/.test(sec1), 'بخش سرمایه');
   for (const b of ['چاپ', 'اکسل کامل', 'کپی برای Claude', 'ذخیره‌ی متن']) ok(await page.locator('#view button', { hasText: b }).count() === 1, 'دکمه‌ی ' + b);
-  // خروج: تغییر درصد جدول را عوض می‌کند
-  const exitRows = async () => (await page.locator('#view .pack-sec').nth(8).locator('tbody tr').count());
-  const a = await exitRows(); await page.locator('input[aria-label="درصد از فروش"]').fill('90'); await page.locator('input[aria-label="درصد از فروش"]').blur(); await sleep(700);
-  const b2 = await exitRows(); ok(a >= 1 && b2 <= a, `جدول پرداخت با درصد بیشتر کوتاه‌تر یا مساوی می‌شود (${a} → ${b2})`);
-  const ex = en(await page.locator('#view .pack-sec').nth(8).innerText()); ok(/طلب رعنا و مهدی/.test(ex) && /90/.test(ex), 'بخش خروج با درصد جدید');
+  // بازه‌ی «کل» پیش‌فرض است
+  ok(await page.locator('select[aria-label="بازه‌ی جدول‌های ماهانه"]').inputValue() === 'all', 'بازه‌ی جدول ماهانه پیش‌فرض «کل» است');
+  ok(/کل: از اولین فعالیت/.test(en(await page.locator('#view .pack-sec').nth(5).innerText())), 'عنوان ماه‌به‌ماه «کل: از اولین فعالیت…» است');
+  // جنس مانده: همه‌ی کالاهای دارای موجودی با سن و فروش
+  const haveN = T.v_stock.filter(i => i.active && i.rem > 0).length;
+  const stRows = await page.locator('#view .pack-sec').nth(4).locator('table').nth(1).locator('tbody tr').count();
+  ok(stRows === haveN, `ردیف کالاهای مانده ${stRows} = ${haveN}`);
+  const stTxt = en(await page.locator('#view .pack-sec').nth(4).innerText());
+  ok(/هرگز فروخته‌نشده/.test(stTxt) && /قدیمی‌ترین ورود/.test(stTxt) && /روز\)/.test(stTxt), 'بخش سن و فروش کالا');
+  // خروج: درصد خالی = بر اساس فروش واقعی؛ با درصد، جدول عوض می‌شود
+  const exSec = () => page.locator('#view .pack-sec').nth(8);
+  ok(await page.locator('input[aria-label="درصد از فروش"]').inputValue() === '', 'درصد پیش‌فرض خالی است');
+  ok(/بر اساس فروش واقعی/.test(await exSec().innerText()), 'خروج: بر اساس فروش واقعی');
+  await page.locator('input[aria-label="درصد از فروش"]').fill('90'); await page.locator('input[aria-label="درصد از فروش"]').blur(); await sleep(700);
+  const ex = en(await exSec().innerText()); ok(/طلب رعنا و مهدی/.test(ex) && /90/.test(ex) && !/بر اساس فروش واقعی/.test(ex), 'خروج با درصد انتخابی');
+  await page.locator('input[aria-label="درصد از فروش"]').fill(''); await page.locator('input[aria-label="درصد از فروش"]').blur(); await sleep(700);
+  ok(/بر اساس فروش واقعی/.test(await exSec().innerText()), 'خالی کردن درصد دوباره به فروش واقعی برمی‌گردد');
   // دانلود اکسل و متن
   const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 20000 }), page.locator('#view button', { hasText: 'ذخیره‌ی متن' }).click()]);
   const fs = await import('fs'); const p = await dl.path(); const body = fs.readFileSync(p, 'utf8');
