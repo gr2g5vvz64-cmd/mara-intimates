@@ -1002,3 +1002,10 @@ a.hchip:hover{background:#5d2e47}
 .bal.debt.cred{color:var(--red)}
 .chk.credbox{padding:10px 12px;border:1px dashed var(--line,#cdbf9d);border-radius:12px;background:var(--tint);margin-bottom:8px;font-weight:700}
 .hint.amb{color:var(--amber,#b7791f)}
+
+.qhelp{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;margin-inline-start:6px;border-radius:50%;border:1px solid var(--bd,#ccc);background:var(--card,#fff);color:inherit;font:inherit;font-size:15px;line-height:1;cursor:pointer;vertical-align:middle;opacity:.8}
+.qhelp:hover,.qhelp:focus-visible{opacity:1}
+.qhelp-row{margin-bottom:8px}
+.ph-what{font-size:15px;line-height:1.9;margin:0 0 10px}
+.ph-sec h3{font-size:14px;margin:12px 0 4px}
+.ph-sec ul{margin:0;padding-inline-start:20px;line-height:1.9}

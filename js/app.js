@@ -29,6 +29,7 @@ import { saleForm, purchaseForm } from './forms_trade.js';
 import { navCounts } from './insights.js';
 import { themesFor, currentTheme, chooseTheme, loadTheme } from './theme.js';
 import { fmt } from './util.js';
+import { attachHelp } from './page_help.js';
 
 const ROUTES = {
   '': { t: 'خانه', i: '⌂', f: () => dash.render() },
@@ -105,7 +106,7 @@ function route() {
   navEls.forEach(a => a.classList.toggle('on', a.dataset.r === nk));
   navEls.forEach(a => (a.dataset.r === nk ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
   const gid = groupOf(nk); grpEls.forEach(x => x.btn.classList.toggle('hon', x.g.id === gid));
-  try { view.replaceChildren(r.f(q)); } catch (e) { console.error(e); reportError('E_UI_RENDER', e.message, 'ui.page.' + key, e.stack); view.replaceChildren(h('div', { class: 'card' }, h('h2', null, 'خطا در نمایش صفحه'), h('p', null, e.message), h('p', { class: 'hint' }, `کد: E_UI_RENDER · صفحه: ${key || 'خانه'} (به‌صورت خودکار برای مدیر ثبت شد)`))); }
+  try { view.replaceChildren(r.f(q)); attachHelp(view, key, r.t); } catch (e) { console.error(e); reportError('E_UI_RENDER', e.message, 'ui.page.' + key, e.stack); view.replaceChildren(h('div', { class: 'card' }, h('h2', null, 'خطا در نمایش صفحه'), h('p', null, e.message), h('p', { class: 'hint' }, `کد: E_UI_RENDER · صفحه: ${key || 'خانه'} (به‌صورت خودکار برای مدیر ثبت شد)`))); }
   window.scrollTo(0, 0); paintCounts();
 }
 /* ---- شمارنده‌ی جلوی نام هر زبانه ---- */
