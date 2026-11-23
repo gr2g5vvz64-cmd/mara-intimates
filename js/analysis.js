@@ -6,6 +6,7 @@ import { stockMonths, stockCoverText, bizDays, noExpensesYet, STALE_MID, STALE_O
 import { jmonthKey } from './util.js';
 import { modal, pill } from './ui.js';
 import { toast } from './util.js';
+import { exitRec } from './exit.js';
 
 const days = iso => Math.max(0, Math.round((Date.parse(todayISO() + 'T00:00:00Z') - Date.parse(String(iso).slice(0, 10) + 'T00:00:00Z')) / 864e5));
 const names = (arr, f, n = 6) => { const a = [...new Set(arr.map(f).filter(Boolean))]; return a.slice(0, n).join('، ') + (a.length > n ? ` و ${a.length - n} مورد دیگر` : ''); };
@@ -94,7 +95,7 @@ export function analyze() {
   const cm = T.capital_m || 0, cr = T.capital_r || 0;
   if (cm < 0 || cr < 0) add('err', 'سرمایه‌ی منفی برای یک شریک', `مهسا ${fmt(cm)} · رعنا ${fmt(cr)}`, { fix: 'برداشت‌ها بیشتر از سرمایه ثبت شده؛ صحت برداشت‌ها را بررسی کن.', href: '#/finance' });
   const dif = Math.abs(cm - cr);
-  if (cm + cr > 0 && dif > Math.max(1000000, (cm + cr) * 0.05)) add('info', 'سرمایه‌ی دو شریک برابر نیست', `مهسا ${fmt(cm)} · رعنا ${fmt(cr)} (تفاوت ${fmt(dif)})`, { fix: `اگر قرار است برابر باشد: انتقال لازم نصف تفاوت است یعنی ${fmt(Math.round(dif / 2))} ریال از ${cm > cr ? 'مهسا به رعنا' : 'رعنا به مهسا'} (نه کل تفاوت). قبل از انتقال مطمئن شوید این ارقام «سرمایه‌ی پرداخت‌شده» اند، نه مانده‌ی حساب شریک پس از برداشت و سودهای قبلی. مسیر: مالی ← «انتقال سرمایه» ← «برابر کردن سهم‌ها».`, href: '#/finance' });
+  if (!exitRec() && cm + cr > 0 && dif > Math.max(1000000, (cm + cr) * 0.05)) add('info', 'سرمایه‌ی دو شریک برابر نیست', `مهسا ${fmt(cm)} · رعنا ${fmt(cr)} (تفاوت ${fmt(dif)})`, { fix: `اگر قرار است برابر باشد: انتقال لازم نصف تفاوت است یعنی ${fmt(Math.round(dif / 2))} ریال از ${cm > cr ? 'مهسا به رعنا' : 'رعنا به مهسا'} (نه کل تفاوت). قبل از انتقال مطمئن شوید این ارقام «سرمایه‌ی پرداخت‌شده» اند، نه مانده‌ی حساب شریک پس از برداشت و سودهای قبلی. مسیر: مالی ← «انتقال سرمایه» ← «برابر کردن سهم‌ها».`, href: '#/finance' });
 
   // ۱۱) ثبت‌های دیرهنگام و احتمال دوباره‌کاری
   const late = act.filter(s => s.created_at && days(s.created_at) < 30 && (Date.parse(String(s.created_at).slice(0, 10)) - Date.parse(s.date)) / 864e5 > 3);

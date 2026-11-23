@@ -7,6 +7,7 @@ import { dtable } from '../ui.js';
 import { bonusLifetime } from '../insights.js';
 import { analyze } from '../analysis.js';
 import { head, btn } from './common.js';
+import { exitRec, exitPaid, exitLeft, exitShareFix } from '../exit.js';
 
 const R = v => fmt(Math.round(Number(v) || 0));
 const RY = v => R(v) + ' ریال';
@@ -19,7 +20,13 @@ export function partners() {
   const chg = n => sum((S.charges || []).filter(c => !c.voided && c.partner === n), c => Number(c.amount) || 0);
   const BL = bonusLifetime(), baseHalf = (profit + chg('مهسا') + chg('رعنا') - (BL['مهسا'] + BL['رعنا'])) / 2;
   const mk = (name, cap, payout) => { const share = baseHalf - chg(name); return { name, cap: cap || 0, share, payout: payout || 0, owed: (cap || 0) + share - (payout || 0), bonus: (S.fundNet || BL)[name] || 0 }; };
-  return [mk('مهسا', T.capital_m, T.payout_m), mk('رعنا', T.capital_r, T.payout_r)];
+  const P = [mk('مهسا', T.capital_m, T.payout_m), mk('رعنا', T.capital_r, T.payout_r)], rec = exitRec();
+  if (rec) {   // رعنا خارج شده: عددهایش ثابت است و مانده‌اش همان بدهی باقی‌مانده
+    const fx = exitShareFix(profit, BL, rec);
+    P[1] = { ...P[1], cap: Number(rec.cap), share: fx.ranaShare, payout: Number(rec.payout) + exitPaid(rec), owed: exitLeft(rec), exited: true };
+    P[0] = { ...P[0], share: fx.mahsaShare, owed: P[0].cap + fx.mahsaShare - P[0].payout };
+  }
+  return P;
 }
 
 /* ---------- پیش‌فرض‌های محاسبه‌ی خروج (قابل تغییر در صفحه) ---------- */

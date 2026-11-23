@@ -4,6 +4,7 @@ import { S, catOf, activeSales, defaultMarkup, expKindOf, stockTargetDays, rpc, 
 import { N, modal, dtable, field, numField, chips, run } from './ui.js';
 import { categoryStats } from './insights.js';
 import { salesStats } from './analytics.js';
+import { exitRec, exitLeft } from './exit.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const sv = (tag, a = {}, ...k) => { const e = document.createElementNS(NS, tag); for (const x in a) e.setAttribute(x, a[x]); k.flat().forEach(c => c != null && e.append(c instanceof Node ? c : document.createTextNode(String(c)))); return e; };
@@ -221,7 +222,8 @@ export function adminHero() {
   const od = sum(S.vCus || [], c => c.overdue_amount || 0); if (od > 0) cs.push({ tone: 'warn', text: `${money(od)} طلب از سررسید گذشته`, href: '#/customers' });
   const low = S.stock.filter(i => i.active && i.min_stock > 0 && i.rem <= i.min_stock); if (low.length) cs.push({ tone: 'warn', text: `${fa(low.length)} کالا رو به اتمام است`, href: '#/stock' });
   const T = S.totals || {}, diff = Math.abs((T.capital_m || 0) - (T.capital_r || 0)) / 2;
-  if (diff > 1000) cs.push({ tone: 'warn', text: 'سرمایه‌ی مهسا و رعنا برابر نیست', href: '#/finance' }); else cs.push({ tone: 'ok', text: 'تعادل سرمایه برقرار است ✓' });
+  if (exitRec()) cs.push({ tone: 'warn', text: `بدهی باقی‌مانده به رعنا و مهدی: ${money(exitLeft())}`, href: '#/exitsettle' });
+  else if (diff > 1000) cs.push({ tone: 'warn', text: 'سرمایه‌ی مهسا و رعنا برابر نیست', href: '#/finance' }); else cs.push({ tone: 'ok', text: 'تعادل سرمایه برقرار است ✓' });
   const M = marginStatus(); if (M.has && M.below.length) cs.push({ tone: 'warn', text: `حاشیه‌ی سود ${M.below.slice(0, 2).map(i => i.cat).join(' و ')} زیر هدف است`, href: '#/analysis' });
   const need = cs.filter(c => c.tone === 'warn' || c.tone === 'bad').length;
   return heroCard({ name: (S.me && S.me.name) || '', headline: `امروز ${fa(ts.length)} فروش ثبت شده${need ? `؛ ${fa(need)} مورد نیاز به توجه تو دارد.` : '؛ مورد فوری نیست.'}`, chips: cs.slice(0, 6),
@@ -230,7 +232,7 @@ export function adminHero() {
 export function partnerHero({ me, tasks, own, viewer }) {
   const today = todayISO(), ts = activeSales().filter(s => s.date === today && s.seller === me), cs = tasks.slice(0, 3).map(t => ({ tone: t.tone === 'red' ? 'bad' : t.tone === 'amber' ? 'warn' : 'info', text: t.text, href: t.href }));
   const T = S.totals || {}, diff = Math.abs((T.capital_m || 0) - (T.capital_r || 0)) / 2;
-  cs.push(diff > 1000 ? { tone: 'warn', text: 'سرمایه‌ی مهسا و رعنا برابر نیست', href: '#/finance' } : { tone: 'ok', text: 'تعادل سرمایه‌ی تو و شریکت برقرار است ✓' });
+  if (!exitRec()) cs.push(diff > 1000 ? { tone: 'warn', text: 'سرمایه‌ی مهسا و رعنا برابر نیست', href: '#/finance' } : { tone: 'ok', text: 'تعادل سرمایه‌ی تو و شریکت برقرار است ✓' });
   const need = tasks.length;
   return heroCard({ name: viewer ? me : (S.me && S.me.name) || me, sub: viewer ? 'نمای فقط‌مشاهده' : '', headline: `امروز ${fa(ts.length)} فروش ${viewer ? 'ثبت شده' : 'ثبت کردی'}.${need ? ` ${fa(need)} کار منتظر ${viewer ? me : 'توست'}.` : ' کار معوقی نیست.'}`, chips: cs,
     stats: [{ l: `فروش ${own}، امروز`, v: sum(ts, s => s.total) }, { l: `سود ${own}، امروز`, v: sum(ts, s => s.profit) }] });

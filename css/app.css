@@ -1009,3 +1009,7 @@ a.hchip:hover{background:#5d2e47}
 .ph-what{font-size:15px;line-height:1.9;margin:0 0 10px}
 .ph-sec h3{font-size:14px;margin:12px 0 4px}
 .ph-sec ul{margin:0;padding-inline-start:20px;line-height:1.9}
+
+/* تسویه خروج */
+.xbar { height: 10px; border-radius: 6px; background: var(--line, #ddd); overflow: hidden; margin: 6px 0 12px; }
+.xfill { height: 100%; background: var(--green, #2e9e6b); transition: width .3s; }

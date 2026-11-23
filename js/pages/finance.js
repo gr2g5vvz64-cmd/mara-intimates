@@ -5,6 +5,7 @@ import { transferForm, capitalForm, collectionForm, dayCloseForm } from '../form
 import { dayCloseOpen, negativeAccounts, bonusLifetime } from '../insights.js';
 import { ex } from '../explain.js';
 import { head, btn } from './common.js';
+import { exitRec, exitPaid, exitLeft, exitShareFix } from '../exit.js';
 
 export function render() {
   const T = S.totals; const biz = businessAccounts(), pk = pockets();
@@ -19,13 +20,20 @@ export function render() {
   const part = (name, cap, payout, pocketId) => { const mine = baseHalf - chg(name) + (BL[name] || 0); return { name, cap, share: sh(cap), base: baseHalf, bonus: BL[name] || 0, charge: chg(name), suggest: mine, payout, left: mine - payout, pocketId }; };
   const capDiff = capM - capR, hiName = capDiff > 0 ? 'مهسا' : 'رعنا', loName = capDiff > 0 ? 'رعنا' : 'مهسا', eqAmt = Math.abs(capDiff) / 2;
   const rows = [part('مهسا', capM, T.payout_m || 0, pk.find(a => a.owner === 'مهسا')), part('رعنا', capR, T.payout_r || 0, pk.find(a => a.owner === 'رعنا'))];
+  const xr = exitRec();
+  if (xr) {   // رعنا خارج شده: سهم او ثابت، بقیه‌ی سود مال مهسا؛ هشدار برابری سرمایه معنی ندارد
+    const fx = exitShareFix(profit, BLfull, xr), paid = Number(xr.payout) + exitPaid(xr);
+    rows[0].suggest = fx.mahsaShare + (BL['مهسا'] || 0); rows[0].left = rows[0].suggest - rows[0].payout;
+    Object.assign(rows[1], { cap: Number(xr.cap), suggest: fx.ranaShare + (BL['رعنا'] || 0), payout: paid, left: fx.ranaShare + (BL['رعنا'] || 0) - paid });
+  }
   const ok = Math.abs(T.check_diff || 0) <= 1;
   const R = (k, v, c = '', key = '') => h('div', { class: 'srow ' + c }, h('span', null, k), key ? ex(N(v), key) : N(v));
   return h('div', null,
     head('مالی و سرمایه', [btn('بستن روز', () => dayCloseForm()), btn(S.me.role === 'admin' ? 'انتقال / برداشت سود' : 'انتقال بین حساب‌ها', () => transferForm({ kind: 'transfer' })), btn('انتقال سرمایه', () => capitalForm(), 'ghost'), ...(S.me.role === 'admin' ? [btn('🔍 تحلیل', () => { location.hash = '#/analysis'; }, 'ghost')] : []), btn('دریافت نسیه', () => collectionForm(), 'ghost')], 'سود بین مهسا و رعنا برابر (نصف–نصف) تقسیم می‌شود. روی هر عدد بزنی (مدیر) محاسبه‌اش را می‌بینی.'),
     dayCloseOpen() ? h('div', { class: 'alert warn' }, 'امروز هنوز بسته نشده؛ موجودی نقد و بانک را بشمار و «بستن روز» را بزن.') : null,
     negativeAccounts().length ? h('div', { class: 'alert red' }, 'مانده‌ی این حساب‌ها منفی است: ' + negativeAccounts().map(a => a.name).join('، ') + ' — احتمالاً ثبتی با حساب اشتباه یا دریافتی ثبت‌نشده داریم.') : null,
-    eqAmt > 1000 ? h('div', { class: 'alert warn' }, `سرمایه‌ی وارد‌شده برابر نیست: ${hiName} ${fmt(Math.max(capM, capR))} ریال و ${loName} ${fmt(Math.min(capM, capR))} ریال. برای برابر شدن، ${loName} باید ${fmt(Math.round(eqAmt / 10))} تومان (${fmt(Math.round(eqAmt))} ریال) به حساب شخصی ${hiName} واریز کند و بعد «انتقال سرمایه» ثبت شود.`) : null,
+    xr ? h('div', { class: 'alert warn' }, `رعنا (و مهدی) از ${jstr(xr.cutoff)} خارج شده‌اند. بدهی باقی‌مانده به آن‌ها: ${fmt(Math.round(exitLeft(xr)))} ریال. `, h('a', { href: '#/exitsettle' }, 'جزئیات تسویه خروج ←')) : null,
+    !xr && eqAmt > 1000 ? h('div', { class: 'alert warn' }, `سرمایه‌ی وارد‌شده برابر نیست: ${hiName} ${fmt(Math.max(capM, capR))} ریال و ${loName} ${fmt(Math.min(capM, capR))} ریال. برای برابر شدن، ${loName} باید ${fmt(Math.round(eqAmt / 10))} تومان (${fmt(Math.round(eqAmt))} ریال) به حساب شخصی ${hiName} واریز کند و بعد «انتقال سرمایه» ثبت شود.`) : null,
     h('div', { class: 'kpis' }, kpi('سود کل', ex(N(profit), 'profit'), { tone: profit < 0 ? 'neg' : 'pos' }), kpi('مانده حساب‌ها', ex(N(T.business_balance), 'business_balance')), kpi('ارزش موجودی انبار', ex(N(T.stock_value), 'stock_value')), kpi('کل دارایی کسب‌وکار', ex(N(T.net_worth), 'net_worth'), { sub: 'حساب‌ها + موجودی + طلب − بدهی' })),
     h('div', { class: 'grid2' },
       h('div', { class: 'card' }, h('div', { class: 'ct' }, 'حساب‌ها'),
